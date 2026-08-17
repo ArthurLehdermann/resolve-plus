@@ -126,9 +126,9 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 **Críticas**
 - Quem será o responsável legal pela garantia: plataforma ou profissional? (B001, decisão provisória: profissional, sem retenção; parecer jurídico definitivo ainda bloqueado)
 - Como ocorrerá a mediação de conflitos? (B003, em elaboração, ver `foundation/03-cancellation-rules.md`)
-- Quais documentos serão obrigatórios para validar um profissional? (RF002, ainda sem critério)
+- Quais documentos além de `SEGURO_RC` serão obrigatórios para validar um profissional? (RF002, `SEGURO_RC` fechado provisoriamente em B005; identidade/certificações ainda abertos)
 - Quais categorias estarão disponíveis no lançamento?
-- Quem responde por dano ao imóvel causado pelo profissional? (B005, novo em 2026-08-17)
+- Valor mínimo de cobertura da apólice RC e parecer jurídico definitivo de responsabilidade civil (B005, decisão provisória registrada: profissional responde, plataforma media, seguro RC no cadastro)
 
 > "Pagamento em escrow ou autorizado/capturado depois?" removida desta lista em 2026-08-17, respondida por `adr/ADR-002-financeiro.md` (autorizar→capturar→repassar, não escrow). Pendências residuais dessa decisão (Pix, reautorização, split nativo) estão documentadas no próprio ADR-002, não aqui.
 
@@ -174,7 +174,7 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 
 **Pontos Prontos**: visão de produto definida, fluxos principais mapeados, escopo do MVP delimitado, arquitetura definida, APIs especificadas, requisitos não funcionais levantados, roadmap e backlog estruturados.
 
-**Bloqueadores**: definição do gateway de pagamento (e se ele suporta reautorização + split nativo, ver `adr/ADR-002-financeiro.md`), parecer jurídico definitivo de garantia (B001, decisão provisória já permite desenvolver), mediação/cancelamento (B003, rascunho em elaboração) e responsabilidade civil por dano ao imóvel (B005), critérios de validação de profissionais (RF002), protótipos de interface em alta fidelidade.
+**Bloqueadores**: definição do gateway de pagamento (e se ele suporta reautorização + split nativo, ver `adr/ADR-002-financeiro.md`), parecer jurídico definitivo de garantia (B001, decisão provisória já permite desenvolver), mediação/cancelamento (B003, rascunho em elaboração), parecer jurídico definitivo de responsabilidade civil (B005, decisão provisória já permite desenvolver RF002/Termos), protótipos de interface em alta fidelidade.
 
 ## Análise Crítica da Conversa
 

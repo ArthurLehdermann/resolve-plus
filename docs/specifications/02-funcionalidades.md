@@ -70,7 +70,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 | ID | Descrição | Prioridade | Origem | Dependências |
 |---|---|---|---|---|
 | RF001 | Permitir cadastro de cliente | Alta | Conversa | Nenhuma |
-| RF002 | Permitir cadastro de profissional | Alta | Conversa | RF001 |
+| RF002 | Permitir cadastro de profissional (inclui upload e validação de documentos; `SEGURO_RC` obrigatório, decisão provisória B005) | Alta | Conversa | RF001 |
 | RF003 | Autenticação | Alta | Inferência | RF001 |
 | RF004 | Recuperação de senha | Média | Inferência | RF003 |
 | RF005 | Editar perfil | Alta | Inferência | RF001 |

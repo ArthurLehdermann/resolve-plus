@@ -70,13 +70,35 @@ Relacionado a `INV-031` e `INV-041` (`00-domain-invariants.md`): o pagamento só
 
 ## B005, Responsabilidade Civil por Dano ao Imóvel
 
-**Status:** Bloqueado
+**Status:** Parcialmente resolvido. Decisão provisória de produto registrada em 2026-08-17 (sexta revisão do PO) para **destravar desenvolvimento** (Termos de Uso, RF002, verificação documental), mas o parecer jurídico definitivo continua bloqueado, esta decisão pode mudar.
 
-**Impacta:** Termos de Uso · Fluxo Financeiro · Verificação de Profissional (RF002)
+**Impacta:** Termos de Uso · Fluxo Financeiro · Verificação de Profissional (RF002) · State Machine (disputa durante execução, B003)
 
 Nenhum documento até 2026-08-17 tratava de quem responde quando um profissional causa dano ao imóvel durante a execução (ex.: vazamento em serviço hidráulico, dano elétrico). É o maior risco reputacional de um marketplace presencial e ficou de fora de toda a análise financeira/jurídica até agora, identificado em revisão crítica do PO sobre `specifications/04-modelo-dados.md`.
 
-**Responsável:** Jurídico + Produto.
+### Pesquisa de mercado (referência, não substitui parecer jurídico)
+
+| Plataforma | Modelo observado | Fonte (2026-08) |
+|---|---|---|
+| **TaskRabbit** (EUA) | Não oferece seguro nem assume responsabilidade pelos taskers. Taskers são pessoalmente responsáveis; a plataforma recomenda que contratem seguro próprio. Oferece "Happiness Pledge"/Taskprotect: compensação **discricionária**, caso a caso, até ~US$ 10 mil, **não é apólice**; cliente deve esgotar seguro residencial/pessoal antes. | [Taskrabbit Support](https://support.taskrabbit.com/hc/en-us/articles/46260501460891), [Happiness Pledge](https://support.taskrabbit.com/hc/en-us/articles/46260466252059) |
+| **GetNinjas** (BR) | Classificado online; declara-se isenta de responsabilidade pela execução, qualidade ou danos causados pelo profissional. Negociação e pagamento ocorrem fora da plataforma (modelo legado). Oferece mediação informal, sem garantia financeira. Precedentes judiciais pontuais reconhecem responsabilidade solidária em casos de falha de segurança na curadoria de prestadores. | [Termos de Uso](https://www.getninjas.com.br/termos-de-uso), seção 16 |
+| **Angi / HomeAdvisor** (EUA) | Marketplace com pagamento na plataforma. **Exige** que profissionais tenham seguro de responsabilidade civil geral (CGL, mín. US$ 500 mil a US$ 2 mi) e apresentem certificado antes de iniciar trabalho; Angi como segurado adicional. "Happiness Guarantee" cobre danos **secundariamente** (após seguro do profissional/cliente), com tetos por tipo de serviço (US$ 2,5 mil a US$ 50 mil). | [Angi Happiness Guarantee](https://www.angi.com/landing/happiness-guarantee), contrato de prestador (CGL obrigatório) |
+
+**Leitura para o Resolve+:** o modelo GetNinjas (zero responsabilidade, pagamento off-platform) não se aplica: o Resolve+ participa da transação inteira (pagamento protegido, garantia, prontuário). O modelo TaskRabbit (pledge discricionário da plataforma) expõe a plataforma a risco financeiro, inconsistente com B001/ADR-003. O modelo Angi (seguro obrigatório do profissional + cobertura secundária da plataforma) é o mais próximo do perfil de risco desejado, adaptado abaixo **sem** a cobertura financeira discricionária da plataforma (mesma linha de B001: plataforma media, não paga).
+
+### Decisão provisória do PO (2026-08-17)
+
+- **Responsabilidade primária:** do **profissional**, por analogia ao Modelo B de B001 (`adr/ADR-003-garantia.md`): quem executa presencialmente no imóvel responde pelos danos causados durante a execução.
+- **Papel da plataforma:** **mediadora**, não parte financeiramente responsável. A plataforma **não** mantém fundo indenizatório, **não** oferece "pledge" discricionário (TaskRabbit) nem cobertura secundária própria (Angi Happiness Guarantee) no MVP.
+- **Seguro do profissional (RF002):** **obrigatório** comprovante de apólice de responsabilidade civil (RC) vigente no cadastro/verificação do profissional. Refletido em `DocumentoProfissional` (`specifications/04-modelo-dados.md`, tipo `SEGURO_RC`). Renovação: profissional com apólice vencida não recebe novas solicitações até revalidar (status de conta permanece `ATIVA`, mas RF002 bloqueia oportunidades, detalhe de implementação futura).
+- **Sinistro durante execução:** usa o fluxo existente de disputa (`Serviço` `Em Andamento` → `Em Contestação`, Cenário C de `foundation/03-cancellation-rules.md`, B003). **Não criar entidade `Sinistro` no MVP**; evidências (fotos, descrição) ficam no registro de disputa/mediação. Resolução de mérito continua dependente de B003 (percentual, captura parcial), mas o **caminho de abertura** já existe.
+- **Compromisso da plataforma em caso de sinistro:** (1) mediação entre cliente e profissional via fluxo de disputa; (2) **facilitar acionamento** da apólice RC do profissional (disponibilizar dados da apólice ao cliente mediante solicitação formal, registrar tentativas de contato); (3) **não** indenizar diretamente nem reter/repassar valores da plataforma para cobrir dano (consistente com B001, sem retenção adicional sobre repasse).
+
+**O que continua bloqueado (parecer jurídico definitivo):** se a decisão provisória (profissional responde, plataforma só media, seguro RC exigido no cadastro) é juridicamente suficiente para um marketplace com pagamento on-platform no Brasil (CDC, responsabilidade solidária da plataforma); valor mínimo de cobertura da apólice RC; se a plataforma precisa ser segurada adicional na apólice (modelo Angi); se sinistro exige entidade/fluxo próprio além de `Em Contestação`. Se o parecer mudar a decisão provisória, `specifications/04-modelo-dados.md` (`DocumentoProfissional`), RF002, Termos de Uso e `foundation/03-cancellation-rules.md` precisam ser revisados juntos.
+
+> **Disclaimer:** esta decisão provisória **não substitui parecer jurídico definitivo**, mesmo texto aplicável a B001 (`adr/ADR-003-garantia.md`). Existe para destravar modelagem e redação de Termos de Uso; pode mudar após validação jurídica.
+
+**Responsável:** Jurídico + Produto (parecer definitivo). Decisão provisória já registrada pelo PO.
 
 ---
 
@@ -89,3 +111,4 @@ Nenhum documento até 2026-08-17 tratava de quem responde quando um profissional
 | 2026-08-17 | Adiciona bloqueador de percentual de reserva financeira de garantia, identificado em terceira revisão crítica do PO (depois fundido em B001, ver linha seguinte). |
 | 2026-08-17 | Quarta revisão do PO: funde o bloqueador de percentual de reserva em B001, mesmo parecer jurídico cobre responsabilidade da garantia e se a reserva financeira que a lastreia caracteriza retenção de fundo de terceiro (mesmo enquadramento que `ADR-002-financeiro.md` evitou). Não existe mais como item numerado separado. |
 | 2026-08-17 | Quinta revisão do PO: B001 parcialmente resolvido (decisão provisória sem retenção, destrava desenvolvimento, parecer jurídico definitivo continua bloqueado). B002 resolvido provisoriamente (72h, `adr/ADR-004-prazo-aceite-automatico.md`). B003 sai de "Bloqueado" simples para "Em elaboração", rascunho de regras em `03-cancellation-rules.md`. |
+| 2026-08-17 | Sexta revisão do PO: B005 parcialmente resolvido (decisão provisória: profissional responde, plataforma media, seguro RC obrigatório no cadastro via RF002/`DocumentoProfissional`, sinistro usa fluxo `Em Contestação`, parecer jurídico definitivo continua bloqueado). Pesquisa de mercado (TaskRabbit, GetNinjas, Angi) registrada. |
