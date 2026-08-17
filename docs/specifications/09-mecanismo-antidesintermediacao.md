@@ -1,4 +1,4 @@
-# 09, Mecanismo Antidesintermediação
+# 09: Mecanismo Antidesintermediação
 
 **Status:** Proposta inicial (2026-08-17, revisada na mesma data após 2ª crítica do PO), **não é decisão fechada**. Precisa de validação de Produto (agressividade do bloqueio vs. fricção do usuário) e Jurídico (monitoramento de conteúdo de mensagens entre particulares tem implicação de privacidade/LGPD que não foi avaliada aqui).
 

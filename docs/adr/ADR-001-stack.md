@@ -1,4 +1,4 @@
-# ADR-001, Stack Tecnológica
+# ADR-001: Stack Tecnológica
 
 **Status:** Decidido
 

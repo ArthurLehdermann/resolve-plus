@@ -1,4 +1,4 @@
-# 05, Arquitetura do MVP
+# 05: Arquitetura do MVP
 
 ## Objetivo
 

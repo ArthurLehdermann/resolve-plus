@@ -1,4 +1,4 @@
-# 04, Modelo de Dados do MVP
+# 04: Modelo de Dados do MVP
 
 > Revisado em 2026-08-17 para eliminar contradições com `foundation/00-domain-invariants.md` e `foundation/02-state-machine.md`, apontadas em análise crítica do PO. A versão anterior mantinha uma entidade `Contratacao` (proibida por INV-020), um `Pagamento` 1:1 simples (proibido por INV-040 a INV-045) e um `HistoricoImovel` de log raso (proibido por INV-060 a INV-062). Onde este documento e `00-domain-invariants.md` divergirem no futuro, o invariante vence, ver regra no topo de `00-domain-invariants.md`.
 
@@ -80,10 +80,14 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 > Renomeado de `Imovel` para alinhar com `06-apis.md` (`/properties`, `property_id`) e com INV-061/062. Antes ligado a `cliente_id` como FK fixa, isso contradizia o glossário ("vinculado ao endereço/unidade, não à pessoa") e quebrava o prontuário na venda do imóvel. Agora o vínculo com o dono é mutável (via `PropertyOwnership`) e separado da identidade do registro.
 >
 > Corrigido em 2026-08-17: o endereço passou a ser **campo próprio de Property**, não mais FK para `Endereco`. A versão anterior (`Property` 1:1 `Endereco`, com `Endereco.usuario_id`) deixava o endereço do imóvel pendurado no dono anterior depois de uma venda, o desacoplamento via `PropertyOwnership` não tinha efeito nenhum enquanto o endereço em si continuasse amarrado a um usuário.
+>
+> Corrigido em 2026-08-17 (3ª revisão do PO): nada impedia dois registros de `Property` para a mesma casa (mesmo endereço cadastrado duas vezes fragmenta o prontuário, que é o próprio diferencial competitivo do produto, OBJ-NEG-02). Adicionado `chave_endereco` com índice único.
 
-**Campos**: id, cep, logradouro, numero, complemento, bairro, cidade, estado, latitude, longitude, apelido
+**Campos**: id, cep, logradouro, numero, complemento, bairro, cidade, estado, latitude, longitude, apelido, chave_endereco (gerado, ver abaixo)
 
-**Relacionamentos**: 1:N Area · 1:N PropertyOwnership
+**`chave_endereco`**: normalização de `cep + numero + complemento` (maiúsculas, sem acento, sem pontuação, trim) — ex.: `01310200|100|APTO101`. Índice `UNIQUE (chave_endereco)`. **Limite conhecido**: normalização de string não resolve variação livre de texto em `complemento` (ex.: "Bloco A Apto 101" vs. "BL A AP 101" geram chaves diferentes para a mesma unidade) — mitiga duplicata óbvia, não garante deduplicação perfeita sem autocomplete/validação de endereço na criação (fora de escopo do MVP).
+
+**Relacionamentos**: 1:N Area · 1:N PropertyOwnership · 1:N PropertyOwnershipTransfer
 
 ### PropertyOwnership
 
@@ -92,6 +96,16 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 **Campos**: id, property_id, cliente_id, desde, ate (NULL = dono atual)
 
 **Regra de integridade**: no máximo um registro com `ate IS NULL` por `property_id`.
+
+**Quem escreve aqui**: só o fluxo de `PropertyOwnershipTransfer` abaixo (aceite do novo dono). Corrigido em 2026-08-17 (3ª revisão do PO) — a versão anterior criava a tabela mas nenhum endpoint escrevia nela; a venda do imóvel, motivo original da refatoração, não tinha caminho executável.
+
+### PropertyOwnershipTransfer
+
+> Transferência de posse nunca é unilateral (INV-064) — dono atual só inicia, novo dono precisa aceitar. Evita que erro de digitação ou má-fé transfira um prontuário inteiro sem o outro lado saber.
+
+**Campos**: id, property_id, de_cliente_id, para_cliente_id (nulo se `para_email` ainda sem conta na plataforma), para_email, status (`PENDENTE | ACEITO | RECUSADO | EXPIRADO`), criado_em, expira_em
+
+**Regra**: ao `ACEITO`, fecha o `PropertyOwnership.ate` do `de_cliente_id` (`= now()`) e cria um novo `PropertyOwnership` com `cliente_id = para_cliente_id` e `ate = NULL`, na mesma transação. `de_cliente_id` deve ser o dono vigente no momento da criação (mesma checagem de INV-014, aplicada aqui a `PropertyOwnershipTransfer` em vez de `Solicitação`).
 
 ### Area
 
@@ -153,7 +167,9 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 ### Garantia
 
-**Campos**: id, servico_id, inicio, fim, status (`StatusGarantia`)
+**Campos**: id, servico_id, inicio, fim, status (`StatusGarantia`), payment_split_id (link para a reserva que a lastreia, INV-053)
+
+**Regra de encerramento (INV-053)**: quando `status` sai de `ATIVA` (vira `EXPIRADA` sem acionamento, ou `ENCERRADA` após `ACIONADA` resolvida), dispara `RESERVA_LIBERADA` sobre o `PaymentSplit` vinculado. Se `ACIONADA` e a resolução envolve reembolso ao cliente (não revisita), o `PaymentRefund` é limitado a `valor_reserva_garantia` — dano acima disso não é coberto por este mecanismo (a plataforma não é seguradora sob o Modelo B recomendado em `adr/ADR-003-garantia.md`; ver B005 para responsabilidade civil além desse teto).
 
 ## Bounded Context: Payment (INV-040 a INV-045)
 
@@ -181,9 +197,11 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 ### PaymentSplit
 
-**Campos**: id, payment_event_id (o evento de captura), valor_profissional, valor_plataforma, aliquota_vigente
+> Corrigido em 2026-08-17 (3ª revisão do PO): garantia acionada não tinha lastro financeiro, o repasse já ocorreu (~72h após aprovação, B002) muito antes de a garantia poder ser acionada (prazo pode ser 90 dias). `valor_profissional` agora se divide em liberado imediato e reserva de garantia (INV-053).
 
-**Regra**: calculado no momento da captura com a alíquota vigente naquele instante; alterar a comissão depois não recalcula splits antigos (INV-044).
+**Campos**: id, payment_event_id (o evento de captura), valor_profissional_liberado, valor_reserva_garantia, valor_plataforma, aliquota_vigente, percentual_reserva_vigente
+
+**Regra**: calculado no momento da captura com a alíquota e o percentual de reserva vigentes naquele instante (B006, ainda sem valor definido); alterar comissão ou percentual depois não recalcula splits antigos (INV-044). `valor_profissional_liberado` é repassado normalmente (P6, B002); `valor_reserva_garantia` fica retido até a `Garantia` do serviço sair de `ATIVA` (INV-053) — gera `PaymentEvent` próprio (`RESERVA_LIBERADA`) quando isso acontece, não é liberado junto com o repasse principal.
 
 ### PaymentRefund
 
@@ -223,6 +241,7 @@ Para validação documental (RF002, critérios de validação ainda não definid
 | Categoria | Solicitação | 1:N |
 | Property | Area | 1:N |
 | Property | PropertyOwnership | 1:N |
+| Property | PropertyOwnershipTransfer | 1:N |
 | Area | Asset | 1:N |
 | Asset | Intervention | 1:N |
 | Solicitação | Property | N:1 |
@@ -257,13 +276,15 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 
 **StatusPaymentAuthorization**: `AUTORIZADO`, `CAPTURADO`, `CANCELADO`, `EXPIRADO`
 
-**TipoPaymentEvent**: `AUTORIZADO`, `CAPTURADO`, `REPASSADO`, `CANCELADO`, `EXPIRADO`, `REEMBOLSADO`, `REAUTORIZADO`
+**TipoPaymentEvent**: `AUTORIZADO`, `CAPTURADO`, `REPASSADO`, `CANCELADO`, `EXPIRADO`, `REEMBOLSADO`, `REAUTORIZADO`, `RESERVA_LIBERADA`
 
 **StatusGarantia**: `ATIVA`, `EXPIRADA`, `ACIONADA`, `ENCERRADA`
 
 > `ENCERRADA` adicionada, faltava para representar a transição final de `Acionada` em `02-state-machine.md` §5.
 
 **OrigemIntervention**: `PLATAFORMA`, `MANUAL`, `IMPORTADO`
+
+**StatusPropertyOwnershipTransfer**: `PENDENTE`, `ACEITO`, `RECUSADO`, `EXPIRADO`
 
 ## Índices Recomendados
 
@@ -279,7 +300,9 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 
 **PaymentEvent**: payment_authorization_id, tipo, criado_em
 
-**Property**: latitude, longitude (bounding box, ver seção "Busca geográfica")
+**Property**: latitude, longitude (bounding box, ver seção "Busca geográfica"), `UNIQUE (chave_endereco)`
+
+**PropertyOwnershipTransfer**: property_id, para_cliente_id, para_email, status
 
 **Intervention**: asset_id, servico_id, origem
 
@@ -316,4 +339,5 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 |---|---|
 | 2026-08-16 | Versão original (pré-DDD), com `Contratacao`, `Pagamento` simples e `HistoricoImovel`. |
 | 2026-08-17 (1ª passada) | Reescrita completa contra `00-domain-invariants.md`/`02-state-machine.md`: remove `Contratacao`, introduz bounded context `Payment` (5 entidades), substitui `HistoricoImovel` por `Property/Area/Asset/Intervention`, corrige enums divergentes da state machine, renomeia `Imovel`→`Property` e `endereco_id`→`property_id` em Solicitação, adiciona `PropertyOwnership`, avaliação bidirecional, índice parcial de proposta aceita. |
+| 2026-08-17 (3ª passada) | Adiciona `chave_endereco` (CEP+numero+complemento normalizados, `UNIQUE`) em Property (INV-063, corrige duplicidade de imóvel); adiciona `PropertyOwnershipTransfer` e regra de aceite explícito (INV-064, corrige `PropertyOwnership` sem caminho executável); corrige INV-031 (`CONCLUIDO`→`APROVADO`, mesma classe de bug de INV-060). |
 | 2026-08-17 (2ª passada) | Corrige 4 contradições introduzidas na 1ª passada: `PaymentAuthorization` vira 1:N com reautorização (INV-046, não mais órfão financeiro em autorização expirada); `Property` passa a ter endereço próprio em vez de FK para `Endereco.usuario_id` (venda de imóvel não deixa mais o endereço preso ao dono anterior); `INV-060` corrigida para `APROVADO` (referenciava `FINALIZADO`, estado inexistente); adiciona INV-014 (ownership de Solicitação via `PropertyOwnership`). |

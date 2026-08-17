@@ -1,4 +1,4 @@
-# 01, Event Storm
+# 01: Event Storm
 
 > v0.1, rascunho construído a partir das jornadas e fluxos já mapeados em `specifications/02-funcionalidades.md` (UC001–UC020, FP001–FP003, FA001–FA004) e das invariantes em `00-domain-invariants.md`. Falta validação do PO/Produto sobre exceções ainda não descritas (disputa formal, garantia acionada em detalhe).
 
@@ -15,12 +15,12 @@ Eventos de domínio (passado, o que já aconteceu) → Commands que os disparam 
 | 3 | CriarSolicitacao | Cliente | `SolicitacaoCriada` | Notificar profissionais elegíveis na categoria/raio |
 | 4 | EnviarProposta | Profissional | `PropostaEnviada` | Notificar cliente |
 | 5 | AceitarProposta | Cliente | `PropostaAceita` | **P1** Recusar automaticamente as demais propostas (INV-011) · **P2** Criar `Serviço` a partir da proposta (INV-020/021) · **P3** Habilitar chat |
-| 6 | AgendarServico | Cliente+Profissional | `ServicoAgendado` |, |
-| 7 | IniciarExecucao | Profissional | `ExecucaoIniciada` |, |
+| 6 | AgendarServico | Cliente+Profissional | `ServicoAgendado` | (nenhuma, aguarda execução) |
+| 7 | IniciarExecucao | Profissional | `ExecucaoIniciada` | (nenhuma, chat permanece habilitado) |
 | 8 | RegistrarConclusao | Profissional | `ConclusaoRegistrada` | Notificar cliente, iniciar janela de aceite automático (B002) |
 | 9 | ConfirmarConclusao **ou** expirar janela | Cliente / Sistema | `ServicoAprovado` | **P4** Capturar pagamento (INV-041) · **P5** Emitir garantia (INV-050) |
 | 10 | (interno) | Sistema | `PagamentoCapturado` | **P6** Agendar repasse após janela de contestação (B002) |
-| 11 | (interno) | Sistema | `PagamentoRepassado` |, |
+| 11 | (interno) | Sistema | `PagamentoRepassado` | Notifica profissional do repasse |
 | 12 | (interno) | Sistema | `InterventionRegistrada` | Anexa ao prontuário do imóvel (INV-060/061) |
 | 13 | AvaliarServico | Cliente | `AvaliacaoRegistrada` | Atualiza reputação do profissional (RN007) |
 

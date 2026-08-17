@@ -1,4 +1,4 @@
-# 04, Decisions Pending (Bloqueadores Formais)
+# 04: Decisions Pending (Bloqueadores Formais)
 
 > Bloqueadores de arquitetura/negócio, com status explícito. Nenhum item aqui é "detalhe a resolver depois", são pontos que **mudam** modelo de dados, API ou fluxo financeiro dependendo da resposta. Registrado pelo PO em 2026-08-16.
 
@@ -78,9 +78,28 @@ Nenhum documento até 2026-08-17 tratava de quem responde quando um profissional
 
 ---
 
+## B006, Percentual de Reserva Financeira de Garantia
+
+**Status:** Bloqueado
+
+**Impacta:** Fluxo Financeiro (PaymentSplit) · Remuneração do Profissional · Termos de Uso
+
+O mecanismo (INV-053, `adr/ADR-003-garantia.md`) está desenhado: uma fração do split do profissional fica retida até a garantia sair de `ATIVA`. O percentual em si não está definido.
+
+**Alternativas:** 10% · 15% · 20% do `valor_profissional` no split.
+
+**Trade-off**: percentual alto cobre mais risco de garantia, mas atrasa mais dinheiro do profissional (pode afetar adesão do lado profissional, ver `08-planejamento.md` "aquisição de oferta"). Percentual baixo tem o efeito oposto.
+
+**Preferência provisória:** nenhuma registrada, precisa validação de Produto com dado de ticket médio por categoria.
+
+**Responsável:** Produto + Financeiro.
+
+---
+
 ## Changelog
 
 | Data | Mudança |
 |---|---|
 | 2026-08-16 | Criação a partir da revisão do PO sobre a estrutura de `foundation/`. |
 | 2026-08-17 | Adiciona B005 (responsabilidade civil por dano ao imóvel), identificado em segunda revisão crítica do PO. |
+| 2026-08-17 | Adiciona B006 (percentual de reserva financeira de garantia), identificado em terceira revisão crítica do PO. |

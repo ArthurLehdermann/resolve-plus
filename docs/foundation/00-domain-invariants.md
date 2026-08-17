@@ -1,4 +1,4 @@
-# 00, Domain Invariants
+# 00: Domain Invariants
 
 > Regras que **nunca podem ser violadas**, independente de quem implementa (dev humano ou agente de IA) ou de qual módulo está sendo alterado. Este documento é a fonte de verdade quando houver conflito com qualquer outro documento (`foundation/`, `specifications/`, `adr/`). Nasceu da `notas-revisao-arquitetural.md` (2026-08-16) e das decisões arquiteturais tomadas na sequência.
 
@@ -31,7 +31,7 @@
 ## 4. Serviço
 
 - INV-030, Um serviço pertence a exatamente uma solicitação e a exatamente uma proposta aceita.
-- INV-031, Um serviço só entra em `CONCLUIDO` após o profissional registrar conclusão **e** o cliente confirmar, ou o prazo de aceite automático (RN010, ainda **Necessita Validação** o valor do prazo) se esgotar sem contestação.
+- INV-031, Um serviço só entra em `APROVADO` após o profissional registrar conclusão **e** o cliente confirmar, ou o prazo de aceite automático (RN010, ainda **Necessita Validação** o valor do prazo) se esgotar sem contestação. (Corrigido em 2026-08-17, mesma classe de bug de INV-060: referenciava `CONCLUIDO`, estado que não existe em `02-state-machine.md`.)
 - INV-032, Um serviço `CANCELADO` não gera garantia nem libera pagamento normal (pode gerar reembolso parcial/multa, regras de cancelamento ainda pendentes de definição de negócio).
 - INV-033, Um serviço em garantia ativa que sofra nova intervenção pela **mesma causa/escopo coberto** não pode gerar nova cobrança ao cliente (regra herdada da nota de revisão, mantida).
 
@@ -54,6 +54,7 @@
 - INV-050, Toda conclusão aprovada de serviço gera exatamente uma garantia (RN005).
 - INV-051, Garantia tem prazo definido no momento da criação (herdado da proposta aceita); alterar o prazo padrão de uma categoria não afeta garantias já emitidas.
 - INV-052, Acionamento de garantia é sempre registrado como evento com evidências (fotos, descrição), nunca como simples mudança de status sem payload.
+- INV-053, Uma fração do `PaymentSplit.valor_profissional` fica retida (`valor_reserva_garantia`) até a `Garantia` correspondente sair de `ATIVA` (expirar ou ser resolvida) — sem isso, uma garantia acionada não tem nenhum lastro financeiro: o repasse já ocorreu (~72h após aprovação, B002) muito antes de a garantia poder ser acionada (até o fim do prazo de garantia, podem ser 90 dias). A reserva cobre revisita/reembolso dentro do modelo B (`adr/ADR-003-garantia.md`, profissional responde primeiro) até o limite do valor retido — **não torna a plataforma seguradora**, dano acima da reserva não é coberto por este mecanismo (mesmo limite de responsabilidade de B005). Percentual de reserva ainda não definido (ver `04-decisions-pending.md`, B006). Adicionada em 2026-08-17, terceira revisão crítica do PO ("garantia é promessa sem mecanismo").
 
 ## 7. Histórico do Imóvel (prontuário)
 
@@ -62,6 +63,8 @@
 - INV-060, Todo serviço que atinge `APROVADO` gera pelo menos uma `Intervention` no prontuário do imóvel (RN006, atualizada). Não existe estado `FINALIZADO` em `02-state-machine.md`, `APROVADO` é o único estado terminal positivo do Serviço, e é ele que dispara garantia, captura de pagamento e prontuário. (Corrigido em 2026-08-17, a versão anterior desta invariante referenciava um estado que não existe na state machine.)
 - INV-061, Uma `Intervention` referencia sempre um `Asset` dentro de uma `Area` do `Property`, nunca é solta, mesmo quando a granularidade de ambiente/item não for capturada no MVP (usar `Area`/`Asset` genéricos "Não especificado" como fallback, nunca omitir o nível).
 - INV-062, Todo registro do prontuário carrega uma flag de origem (`origem: PLATAFORMA | MANUAL | IMPORTADO`) e um selo de confiabilidade correspondente, nunca misturado sem distinção com histórico de serviços reais. Modelo híbrido (decisão provisória do PO, 2026-08-16), ver `04-decisions-pending.md` (B004), ainda sem validação final de Produto.
+- INV-063, Um `Property` é identificado unicamente por CEP + número + complemento normalizados (`chave_endereco`, `04-modelo-dados.md`), não pode existir mais de um registro de `Property` para o mesmo endereço físico. Sem isso, o prontuário (diferencial competitivo declarado em OBJ-NEG-02) fragmenta entre registros duplicados da mesma casa. Adicionada em 2026-08-17, identificada em terceira revisão crítica do PO.
+- INV-064, Transferência de posse de um `Property` (`PropertyOwnership`) nunca é unilateral: exige aceite explícito do novo dono via `PropertyOwnershipTransfer` (`04-modelo-dados.md`). O dono atual só pode iniciar a transferência; fechar o `PropertyOwnership` anterior e abrir o novo só acontece após o aceite. Adicionada em 2026-08-17, sem isso `PropertyOwnership` existia na modelagem mas não tinha nenhum caminho executável (nenhum endpoint escrevia nela).
 
 ## 8. Auditoria
 
@@ -78,3 +81,6 @@
 |---|---|
 | 2026-08-16 | Criação do documento a partir de `notas-revisao-arquitetural.md` + decisões do PO sobre Pagamento (bounded context), Contratação (evento) e Histórico do Imóvel (prontuário). |
 | 2026-08-17 | Segunda revisão crítica do PO sobre `04-modelo-dados.md`: adiciona INV-014 (ownership de Solicitação via `PropertyOwnership`) e INV-046 (reautorização de pagamento); corrige INV-060 (referenciava estado `FINALIZADO` inexistente). |
+| 2026-08-17 | Terceira revisão crítica do PO (rodada de `scripts/check-docs.sh`): corrige INV-031, mesma classe de bug de INV-060, referenciava `CONCLUIDO`, estado inexistente. |
+| 2026-08-17 | Adiciona INV-063 (identidade de Property por endereço normalizado) e INV-064 (transferência de posse exige aceite, não é unilateral). |
+| 2026-08-17 | Adiciona INV-053 (reserva financeira de garantia sobre o split do profissional) e B006 em `04-decisions-pending.md` (percentual de reserva). |

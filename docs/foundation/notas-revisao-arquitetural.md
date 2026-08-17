@@ -1,4 +1,4 @@
-# Notas, Revisão Arquitetural (2026-08-16)
+# Notas de Revisão Arquitetural (2026-08-16)
 
 Revisão crítica sobre a documentação 01–08, com pontos elevados a bloqueador de arquitetura (não apenas inconsistência editorial).
 

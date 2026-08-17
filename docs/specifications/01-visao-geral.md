@@ -1,4 +1,4 @@
-# 01, Visão Geral e Negócio
+# 01: Visão Geral e Negócio
 
 > Documento gerado a partir do briefing de origem (conversa de ideação do produto). Nível de detalhamento: especificação de arquiteto sênior, servindo de base para os documentos 02–08.
 

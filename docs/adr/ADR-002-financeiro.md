@@ -1,4 +1,4 @@
-# ADR-002, Modelo Financeiro (Escrow vs. Autorizar/Capturar)
+# ADR-002: Modelo Financeiro (Escrow vs. Autorizar/Capturar)
 
 **Status:** Decisão provisória de arquitetura (não é decisão jurídica/regulatória final)
 

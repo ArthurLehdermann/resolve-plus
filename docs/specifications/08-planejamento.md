@@ -1,4 +1,4 @@
-# 08, Planejamento do MVP
+# 08: Planejamento do MVP
 
 ## Objetivo
 

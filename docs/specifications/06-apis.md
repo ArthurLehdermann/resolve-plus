@@ -1,4 +1,4 @@
-# 06, Especificação da API REST (MVP)
+# 06: Especificação da API REST (MVP)
 
 ## Padrões
 
@@ -76,13 +76,31 @@ Erros: 400, 409, 422
 
 ## Imóveis
 
-**GET /properties**, Lista imóveis do cliente.
+> Corrigido em 2026-08-17 (3ª revisão do PO): `GET /properties` descrevia "imóveis do cliente" sem passar por `PropertyOwnership` — exatamente o ownership implícito que INV-014 resolveu para Solicitação, esquecido aqui. `DELETE /properties/{id}` foi removido: um `Property` sobrevive à troca de dono por premissa (INV-063/064) e carrega prontuário — apagá-lo apaga histórico que INV-071 proíbe apagar. A ação real do cliente que "não quer mais" um imóvel é transferir a posse, não excluir.
 
-**POST /properties**, Cadastrar imóvel.
+**GET /properties**, Lista `Property` cujo dono vigente (`PropertyOwnership.ate IS NULL`, `cliente_id` = usuário autenticado) é o cliente autenticado (INV-014).
 
-**PUT /properties/{id}**, Editar imóvel.
+**POST /properties**, Cadastra `Property` (checa `UNIQUE (chave_endereco)`, INV-063 — se já existir, retorna 409 com o `property_id` existente em vez de duplicar) e cria o primeiro `PropertyOwnership` (`cliente_id` = usuário autenticado, `ate = NULL`).
 
-**DELETE /properties/{id}**, Excluir (soft delete).
+**PUT /properties/{id}**, Editar campos do imóvel (apelido, dados de endereço se houver erro de digitação — não deve permitir editar `chave_endereco` livremente sem revalidar unicidade). Requer ser o dono vigente.
+
+**POST /properties/{id}/transfer**, Dono vigente inicia transferência de posse (INV-064). Cria `PropertyOwnershipTransfer` `PENDENTE`.
+
+Request
+```json
+{
+  "para_cliente_id": "",
+  "para_email": ""
+}
+```
+
+Erros: 403 (não é o dono vigente), 404, 422 (nem `para_cliente_id` nem `para_email` informado)
+
+**POST /property-transfers/{id}/accept**, Novo dono aceita. Fecha o `PropertyOwnership` do dono anterior e abre um novo (mesma transação). Requer ser o `para_cliente_id`/dono da conta associada a `para_email`.
+
+**POST /property-transfers/{id}/decline**, Novo dono recusa. `PropertyOwnershipTransfer.status = RECUSADO`, `PropertyOwnership` não muda.
+
+**GET /property-transfers**, Lista transferências pendentes do usuário autenticado (como origem ou destino).
 
 ## Solicitações
 

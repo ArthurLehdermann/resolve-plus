@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Instalado via: git config core.hooksPath .githooks
+# (feito automaticamente para este clone em 2026-08-17; para clones novos, rodar o comando acima uma vez)
+set -uo pipefail
+cd "$(git rev-parse --show-toplevel)"
+
+if ! git diff --cached --name-only | grep -q '^docs/'; then
+  exit 0
+fi
+
+bash scripts/check-docs.sh
+exit $?

@@ -1,4 +1,4 @@
-# 02, Funcionalidades
+# 02: Funcionalidades
 
 ## 1. Casos de Uso
 
@@ -105,9 +105,9 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 | RN001 | Apenas profissionais verificados podem receber solicitações. |
 | RN002 | Cliente só pode contratar uma proposta por solicitação. |
 | RN003 | Pagamento é autorizado no aceite da proposta e só é capturado/repassado após conclusão e aprovação do serviço, não é escrow, é autorizar→capturar→repassar (ver `adr/ADR-002-financeiro.md`, INV-041). Redigido em 2026-08-16 com vocabulário de escrow ("retido"), corrigido em 2026-08-17. |
-| RN004 | Avaliação somente após conclusão. |
-| RN005 | Toda conclusão gera garantia. |
-| RN006 | Todo serviço concluído entra no histórico do imóvel. |
+| RN004 | Avaliação só é permitida com o Serviço em `APROVADO` (não existe estado "concluído" separado, ver `foundation/02-state-machine.md`). |
+| RN005 | Todo Serviço que atinge `APROVADO` gera garantia (INV-050). |
+| RN006 | Todo Serviço que atinge `APROVADO` entra no prontuário do imóvel via `Intervention` (INV-060). |
 | RN007 | Profissionais possuem reputação baseada em desempenho. |
 | RN008 | Cancelamentos impactam reputação. |
 | RN009 | Fotos podem ser exigidas na conclusão. |
@@ -165,7 +165,9 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 
 **Serviço**: Agendado → Em andamento → Aguardando Aprovação → Aprovado / Em Contestação → Cancelado
 
-**PaymentAuthorization**: Autorizado → Capturado → Repassado (evento) | Cancelado | Expirado → Reautorizado (INV-046) | Reembolsado (sobre capturado)
+**PaymentAuthorization.status** (4 valores): Autorizado → Capturado | Cancelado | Expirado → (nova autorização, evento Reautorizado, INV-046). `Capturado` é terminal para o status.
+
+**PaymentEvent.tipo sobre autorização Capturado** (histórico, não status): Repassado, Reembolsado — ver `foundation/02-state-machine.md` §4b, corrigido em 2026-08-17 para não misturar as duas máquinas.
 
 **Garantia**: Ativa → Expirada → Acionada → Encerrada
 
