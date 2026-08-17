@@ -74,7 +74,7 @@ Erros: 400, 409, 422
 
 **GET /categories**, Lista categorias disponíveis.
 
-**GET /categories/{id}**, Detalhes, inclui `template_escopo` (schema dos campos estruturados que `POST /requests` exige para essa categoria, INV-080). App usa isso pra renderizar o formulário de escopo antes de criar a solicitação.
+**GET /categories/{id}**, Detalhes, inclui `template_escopo` (schema dos campos estruturados que `POST /requests` exige para essa categoria, INV-080). App usa isso pra renderizar o formulário de escopo antes de criar a solicitação. Campos do template podem trazer `ajuste_preco` (consumido pelo motor de `10-motor-precificacao.md`, não é campo de formulário).
 
 ## Imóveis
 
@@ -106,11 +106,13 @@ Erros: 403 (não é o dono vigente), 404, 422 (nem `para_cliente_id` nem `para_e
 
 ## Solicitações
 
+> Adicionado em 2026-08-17 (issue #2): `POST /requests/estimate` e snapshot `estimated_price_*` na criação/detalhe. Heurística em `10-motor-precificacao.md`. Declarar a rota `/requests/estimate` **antes** de `/requests/{id}` para `estimate` não ser lido como UUID.
+
 **GET /requests**, Lista solicitações do usuário.
 
 Filtros: `status`, `categoria`, `data`
 
-**POST /requests**, Criar solicitação. Valida `scope` contra `Categoria.template_escopo` da `category_id` informada (INV-080), campo obrigatório do template ausente é 422.
+**POST /requests/estimate**, Pré-visualização da faixa (OBJ-MVP-01: antes de contratar / antes de falar com profissional). Mesmo body de `POST /requests`, **não persiste**. Recalcula a cada chamada.
 
 Request
 ```json
@@ -123,11 +125,49 @@ Request
 }
 ```
 
-Erros: 422 (`scope` não bate com `template_escopo` da categoria)
+Response `200`
+```json
+{
+  "estimated_price_min": 8000,
+  "estimated_price_max": 25000,
+  "estimated_price_factor_bp": 10000
+}
+```
 
-**GET /requests/{id}**, Detalhes.
+Valores em centavos. `estimated_price_min < estimated_price_max` sempre.
 
-**PUT /requests/{id}**, Editar enquanto aberta. `scope` não é editável se já existir proposta para a solicitação (mudar escopo depois de propostas enviadas quebra a comparabilidade que gerou, INV-080), 409 nesse caso.
+Erros: 422 (`scope` não bate com `template_escopo` da categoria; código `PRECO_TABELA_AUSENTE` se não houver `TabelaPreco` ativa para a categoria + `Property.cidade`)
+
+**POST /requests**, Criar solicitação. Valida `scope` contra `Categoria.template_escopo` da `category_id` informada (INV-080), campo obrigatório do template ausente é 422. Calcula a faixa pela heurística de `10-motor-precificacao.md`, grava snapshot (`faixa_preco_min`/`faixa_preco_max`/`faixa_preco_fator_bp`/`tabela_preco_id`) e devolve a faixa na resposta. Ignora qualquer `estimated_price_*` enviado no body (a faixa não é input do cliente).
+
+Request
+```json
+{
+  "property_id": "",
+  "category_id": "",
+  "description": "",
+  "scope": {},
+  "desired_date": ""
+}
+```
+
+Response `201`
+```json
+{
+  "id": "",
+  "status": "CRIADA",
+  "estimated_price_min": 8000,
+  "estimated_price_max": 25000,
+  "estimated_price_factor_bp": 10000,
+  "price_table_id": ""
+}
+```
+
+Erros: 422 (`scope` não bate com `template_escopo` da categoria; código `PRECO_TABELA_AUSENTE` se não houver `TabelaPreco` ativa para a categoria + `Property.cidade`)
+
+**GET /requests/{id}**, Detalhes. Inclui o snapshot `estimated_price_min`, `estimated_price_max`, `estimated_price_factor_bp`, `price_table_id`.
+
+**PUT /requests/{id}**, Editar enquanto aberta. `scope` não é editável se já existir proposta para a solicitação (mudar escopo depois de propostas enviadas quebra a comparabilidade que gerou, INV-080), 409 nesse caso. Se `scope`/`category_id`/`property_id` mudam e ainda não há proposta, recalcula e persiste o snapshot da faixa. Se já houver proposta, o snapshot permanece congelado com o escopo.
 
 **DELETE /requests/{id}**, Cancelar.
 
@@ -137,7 +177,7 @@ Erros: 422 (`scope` não bate com `template_escopo` da categoria)
 
 **GET /requests/{id}/proposals**, Lista propostas.
 
-**POST /requests/{id}/proposals**, Profissional envia proposta.
+**POST /requests/{id}/proposals**, Profissional envia proposta. No MVP, `price` **não** é validado contra a faixa estimada da solicitação (`10-motor-precificacao.md` §4).
 ```json
 {
   "price": 350,
@@ -260,6 +300,25 @@ Request
 **GET /admin/payments**, Pagamentos.
 
 **GET /admin/dashboard**, Indicadores gerais.
+
+**GET /admin/price-tables**, Lista `TabelaPreco` (Admin).
+
+**POST /admin/price-tables**, Cria linha (Admin). Uma linha ativa por `(category_id, city)`.
+
+Request
+```json
+{
+  "category_id": "",
+  "city": "",
+  "min_amount": 8000,
+  "max_amount": 25000,
+  "active": true
+}
+```
+
+`min_amount`/`max_amount` em centavos. Erros: 403 (fora do papel Admin), 409 (já existe linha ativa para o par), 422 (`min_amount <= 0` ou `max_amount < min_amount`)
+
+**PUT /admin/price-tables/{id}**, Edita `min_amount` / `max_amount` / `active` (Admin). Não reescreve `Solicitacao` já criada (snapshot). Erros: 403, 404, 409 (ativar colidiria com outra linha ativa do mesmo par), 422.
 
 ## Paginação
 

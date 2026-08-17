@@ -14,7 +14,7 @@ Usuário
  └── Profissional
         │
         ▼
-Categoria
+Categoria ── TabelaPreco
         │
         ▼
 Solicitação ──(property_id)──> Property ── Area ── Asset ── Intervention
@@ -79,6 +79,25 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 **`template_escopo`**: schema dos campos estruturados que uma Solicitação dessa categoria precisa preencher (ex.: Pintura → `{comodos: int, area_m2: number, tipo_tinta: enum, paredes_ou_teto: enum}`; Elétrica → `{tipo_servico: enum, quantidade_pontos: int}`). É o que torna `Solicitacao.escopo` (abaixo) estruturado em vez de texto livre, e o que faz `Proposta` não ter campo de escopo próprio ser suficiente para garantir comparabilidade (INV-080, OBJ-MVP-03). Sem template por categoria, "propostas comparáveis" é intenção declarada sem modelo, não um comportamento garantido pelo schema.
 
+Campos do template **podem** declarar `ajuste_preco` opcional (fator em basis points, `10000` = 1.0). Campo sem `ajuste_preco` não altera a faixa estimada. Schema e fórmula em `10-motor-precificacao.md` §2.2.
+
+### TabelaPreco
+
+> Adicionado em 2026-08-17 (issue #2). Bootstrap da estimativa de preço sem histórico próprio de serviços na cidade piloto. Heurística, pesquisa de cold start e fórmula em `10-motor-precificacao.md`. Não é proposta e não é preço cobrável; o valor da transação continua sendo `Proposta.valor`.
+
+**Campos**: id, categoria_id, cidade, valor_min (INTEGER, centavos), valor_max (INTEGER, centavos), ativo, criado_em, atualizado_em
+
+**Índice obrigatório**: `UNIQUE (categoria_id, cidade) WHERE ativo = true`, no máximo uma linha ativa por par categoria+cidade.
+
+**Regras**:
+- `valor_min > 0` e `valor_max >= valor_min`.
+- Linha com `ativo = false` não entra no cálculo.
+- Sem linha ativa para `categoria_id` + `Property.cidade` da solicitação, a estimativa **falha**: `POST /requests` e `POST /requests/estimate` respondem 422 com código `PRECO_TABELA_AUSENTE`. Não inventa número.
+- Editar `valor_min`/`valor_max` depois **não** reescreve `Solicitacao` já criada (snapshot em `faixa_preco_*` abaixo).
+- Só Admin cria/edita (RF028 / `06-apis.md` `/admin/price-tables`).
+
+**Relacionamentos**: Categoria N:1 · Solicitação 1:N (via `tabela_preco_id` do snapshot)
+
 ### Property (Imóvel)
 
 > Renomeado de `Imovel` para alinhar com `06-apis.md` (`/properties`, `property_id`) e com INV-061/062. Antes ligado a `cliente_id` como FK fixa, isso contradizia o glossário ("vinculado ao endereço/unidade, não à pessoa") e quebrava o prontuário na venda do imóvel. Agora o vínculo com o dono é mutável (via `PropertyOwnership`) e separado da identidade do registro.
@@ -129,15 +148,17 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 ### Solicitacao
 
-**Campos**: id, cliente_id, categoria_id, property_id, descricao, escopo (JSONB), status, data_desejada, criado_em
+**Campos**: id, cliente_id, categoria_id, property_id, descricao, escopo (JSONB), status, data_desejada, faixa_preco_min (INTEGER, centavos), faixa_preco_max (INTEGER, centavos), faixa_preco_fator_bp (INTEGER), tabela_preco_id, criado_em
 
 > Campo renomeado de `endereco_id` para `property_id`, a versão anterior divergia de `06-apis.md`, que já usa `property_id` em `POST /requests`. Toda solicitação nasce vinculada a um imóvel (que carrega o endereço), não a um endereço solto, porque o prontuário (`Intervention`) precisa de um `Property` para existir.
 >
 > **`escopo`** (adicionado em 2026-08-17, quarta revisão do PO, modela INV-080): estrutura preenchida pelo cliente na criação, validada contra `Categoria.template_escopo` (campos obrigatórios do template presentes). `descricao` continua existindo como texto livre complementar, mas o escopo comparável entre propostas é este campo estruturado, não a descrição. É fixo depois de criada a solicitação (editar escopo depois de já existirem propostas quebraria a comparabilidade que gerou; se precisar mudar, cancela e recria).
+>
+> **`faixa_preco_*` / `tabela_preco_id`** (adicionado em 2026-08-17, issue #2, fecha OBJ-MVP-01 e OBJ-TEC-02): snapshot da estimativa no instante do cálculo (`10-motor-precificacao.md`). `faixa_preco_min < faixa_preco_max` sempre (intervalo, nunca ponto único). Não é input do cliente nem do profissional; `POST /requests` ignora qualquer faixa enviada no body. Recálculo só em `PUT /requests/{id}` quando `escopo`/`categoria_id`/`property_id` mudam **e** ainda não há proposta (mesmo recorte de INV-080); se já houver proposta, o snapshot fica congelado junto com o escopo.
 
 **Regra (INV-080)**: `Proposta` não tem campo de escopo (ver entidade abaixo), o profissional responde sobre o `escopo` da `Solicitacao` como está, só varia valor/prazo/garantia_dias/observacoes. A ausência do campo na tabela é o que impede a violação, não é só validação de API.
 
-**Relacionamentos**: Cliente, Categoria, Property, Fotos, Propostas
+**Relacionamentos**: Cliente, Categoria, Property, TabelaPreco, Fotos, Propostas
 
 ### FotoSolicitacao
 
@@ -232,7 +253,7 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 ## Tabelas Auxiliares
 
 ### Configuração
-Parâmetros globais: comissão (%), prazo de garantia padrão, `AUTO_APPROVAL_HOURS` (tempo limite para aceite automático, 72h, `adr/ADR-004-prazo-aceite-automatico.md`), raio máximo de atendimento.
+Parâmetros globais: comissão (%), prazo de garantia padrão, `AUTO_APPROVAL_HOURS` (tempo limite para aceite automático, 72h, `adr/ADR-004-prazo-aceite-automatico.md`), raio máximo de atendimento, `PRECO_ARREDONDAMENTO_CENTAVOS` (default `1000` = R$ 10, usado na heurística de `10-motor-precificacao.md` §2.3).
 
 ### Notificação
 **Campos**: usuario_id, titulo, mensagem, lida, data
@@ -249,6 +270,8 @@ Para validação documental (RF002, critérios de validação ainda não definid
 | Usuário | Endereço | 1:N |
 | Usuário | Solicitação | 1:N |
 | Categoria | Solicitação | 1:N |
+| Categoria | TabelaPreco | 1:N |
+| TabelaPreco | Solicitação | 1:N (snapshot; linha pode ser editada depois sem mutar solicitações antigas) |
 | Property | Area | 1:N |
 | Property | PropertyOwnership | 1:N |
 | Property | PropertyOwnershipTransfer | 1:N |
@@ -300,7 +323,9 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 
 **Usuário**: email (Unique), telefone, tipo
 
-**Solicitação**: cliente_id, categoria_id, property_id, status, criado_em
+**Solicitação**: cliente_id, categoria_id, property_id, tabela_preco_id, status, criado_em
+
+**TabelaPreco**: categoria_id, cidade, ativo, `UNIQUE (categoria_id, cidade) WHERE ativo = true`
 
 **Proposta**: profissional_id, solicitacao_id, status, `UNIQUE (solicitacao_id) WHERE status = 'ACEITA'`
 
@@ -323,6 +348,7 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 ## Regras de Integridade
 
 - Toda solicitação pertence a um cliente e a um property, e o cliente deve ser o dono vigente do property (`PropertyOwnership.ate IS NULL` com `cliente_id` igual ao da solicitação), INV-014.
+- Toda solicitação persistida carrega snapshot `faixa_preco_min`, `faixa_preco_max`, `faixa_preco_fator_bp` e `tabela_preco_id` da linha ativa usada no cálculo; `faixa_preco_min < faixa_preco_max`. Sem `TabelaPreco` ativa para o par categoria+cidade, a solicitação não é criada.
 - Toda proposta pertence a uma solicitação.
 - Só o cliente dono da solicitação pode aceitar uma proposta dela, `POST /proposals/{id}/accept` checa `solicitacao.cliente_id` contra o usuário autenticado (ownership, INV-013).
 - No máximo uma proposta por solicitação pode estar `ACEITA` (índice parcial, não só validação de aplicação).
@@ -343,6 +369,8 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 - A contratação poderá envolver mais de um profissional?
 - Exclusão LGPD por anonimização (proposta acima) precisa de validação jurídica, mesma pendência de B001/ADR-002.
 - Responsabilidade civil por dano ao imóvel durante a execução do serviço não tem mecanismo nem entidade, maior risco reputacional de marketplace presencial e não citado em nenhum documento até 2026-08-17 (ver B005 em `foundation/04-decisions-pending.md`).
+- Valores reais de `TabelaPreco` na cidade piloto (os exemplos de `10-motor-precificacao.md` §2.1 são chutes operacionais, não copiar para produção sem revisão).
+- Quais campos de cada `template_escopo` carregam `ajuste_preco` no lançamento.
 
 ## Changelog
 
@@ -353,3 +381,4 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 | 2026-08-17 (4ª passada) | Rebaixa INV-053 de invariante fechada para proposta (ADR-002/003 reabertos, ver `foundation/00-domain-invariants.md`); referencia INV-001/013/022/030/033 (estavam órfãs, sem nenhum ponto de aplicação); modela INV-080 (`Categoria.template_escopo` + `Solicitacao.escopo`, `Proposta` sem campo de escopo por construção). |
 | 2026-08-17 (3ª passada) | Adiciona `chave_endereco` (CEP+numero+complemento normalizados, `UNIQUE`) em Property (INV-063, corrige duplicidade de imóvel); adiciona `PropertyOwnershipTransfer` e regra de aceite explícito (INV-064, corrige `PropertyOwnership` sem caminho executável); corrige INV-031 (`CONCLUIDO`→`APROVADO`, mesma classe de bug de INV-060). |
 | 2026-08-17 (2ª passada) | Corrige 4 contradições introduzidas na 1ª passada: `PaymentAuthorization` vira 1:N com reautorização (INV-046, não mais órfão financeiro em autorização expirada); `Property` passa a ter endereço próprio em vez de FK para `Endereco.usuario_id` (venda de imóvel não deixa mais o endereço preso ao dono anterior); `INV-060` corrigida para `APROVADO` (referenciava `FINALIZADO`, estado inexistente); adiciona INV-014 (ownership de Solicitação via `PropertyOwnership`). |
+| 2026-08-17 (issue #2) | Adiciona `TabelaPreco` (categoria+cidade, editável por Admin) e snapshot `faixa_preco_min`/`faixa_preco_max`/`faixa_preco_fator_bp`/`tabela_preco_id` em `Solicitacao`; `Configuração.PRECO_ARREDONDAMENTO_CENTAVOS`. Heurística em `10-motor-precificacao.md`. |

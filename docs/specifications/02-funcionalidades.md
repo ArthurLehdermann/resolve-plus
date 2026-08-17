@@ -27,7 +27,7 @@
 
 ## 2. Jornada do Cliente
 
-Abrir aplicativo → Login/Cadastro → Escolher categoria → Descrever problema → Enviar fotos → Confirmar endereço → Criar solicitação → Profissionais recebem → Receber propostas → Comparar propostas → Selecionar profissional → Chat → Agendamento → Execução → Conclusão → Aceite → Pagamento liberado → Avaliação → Serviço entra no histórico
+Abrir aplicativo → Login/Cadastro → Escolher categoria → Descrever problema → Enviar fotos → Confirmar endereço → Ver faixa de preço estimada → Criar solicitação → Profissionais recebem → Receber propostas → Comparar propostas → Selecionar profissional → Chat → Agendamento → Execução → Conclusão → Aceite → Pagamento liberado → Avaliação → Serviço entra no histórico
 
 ## 3. Jornada do Profissional
 
@@ -37,11 +37,12 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 
 **FP001, Solicitar serviço**
 1. Cliente escolhe categoria.
-2. Informa descrição.
+2. Informa descrição e preenche o `escopo` do `template_escopo`.
 3. Anexa imagens.
-4. Informa endereço.
-5. Sistema cria solicitação.
-6. Profissionais elegíveis recebem notificação.
+4. Informa endereço (imóvel).
+5. Sistema calcula e exibe faixa de preço estimada (`POST /requests/estimate`, `10-motor-precificacao.md`). A faixa é informativa, não é proposta.
+6. Cliente confirma; sistema cria a solicitação com snapshot da faixa (`POST /requests`).
+7. Profissionais elegíveis recebem notificação.
 
 **FP002, Contratação**
 1. Cliente recebe propostas.
@@ -76,7 +77,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 | RF005 | Editar perfil | Alta | Inferência | RF001 |
 | RF006 | Cadastro de endereço | Alta | Conversa | RF001 |
 | RF007 | Cadastro de categorias | Alta | Conversa | Admin |
-| RF008 | Criar solicitação | Alta | Conversa | RF006 |
+| RF008 | Criar solicitação | Alta | Conversa | RF006, RF029 |
 | RF009 | Upload de fotos | Alta | Conversa | RF008 |
 | RF010 | Localizar profissionais próximos | Alta | Conversa | RF008 |
 | RF011 | Notificar profissionais | Alta | Conversa | RF010 |
@@ -97,6 +98,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 | RF026 | Sistema de reputação | Média | Conversa | RF022 |
 | RF027 | Notificações push | Média | Inferência | RF011 |
 | RF028 | Painel administrativo | Alta | Inferência | Todos |
+| RF029 | Gerar e exibir faixa de preço estimada (heurística tabela+escopo, sem ML) | Alta | OBJ-MVP-01 | RF006, RF007 |
 
 ## 7. Regras de Negócio
 
@@ -121,6 +123,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 
 **Cliente**
 - Solicitar serviço
+- Ver faixa de preço estimada
 - Receber propostas
 - Contratar
 - Conversar
@@ -139,6 +142,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 **Administrador**
 - Gerenciar usuários
 - Gerenciar categorias
+- Gerenciar tabelas de preço
 - Moderar avaliações
 - Resolver disputas
 - Visualizar métricas
@@ -149,6 +153,8 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 | Ação | Cliente | Profissional | Admin |
 |---|---|---|---|
 | Criar solicitação | ✔ | ✖ | ✔ |
+| Pré-visualizar estimativa de preço | ✔ | ✖ | ✔ |
+| Gerenciar tabela de preço | ✖ | ✖ | ✔ |
 | Enviar proposta | ✖ | ✔ | ✖ |
 | Contratar | ✔ | ✖ | ✔ |
 | Chat | ✔ | ✔ | ✔ |

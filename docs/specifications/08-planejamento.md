@@ -16,7 +16,7 @@ Transformar a visão do produto em um plano de execução incremental, reduzindo
 
 **Épico 1, Autenticação**: cadastro, login, recuperação de senha, perfil.
 
-**Épico 2, Solicitações**: criar solicitação, upload de fotos, endereço, categorias.
+**Épico 2, Solicitações**: criar solicitação, faixa de preço estimada (heurística, `10-motor-precificacao.md`), upload de fotos, endereço, categorias.
 
 **Épico 3, Propostas**: recebimento, comparação, aceite, rejeição.
 
@@ -26,7 +26,7 @@ Transformar a visão do produto em um plano de execução incremental, reduzindo
 
 **Épico 6, Avaliações**: avaliação, reputação, garantia, histórico do imóvel.
 
-**Épico 7, Administração**: gestão de usuários, categorias, serviços, relatórios básicos.
+**Épico 7, Administração**: gestão de usuários, categorias, tabelas de preço, serviços, relatórios básicos.
 
 ### Pós-MVP (V1)
 
@@ -46,7 +46,7 @@ Marketplace de materiais, seguro para serviços, assinatura de manutenção prev
 
 ## Backlog Inicial
 
-**Prioridade P0 (Obrigatório)**: cadastro e login, cadastro de profissionais, cadastro de clientes, categorias, solicitação de serviço, upload de fotos, propostas, contratação, agenda, chat, conclusão, pagamento protegido, avaliação, garantia, histórico do imóvel, painel administrativo.
+**Prioridade P0 (Obrigatório)**: cadastro e login, cadastro de profissionais, cadastro de clientes, categorias, solicitação de serviço, faixa de preço estimada, upload de fotos, propostas, contratação, agenda, chat, conclusão, pagamento protegido, avaliação, garantia, histórico do imóvel, painel administrativo.
 
 **Prioridade P1 (Importante)**: push notifications, recuperação de senha, perfil avançado, indicadores, dashboard, relatórios.
 
@@ -55,7 +55,7 @@ Marketplace de materiais, seguro para serviços, assinatura de manutenção prev
 ## User Stories
 
 **US001**, Como cliente, quero solicitar um serviço, para receber propostas de profissionais.
-Critérios de Aceite: categoria obrigatória, descrição obrigatória, endereço válido, solicitação criada com sucesso.
+Critérios de Aceite: categoria obrigatória, descrição obrigatória, endereço válido, faixa de preço estimada devolvida (min/max), solicitação criada com sucesso.
 
 **US002**, Como profissional, quero enviar uma proposta, para disputar uma oportunidade.
 Critérios: valor obrigatório, prazo obrigatório, garantia informada.
@@ -68,7 +68,7 @@ Critérios: valor obrigatório, prazo obrigatório, garantia informada.
 
 ## Critérios de Aceite do MVP
 
-O MVP será considerado pronto quando permitir: cadastro e autenticação de clientes e profissionais, solicitação de serviços com fotos, recebimento de propostas, contratação, chat entre as partes, registro da execução, aprovação do cliente, liberação do pagamento, avaliação, geração da garantia, registro no histórico do imóvel, painel administrativo funcional.
+O MVP será considerado pronto quando permitir: cadastro e autenticação de clientes e profissionais, solicitação de serviços com fotos e faixa de preço estimada, recebimento de propostas, contratação, chat entre as partes, registro da execução, aprovação do cliente, liberação do pagamento, avaliação, geração da garantia, registro no histórico do imóvel, painel administrativo funcional.
 
 ## Dependências
 

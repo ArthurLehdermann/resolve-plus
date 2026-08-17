@@ -52,7 +52,7 @@ Object Storage (S3 compatível), para armazenar fotos, documentos, evidências, 
 
 ## Módulos do Sistema
 
-Autenticação, Usuários, Perfis, Categorias, Solicitações, Propostas, Serviços, Agenda, Chat, Pagamentos, Garantias, Prontuário do Imóvel, Avaliações, Notificações, Administração.
+Autenticação, Usuários, Perfis, Categorias, Solicitações (inclui cálculo da faixa de preço, `10-motor-precificacao.md`), Propostas, Serviços, Agenda, Chat, Pagamentos, Garantias, Prontuário do Imóvel, Avaliações, Notificações, Administração (inclui `TabelaPreco`).
 
 > "Contratações" removido em 2026-08-17, não existe entidade `Contratação` (INV-020). O que a proposta aceita gera é o módulo `Serviços` diretamente.
 
@@ -108,7 +108,7 @@ Executar em filas: envio de e-mails, push notifications, SMS, geração de hist�
 
 **CEP**: ViaCEP (Brasil), para preenchimento automático do endereço.
 
-**IA (Futuro)**: OpenAI ou modelo equivalente para organização automática do escopo, estimativa inicial de preço, sugestão de materiais. Fora do MVP.
+**IA (Futuro)**: OpenAI ou modelo equivalente para organização automática do escopo, estimativa inicial de preço, sugestão de materiais. Fora do MVP. A faixa de preço do MVP **não** é este item: é a heurística de `TabelaPreco` + `template_escopo` em `10-motor-precificacao.md` (OBJ-MVP-01 / OBJ-TEC-02 / RF029).
 
 ## Escalabilidade
 
