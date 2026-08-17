@@ -118,7 +118,7 @@ Incluído:
 |---|---|
 | Resolve+ | Nome provisório do produto/plataforma. |
 | Prontuário do Imóvel | Histórico digital de serviços executados em um imóvel específico, vinculado ao endereço/unidade, não à pessoa. |
-| Orçamento Inteligente | Estimativa de preço gerada a partir de categoria, região e histórico de serviços similares, antes da escolha do profissional. |
+| Orçamento Inteligente | Estimativa de preço gerada a partir de categoria, região e histórico de serviços similares, antes da escolha do profissional. No MVP é heurística de tabela de referência + ajuste por `template_escopo` (`10-motor-precificacao.md`), não ML. |
 | Escopo Padronizado | Descrição estruturada do serviço solicitado, usada como base comum para todas as propostas recebidas, permite comparação direta entre profissionais. |
 | Pagamento Protegido | Modalidade em que o valor pago pelo cliente fica retido pela plataforma até a conclusão/aceite do serviço (escrow). |
 | Garantia Digital | Registro formal, dentro da plataforma, de cobertura pós-serviço (prazo, escopo coberto, evidências antes/depois). |
