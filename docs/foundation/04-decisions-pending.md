@@ -30,7 +30,7 @@ Isso resolve, por consequência, a reabertura de `adr/ADR-002-financeiro.md`: se
 
 **Decisão:** 72 horas, modelado como parâmetro `AUTO_APPROVAL_HOURS` (tabela `Configuração`, `04-modelo-dados.md`), não como valor fixo em código. Ver `adr/ADR-004-prazo-aceite-automatico.md`.
 
-Relacionado a `INV-031` e `INV-041` (`00-domain-invariants.md`): o pagamento só é **repassado** após aprovação do cliente **ou** o esgotamento desta janela sem contestação. Captura de Pix é imediata no aceite (`adr/ADR-005-gateway-pagamento.md`); captura de cartão continua após aprovação.
+Relacionado a `INV-031` e `INV-041` (`00-domain-invariants.md`): o pagamento do serviço executado só é **repassado** após aprovação do cliente **ou** o esgotamento desta janela sem contestação. Captura de Pix é imediata no aceite (`adr/ADR-005-gateway-pagamento.md`); captura de cartão no caminho feliz continua após aprovação. Exceção: multa do Cenário B (`03-cancellation-rules.md`) pode ser capturada/repassada sem `APROVADO`.
 
 **Responsável:** Produto (decidido). Fica aberto apenas o ajuste fino do valor após dado real de uso, não bloqueia desenvolvimento.
 
@@ -38,21 +38,19 @@ Relacionado a `INV-031` e `INV-041` (`00-domain-invariants.md`): o pagamento só
 
 ## B003, Cancelamento
 
-**Status:** Em elaboração (2026-08-17, quinta revisão do PO). Rascunho de regras registrado em `foundation/03-cancellation-rules.md`, com os 4 cenários (antes de proposta, após proposta aceita, durante execução, após conclusão) mapeados para os estados de `02-state-machine.md`. **Não desbloqueia o fluxo principal**: percentual de multa e mecanismo de resolução de disputa continuam sem resposta.
+**Status:** Resolvido provisoriamente (2026-08-17, sexta revisão do PO). Regras registradas em `foundation/03-cancellation-rules.md`. Destrava implementação de cancelamento (Cenário B), disputas (`PaymentDispute`) e `PUT /disputes/{id}/resolve`. Percentuais de multa e timeout de mediação podem ser ajustados por configuração; validação jurídica da multa e adapter concreto de captura parcial continuam pendentes.
 
-**Definido no rascunho:**
-- Antes de proposta aceita: cliente cancela livremente, sem custo (nada foi cobrado ainda).
-- Após proposta aceita, antes de iniciar (`Agendado`): cliente cancela, pode gerar multa (percentual em aberto).
-- Durante execução (`Em Andamento`): nunca cancela direto, sempre abre disputa (`Em Contestação`).
-- Após conclusão (`Aprovado`): não existe cancelamento, existe garantia (INV-053/B001) ou, se ainda dentro da janela de aceite automático, contestação de conclusão (já existente, FA004).
+**Decisão provisória do PO (2026-08-17):**
+- **Cenário B (multa):** tabela decrescente por antecedência ao agendamento: ≥48h → 10%, ≥24h → 25%, <24h → 50% do valor da proposta. Parâmetros `CANCELLATION_PENALTY_*` em `Configuração`.
+- **Cenário B (financeiro):** captura parcial da autorização `AUTORIZADO` (valor = multa), libera saldo restante; fallback captura+reembolso se gateway não suportar parcial (depende de D1). Pix: reembolso parcial pós-captura imediata.
+- **Resolução de `Em Contestação`:** Admin manual no MVP (`Usuario.tipo = ADMIN`); prazo `DISPUTE_MEDIATION_DAYS` = 7 dias; timeout automático: `CONTESTACAO_CONCLUSAO` → `Aprovado` (captura), `CANCELAMENTO_EXECUCAO` → `Cancelado` (libera autorização). Tipos de disputa e transições em `02-state-machine.md` §3.
 
-**Ainda falta definir** (`foundation/03-cancellation-rules.md`, seção "O que fica pendente"):
-- Percentual de multa (Cenário B).
-- Mecânica de captura parcial (cartão ainda `AUTORIZADO`) / reembolso parcial (Pix já `CAPTURADO`) no Cenário B. Gateway é Asaas (`adr/ADR-005-gateway-pagamento.md`); captura parcial continua **não** assumida.
-- Resolução determinística de `Em Contestação → Aprovado | Cancelado` (Cenários C/D).
-- Impacto de cancelamento/contestação recorrente na reputação: limiares e recálculo em `foundation/05-trust-level.md` (RN008); resolução determinística de disputa continua pendente (itens acima).
+**O que continua pendente:**
+- Parecer jurídico definitivo sobre percentuais de multa (CDC).
+- Implementação do adapter Asaas para captura parcial vs. fallback (captura parcial ainda não assumida, `adr/ADR-005-gateway-pagamento.md`).
+- Impacto de cancelamento/contestação recorrente na reputação: limiares já em `foundation/05-trust-level.md` (RN008); não bloqueia B003.
 
-**Responsável:** Produto + Jurídico.
+**Responsável:** Produto (decidido provisoriamente). Jurídico valida multa. Admin/PO opera mediação no MVP.
 
 ---
 
@@ -91,7 +89,7 @@ Nenhum documento até 2026-08-17 tratava de quem responde quando um profissional
 - **Responsabilidade primária:** do **profissional**, por analogia ao Modelo B de B001 (`adr/ADR-003-garantia.md`): quem executa presencialmente no imóvel responde pelos danos causados durante a execução.
 - **Papel da plataforma:** **mediadora**, não parte financeiramente responsável. A plataforma **não** mantém fundo indenizatório, **não** oferece "pledge" discricionário (TaskRabbit) nem cobertura secundária própria (Angi Happiness Guarantee) no MVP.
 - **Seguro do profissional (RF002):** **obrigatório** comprovante de apólice de responsabilidade civil (RC) vigente no cadastro/verificação do profissional. Refletido em `DocumentoProfissional` (`specifications/04-modelo-dados.md`, tipo `SEGURO_RC`). Renovação: profissional com apólice vencida não recebe novas solicitações até revalidar (status de conta permanece `ATIVA`, mas RF002 bloqueia oportunidades, detalhe de implementação futura).
-- **Sinistro durante execução:** usa o fluxo existente de disputa (`Serviço` `Em Andamento` → `Em Contestação`, Cenário C de `foundation/03-cancellation-rules.md`, B003). **Não criar entidade `Sinistro` no MVP**; evidências (fotos, descrição) ficam no registro de disputa/mediação. Resolução de mérito continua dependente de B003 (percentual, captura parcial), mas o **caminho de abertura** já existe.
+- **Sinistro durante execução:** usa o fluxo existente de disputa (`Serviço` `Em Andamento` → `Em Contestação`, Cenário C de `foundation/03-cancellation-rules.md`, B003). **Não criar entidade `Sinistro` no MVP**; evidências (fotos, descrição) ficam no registro de disputa/mediação. Resolução de mérito segue a tabela de `CANCELAMENTO_EXECUCAO` em `03-cancellation-rules.md` (Admin + timeout 7d).
 - **Compromisso da plataforma em caso de sinistro:** (1) mediação entre cliente e profissional via fluxo de disputa; (2) **facilitar acionamento** da apólice RC do profissional (disponibilizar dados da apólice ao cliente mediante solicitação formal, registrar tentativas de contato); (3) **não** indenizar diretamente nem reter/repassar valores da plataforma para cobrir dano (consistente com B001, sem retenção adicional sobre repasse).
 
 **O que continua bloqueado (parecer jurídico definitivo):** se a decisão provisória (profissional responde, plataforma só media, seguro RC exigido no cadastro) é juridicamente suficiente para um marketplace com pagamento on-platform no Brasil (CDC, responsabilidade solidária da plataforma); valor mínimo de cobertura da apólice RC; se a plataforma precisa ser segurada adicional na apólice (modelo Angi); se sinistro exige entidade/fluxo próprio além de `Em Contestação`. Se o parecer mudar a decisão provisória, `specifications/04-modelo-dados.md` (`DocumentoProfissional`), RF002, Termos de Uso e `foundation/03-cancellation-rules.md` precisam ser revisados juntos.
@@ -128,3 +126,4 @@ Nenhum documento até 2026-08-17 tratava de quem responde quando um profissional
 | 2026-08-17 | Quinta revisão do PO: B001 parcialmente resolvido (decisão provisória sem retenção, destrava desenvolvimento, parecer jurídico definitivo continua bloqueado). B002 resolvido provisoriamente (72h, `adr/ADR-004-prazo-aceite-automatico.md`). B003 sai de "Bloqueado" simples para "Em elaboração", rascunho de regras em `03-cancellation-rules.md`. |
 | 2026-08-17 | B006 resolvido provisoriamente: Asaas no MVP, Pix aceito com captura imediata (`adr/ADR-005-gateway-pagamento.md`). Pendências residuais do ADR-002 deixam de bloquear o épico Financeiro. |
 | 2026-08-17 | Sexta revisão do PO: B005 parcialmente resolvido (decisão provisória: profissional responde, plataforma media, seguro RC obrigatório no cadastro via RF002/`DocumentoProfissional`, sinistro usa fluxo `Em Contestação`, parecer jurídico definitivo continua bloqueado). Pesquisa de mercado (TaskRabbit, GetNinjas, Angi) registrada. |
+| 2026-08-17 | Sexta revisão do PO: B003 resolvido provisoriamente (multa Cenário B, captura parcial, mediação Admin + timeout 7d, `03-cancellation-rules.md`). |
