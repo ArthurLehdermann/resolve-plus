@@ -168,7 +168,17 @@ Request
 
 **GET /payments/{id}** — Detalhes.
 
-**POST /payments/{id}/release** — Liberação manual (Admin).
+**POST /payments/{id}/release** — Liberação manual (Admin), gera `PaymentEvent` fora do fluxo automático (INV-041 exige justificativa e responsável registrados em auditoria).
+
+Request
+```json
+{
+  "justificativa": "",
+  "responsavel_id": ""
+}
+```
+
+Erros: 403 (fora do papel Admin), 409 (serviço não `APROVADO` e sem exceção administrativa), 422 (justificativa ausente)
 
 ## Garantias
 

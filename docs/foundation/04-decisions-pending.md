@@ -48,7 +48,7 @@ Falta definir:
 - Impacto na garantia.
 - Impacto na agenda.
 
-Merece um documento de regras próprio quando destravado (`03-domain-rules.md` deve referenciar, não antecipar).
+Merece um documento de regras próprio quando destravado, referenciado a partir de `00-domain-invariants.md` — não antecipar aqui.
 
 **Responsável:** Produto + Jurídico.
 

@@ -60,7 +60,7 @@ A extensão para **Resolve Empresas** (redes de lojas, condomínios, imobiliári
 
 - OBJ-NEG-01: Gerar receita via comissão por serviço concluído (percentual-alvo inicial: 8–15%).
 - OBJ-NEG-02: Criar recorrência via Prontuário do Imóvel (retenção além do momento de problema pontual).
-- OBJ-NEG-03: Reduzir a taxa de "fechamento por fora" a um nível que não inviabilize a unit economics (ver RNF de retenção em 07-engenharia.md).
+- OBJ-NEG-03: Reduzir a taxa de "fechamento por fora" a um nível que não inviabilize a unit economics (mecanismo proposto em `09-mecanismo-antidesintermediacao.md`, ainda não validado por Produto/Jurídico).
 - OBJ-NEG-04: Viabilizar, a partir da Fase 2, receita adicional por venda de materiais de construção associados ao serviço.
 - OBJ-NEG-05: Abrir, a partir da Fase 3, uma frente B2B (Resolve Empresas) com contratos recorrentes.
 
