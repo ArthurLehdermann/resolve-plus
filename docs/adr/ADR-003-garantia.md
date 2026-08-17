@@ -40,15 +40,24 @@ Responsabilidade sobre garantia é matéria de direito do consumidor, exige vali
 
 Identificado em terceira revisão crítica do PO: mesmo com Modelo B recomendado, garantia acionada não tinha nenhum lastro financeiro. O repasse ao profissional ocorre ~72h após aprovação (B002); a garantia pode ser acionada até o fim do prazo de garantia (pode passar de 90 dias). Sem retenção, "profissional responde pela garantia" (Modelo B) não tem como ser cobrado na prática, o dinheiro já saiu.
 
-**Desenho**: uma fração do `valor_profissional` no `PaymentSplit` (INV-044) fica retida como `valor_reserva_garantia` até a `Garantia` do serviço sair de `ATIVA` (INV-053, `04-modelo-dados.md`, `02-state-machine.md` §5). Se a garantia expira sem acionamento, a reserva é liberada integralmente ao profissional (`RESERVA_LIBERADA`). Se é acionada e a resolução envolve reembolso ao cliente, o reembolso é **limitado ao valor da reserva** — dano acima disso não é coberto por este mecanismo, a plataforma continua não sendo seguradora (ver B005, responsabilidade civil por dano ao imóvel, para o que fica fora do teto).
+**Desenho**: uma fração do `valor_profissional` no `PaymentSplit` (INV-044) fica retida como `valor_reserva_garantia` até a `Garantia` do serviço sair de `ATIVA` (INV-053, `04-modelo-dados.md`, `02-state-machine.md` §5). Se a garantia expira sem acionamento, a reserva é liberada integralmente ao profissional (`RESERVA_LIBERADA`). Se é acionada e a resolução envolve reembolso ao cliente, o reembolso é **limitado ao valor da reserva**, dano acima disso não é coberto por este mecanismo, a plataforma continua não sendo seguradora (ver B005, responsabilidade civil por dano ao imóvel, para o que fica fora do teto).
 
-Este desenho **não depende de B001 fechar** para existir, ele só passa a ser executado de fato quando B001 definir quem decide o desfecho de `Acionada → Encerrada`. O percentual retido é B006 (`04-decisions-pending.md`), ainda sem valor definido.
+Este desenho depende de B001 fechar, e agora inclui o parecer sobre reter repasse do profissional (ver seção abaixo, reaberto em 2026-08-17). O percentual retido, se confirmado, também está dentro de B001 (`04-decisions-pending.md`), ainda sem valor definido.
 
-**O que este mecanismo não resolve**: se o dano exceder a reserva, ou se o profissional simplesmente não tiver mais conta ativa na plataforma para reter contra, o mecanismo não cobre a diferença. Isso é o próprio limite do Modelo B (plataforma medeia, não segura) — se o PO validar juridicamente que a plataforma precisa cobrir mais que isso, o percentual de reserva (B006) sobe, ou o modelo muda para C.
+**O que este mecanismo não resolve**: se o dano exceder a reserva, ou se o profissional simplesmente não tiver mais conta ativa na plataforma para reter contra, o mecanismo não cobre a diferença. Isso é o próprio limite do Modelo B (plataforma medeia, não segura), se o PO validar juridicamente que a plataforma precisa cobrir mais que isso, o percentual de reserva sobe, ou o modelo muda para C.
+
+## Reaberto em 2026-08-17, INV-053 pode reintroduzir escrow pela porta dos fundos
+
+Quarta revisão crítica do PO: reter uma fração do repasse ao profissional (dinheiro de terceiro) por prazo determinado após a captura (até o fim do prazo de garantia, pode passar de 90 dias) tem o mesmo enquadramento regulatório que `adr/ADR-002-financeiro.md` rejeitou ao descartar escrow bancário, com prazo de retenção maior que o escrow original teria. Além disso, retenção parcial com liberação posterior sobre uma transação já capturada é um produto de gateway separado, nem sempre disponível (Asaas e Pagar.me fazem split no momento da captura; `ADR-002-financeiro.md` lista reautorização como pendência de gateway, mas não lista isto).
+
+**O mecanismo em si está certo no domínio** (garantia precisa de lastro financeiro, INV-053). **O problema é que ele muda a resposta de `ADR-002-financeiro.md` e esse ADR não foi reaberto até agora.** Os dois ADRs (`002` e `003`) e B001 (`04-decisions-pending.md`) viram um parecer jurídico único, não é possível decidir responsabilidade da garantia sem decidir também se o mecanismo que a financia é viável.
+
+**Alternativa a avaliar, se reter o repasse do profissional não passar no parecer**: lastrear a garantia com uma fração da comissão da própria plataforma (`PaymentSplit.valor_plataforma`), que já é dela por direito, não é retenção de fundo de terceiro. Reduz a margem da plataforma em vez de atrasar o pagamento do profissional. Não avaliado em detalhe, registrado aqui como caminho alternativo para quando isso voltar à mesa.
 
 ## Changelog
 
 | Data | Mudança |
 |---|---|
 | 2026-08-16 | Recomendação registrada pelo PO como arquiteto responsável, pendente de parecer jurídico (B001). |
-| 2026-08-17 | Adiciona mecanismo financeiro de reserva (INV-053, B006) — desenhado antes do parecer jurídico, como pedido pelo PO. |
+| 2026-08-17 | Adiciona mecanismo financeiro de reserva (INV-053), desenhado antes do parecer jurídico, como pedido pelo PO. |
+| 2026-08-17 | Reaberto na mesma data: mecanismo de reserva pode reintroduzir escrow, contradiz `ADR-002-financeiro.md`. Funde a pergunta de percentual em B001 (`04-decisions-pending.md`), registra alternativa (lastrear com comissão da plataforma em vez do repasse do profissional). |

@@ -74,15 +74,17 @@ Erros: 400, 409, 422
 
 **GET /categories**, Lista categorias disponíveis.
 
+**GET /categories/{id}**, Detalhes, inclui `template_escopo` (schema dos campos estruturados que `POST /requests` exige para essa categoria, INV-080). App usa isso pra renderizar o formulário de escopo antes de criar a solicitação.
+
 ## Imóveis
 
-> Corrigido em 2026-08-17 (3ª revisão do PO): `GET /properties` descrevia "imóveis do cliente" sem passar por `PropertyOwnership` — exatamente o ownership implícito que INV-014 resolveu para Solicitação, esquecido aqui. `DELETE /properties/{id}` foi removido: um `Property` sobrevive à troca de dono por premissa (INV-063/064) e carrega prontuário — apagá-lo apaga histórico que INV-071 proíbe apagar. A ação real do cliente que "não quer mais" um imóvel é transferir a posse, não excluir.
+> Corrigido em 2026-08-17 (3ª revisão do PO): `GET /properties` descrevia "imóveis do cliente" sem passar por `PropertyOwnership`, exatamente o ownership implícito que INV-014 resolveu para Solicitação, esquecido aqui. `DELETE /properties/{id}` foi removido: um `Property` sobrevive à troca de dono por premissa (INV-063/064) e carrega prontuário, apagá-lo apaga histórico que INV-071 proíbe apagar. A ação real do cliente que "não quer mais" um imóvel é transferir a posse, não excluir.
 
 **GET /properties**, Lista `Property` cujo dono vigente (`PropertyOwnership.ate IS NULL`, `cliente_id` = usuário autenticado) é o cliente autenticado (INV-014).
 
-**POST /properties**, Cadastra `Property` (checa `UNIQUE (chave_endereco)`, INV-063 — se já existir, retorna 409 com o `property_id` existente em vez de duplicar) e cria o primeiro `PropertyOwnership` (`cliente_id` = usuário autenticado, `ate = NULL`).
+**POST /properties**, Cadastra `Property` (checa `UNIQUE (chave_endereco)`, INV-063, se já existir, retorna 409 com o `property_id` existente em vez de duplicar) e cria o primeiro `PropertyOwnership` (`cliente_id` = usuário autenticado, `ate = NULL`).
 
-**PUT /properties/{id}**, Editar campos do imóvel (apelido, dados de endereço se houver erro de digitação — não deve permitir editar `chave_endereco` livremente sem revalidar unicidade). Requer ser o dono vigente.
+**PUT /properties/{id}**, Editar campos do imóvel (apelido, dados de endereço se houver erro de digitação, não deve permitir editar `chave_endereco` livremente sem revalidar unicidade). Requer ser o dono vigente.
 
 **POST /properties/{id}/transfer**, Dono vigente inicia transferência de posse (INV-064). Cria `PropertyOwnershipTransfer` `PENDENTE`.
 
@@ -108,7 +110,7 @@ Erros: 403 (não é o dono vigente), 404, 422 (nem `para_cliente_id` nem `para_e
 
 Filtros: `status`, `categoria`, `data`
 
-**POST /requests**, Criar solicitação.
+**POST /requests**, Criar solicitação. Valida `scope` contra `Categoria.template_escopo` da `category_id` informada (INV-080), campo obrigatório do template ausente é 422.
 
 Request
 ```json
@@ -116,13 +118,16 @@ Request
   "property_id": "",
   "category_id": "",
   "description": "",
+  "scope": {},
   "desired_date": ""
 }
 ```
 
+Erros: 422 (`scope` não bate com `template_escopo` da categoria)
+
 **GET /requests/{id}**, Detalhes.
 
-**PUT /requests/{id}**, Editar enquanto aberta.
+**PUT /requests/{id}**, Editar enquanto aberta. `scope` não é editável se já existir proposta para a solicitação (mudar escopo depois de propostas enviadas quebra a comparabilidade que gerou, INV-080), 409 nesse caso.
 
 **DELETE /requests/{id}**, Cancelar.
 

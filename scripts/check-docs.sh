@@ -53,5 +53,21 @@ done
 grep -rn "|, |" $DOCS >/dev/null && report SED "celula de tabela virou '|, |' apos substituicao de travessao"
 grep -rn "^# [0-9]\{2\}, " $DOCS >/dev/null && report SED "titulo H1 no formato '# NN, Titulo'"
 
+# enum -> state machine: todo valor de TipoPaymentEvent citado em 02-state-machine
+for e in $(grep -o "TipoPaymentEvent\*\*: .*" $DOCS/specifications/04-modelo-dados.md \
+           | grep -o "\`[A-Z_]*\`" | tr -d '`'); do
+  grep -q "$e" $DOCS/foundation/02-state-machine.md \
+    || report ENUM "$e no enum, ausente de 02-state-machine.md"
+done
+
+# invariante orfa: definida em 00 e nunca referenciada fora
+for i in $(grep -o "^- INV-[0-9]\{3\}" $DOCS/foundation/00-domain-invariants.md \
+           | grep -o "INV-[0-9]\{3\}"); do
+  n=$(grep -rl "$i" $DOCS | grep -vc "00-domain-invariants")
+  [ "$n" -eq 0 ] && report ORFA "$i definida, nunca aplicada em nenhum doc downstream"
+done
+
+grep -rq "—" $DOCS && report SED "travessao reintroduzido"
+
 [ $FAIL -eq 0 ] && echo "ok" || echo "FALHOU"
 exit $FAIL

@@ -167,7 +167,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 
 **PaymentAuthorization.status** (4 valores): Autorizado → Capturado | Cancelado | Expirado → (nova autorização, evento Reautorizado, INV-046). `Capturado` é terminal para o status.
 
-**PaymentEvent.tipo sobre autorização Capturado** (histórico, não status): Repassado, Reembolsado — ver `foundation/02-state-machine.md` §4b, corrigido em 2026-08-17 para não misturar as duas máquinas.
+**PaymentEvent.tipo sobre autorização Capturado** (histórico, não status): Repassado, Reembolsado, ver `foundation/02-state-machine.md` §4b, corrigido em 2026-08-17 para não misturar as duas máquinas.
 
 **Garantia**: Ativa → Expirada → Acionada → Encerrada
 

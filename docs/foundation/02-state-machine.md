@@ -48,9 +48,9 @@ Agendado|Em Andamento --(cliente/profissional/admin: cancela)--> Cancelado [regr
 - `Cancelado` nunca gera garantia nem libera pagamento normal (INV-032).
 - Transição `Em Contestação → ?` está **bloqueada** até B003 ser resolvido, hoje não há resolução determinística no domínio.
 
-## 4. Pagamento (`PaymentAuthorization` × `PaymentEvent` — duas máquinas, não uma)
+## 4. Pagamento (`PaymentAuthorization` × `PaymentEvent`, duas máquinas, não uma)
 
-> Corrigido em 2026-08-17 (3ª revisão do PO, `scripts/check-docs.sh`): a versão anterior misturava os dois no mesmo diagrama, tratando `Repassado`/`Reembolsado` como se fossem status de `PaymentAuthorization`. Não são — `StatusPaymentAuthorization` (`04-modelo-dados.md`) tem só 4 valores: `AUTORIZADO | CAPTURADO | CANCELADO | EXPIRADO`. `CAPTURADO` é terminal para a autorização em si (INV-042: toda autorização termina em captura/cancelamento/expiração). `Repassado`/`Reembolsado`/`Reautorizado` são **tipos de `PaymentEvent`**, registrados por cima de uma autorização já `CAPTURADO` — não mudam o `status` da autorização, só acrescentam histórico (INV-040, append-only).
+> Corrigido em 2026-08-17 (3ª revisão do PO, `scripts/check-docs.sh`): a versão anterior misturava os dois no mesmo diagrama, tratando `Repassado`/`Reembolsado` como se fossem status de `PaymentAuthorization`. Não são, `StatusPaymentAuthorization` (`04-modelo-dados.md`) tem só 4 valores: `AUTORIZADO | CAPTURADO | CANCELADO | EXPIRADO`. `CAPTURADO` é terminal para a autorização em si (INV-042: toda autorização termina em captura/cancelamento/expiração). `Repassado`/`Reembolsado`/`Reautorizado` são **tipos de `PaymentEvent`**, registrados por cima de uma autorização já `CAPTURADO`, não mudam o `status` da autorização, só acrescentam histórico (INV-040, append-only).
 
 **4a. Ciclo de vida de `PaymentAuthorization` (o `status`)**
 
@@ -61,8 +61,8 @@ Autorizado --(sistema: expira sem uso)--> Expirado [INV-042, nunca fica em limbo
 Expirado --(sistema: Serviço ainda não Cancelado/Aprovado)--> nova PaymentAuthorization Autorizado [evento REAUTORIZADO, INV-046]
 ```
 
-- Toda `PaymentAuthorization` termina em `Capturado`, `Cancelado` ou `Expirado` — nunca fica pendente indefinidamente (INV-042). `Capturado` é terminal: não existe transição de `status` para fora dele.
-- Uma autorização que expira sem o Serviço ter chegado a `Aprovado`/`Cancelado` gera automaticamente uma **nova** `PaymentAuthorization` (linha própria, não mudança de status) — cobre o caso de serviço agendado além da janela de autorização do gateway (cartão expira em ~5-7 dias; agendamento pode passar de 2 semanas). Nunca mais de uma `PaymentAuthorization` `Autorizado` por serviço ao mesmo tempo.
+- Toda `PaymentAuthorization` termina em `Capturado`, `Cancelado` ou `Expirado`, nunca fica pendente indefinidamente (INV-042). `Capturado` é terminal: não existe transição de `status` para fora dele.
+- Uma autorização que expira sem o Serviço ter chegado a `Aprovado`/`Cancelado` gera automaticamente uma **nova** `PaymentAuthorization` (linha própria, não mudança de status), cobre o caso de serviço agendado além da janela de autorização do gateway (cartão expira em ~5-7 dias; agendamento pode passar de 2 semanas). Nunca mais de uma `PaymentAuthorization` `Autorizado` por serviço ao mesmo tempo.
 
 **4b. Eventos registrados sobre uma autorização `Capturado` (o histórico, `PaymentEvent.tipo`)**
 
@@ -72,7 +72,7 @@ Expirado --(sistema: Serviço ainda não Cancelado/Aprovado)--> nova PaymentAuth
 ```
 
 - Reembolso só existe sobre valor já capturado; sobre apenas autorizado, o evento correto é a transição de `status` para `Cancelado` em 4a, não um `PaymentEvent` de reembolso (INV-043).
-- `REPASSADO` e `REEMBOLSADO` podem coexistir na mesma autorização (repasse ao profissional e reembolso parcial posterior ao cliente são eventos distintos, não mutuamente exclusivos) — por isso vivem em `PaymentEvent`, não em `status`.
+- `REPASSADO` e `REEMBOLSADO` podem coexistir na mesma autorização (repasse ao profissional e reembolso parcial posterior ao cliente são eventos distintos, não mutuamente exclusivos), por isso vivem em `PaymentEvent`, não em `status`.
 
 ## 5. Garantia
 
@@ -83,7 +83,7 @@ Ativa --(cliente: aciona com evidências)--> Acionada [INV-052]
 Acionada --(resolução, responsável pendente de B001)--> Encerrada [dispara evento RESERVA_LIBERADA ou PaymentRefund limitado a valor_reserva_garantia, INV-053]
 ```
 
-- Responsabilidade sobre quem resolve `Acionada → Encerrada` depende de B001 (garantia do profissional, da plataforma, ou compartilhada) — mas o mecanismo financeiro que sustenta a resolução (reserva sobre o split) não depende de B001 fechar, está desenhado em INV-053 desde 2026-08-17.
+- Responsabilidade sobre quem resolve `Acionada → Encerrada` depende de B001 (garantia do profissional, da plataforma, ou compartilhada), mas o mecanismo financeiro que sustenta a resolução (reserva sobre o split) não depende de B001 fechar, está desenhado em INV-053 desde 2026-08-17.
 - `Expirada` e `Encerrada` liberam a reserva (total ou o que sobrar dela); nenhum outro estado de `Garantia` toca `PaymentSplit`.
 
 ## 6. Conta
@@ -110,5 +110,5 @@ Ativa --(usuário: solicita exclusão)--> Excluída
 |---|---|
 | 2026-08-16 | v0.1, criado a partir de `specifications/02-funcionalidades.md` §10 e `00-domain-invariants.md`. |
 | 2026-08-17 | Adiciona transição `Expirado → Autorizado` (reautorização, INV-046), motivado por revisão do PO. |
-| 2026-08-17 | 3ª revisão: separa §4 em duas máquinas (`PaymentAuthorization.status` vs. `PaymentEvent.tipo`) — a versão anterior tratava `Repassado`/`Reembolsado` como status de autorização, quando são eventos sobre uma autorização já `Capturado` (terminal). |
-| 2026-08-17 | §5 Garantia: adiciona gatilho de `RESERVA_LIBERADA` em `Expirada`/`Encerrada` (INV-053) — garantia acionada agora tem lastro financeiro desenhado, mesmo com B001 (responsabilidade) ainda bloqueado. |
+| 2026-08-17 | 3ª revisão: separa §4 em duas máquinas (`PaymentAuthorization.status` vs. `PaymentEvent.tipo`), a versão anterior tratava `Repassado`/`Reembolsado` como status de autorização, quando são eventos sobre uma autorização já `Capturado` (terminal). |
+| 2026-08-17 | §5 Garantia: adiciona gatilho de `RESERVA_LIBERADA` em `Expirada`/`Encerrada` (INV-053), garantia acionada agora tem lastro financeiro desenhado, mesmo com B001 (responsabilidade) ainda bloqueado. |

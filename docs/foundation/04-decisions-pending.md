@@ -2,20 +2,25 @@
 
 > Bloqueadores de arquitetura/negócio, com status explícito. Nenhum item aqui é "detalhe a resolver depois", são pontos que **mudam** modelo de dados, API ou fluxo financeiro dependendo da resposta. Registrado pelo PO em 2026-08-16.
 
-## B001, Responsabilidade da Garantia
+## B001, Responsabilidade da Garantia (inclui o mecanismo financeiro que a lastreia)
 
-**Status:** Bloqueado
+**Status:** Bloqueado. Ampliado em 2026-08-17 (quarta revisão do PO) para incluir a pergunta financeira/regulatória abaixo, antes um bloqueador separado, "e agora é um item só" (PO).
 
-**Impacta:** Modelo de Dados · APIs · Fluxo Financeiro · Termos de Uso
+**Impacta:** Modelo de Dados · APIs · Fluxo Financeiro · Termos de Uso · Enquadramento Regulatório
 
-**Alternativas:**
+**Alternativas (responsabilidade):**
 - Profissional responde sozinho pela garantia (Modelo A).
 - Plataforma assume o risco financeiro da garantia (Modelo C).
 - Responsabilidade compartilhada, profissional executa e responde primeiro, plataforma media (Modelo B).
 
 **Recomendação registrada (não é decisão final):** Modelo B, reduz risco jurídico da plataforma e evita que ela vire seguradora, mantendo confiança do cliente.
 
-**Responsável:** Jurídico + Produto.
+**Pergunta financeira/regulatória (bloqueador separado até 2026-08-17, fundido aqui na mesma data):** `ADR-003-garantia.md` propõe lastrear a garantia retendo uma fração do repasse ao profissional (`valor_reserva_garantia`) por até o prazo de garantia (pode passar de 90 dias). `adr/ADR-002-financeiro.md` rejeitou escrow bancário especificamente para não reter dinheiro de terceiro, reter parte do repasse do profissional por prazo determinado após a captura tem o mesmo enquadramento. Os dois ADRs precisam do mesmo parecer jurídico, não podem ser decididos em separado: se reter o repasse não é viável, a alternativa a avaliar é lastrear a garantia com uma fração da comissão da própria plataforma (`valor_plataforma`, já é dela por direito, não é retenção de fundo de terceiro), ou reduzir a janela de exposição.
+
+**Se Modelo B + retenção do repasse forem confirmados, fica pendente também:**
+- Percentual de reserva: 10% · 15% · 20% do `valor_profissional` no split. Trade-off: percentual alto cobre mais risco de garantia, mas atrasa mais dinheiro do profissional (afeta adesão do lado profissional, ver `08-planejamento.md`, "aquisição de oferta"). Sem preferência provisória registrada, precisa dado de ticket médio por categoria.
+
+**Responsável:** Jurídico + Produto + Financeiro.
 
 ---
 
@@ -78,28 +83,11 @@ Nenhum documento até 2026-08-17 tratava de quem responde quando um profissional
 
 ---
 
-## B006, Percentual de Reserva Financeira de Garantia
-
-**Status:** Bloqueado
-
-**Impacta:** Fluxo Financeiro (PaymentSplit) · Remuneração do Profissional · Termos de Uso
-
-O mecanismo (INV-053, `adr/ADR-003-garantia.md`) está desenhado: uma fração do split do profissional fica retida até a garantia sair de `ATIVA`. O percentual em si não está definido.
-
-**Alternativas:** 10% · 15% · 20% do `valor_profissional` no split.
-
-**Trade-off**: percentual alto cobre mais risco de garantia, mas atrasa mais dinheiro do profissional (pode afetar adesão do lado profissional, ver `08-planejamento.md` "aquisição de oferta"). Percentual baixo tem o efeito oposto.
-
-**Preferência provisória:** nenhuma registrada, precisa validação de Produto com dado de ticket médio por categoria.
-
-**Responsável:** Produto + Financeiro.
-
----
-
 ## Changelog
 
 | Data | Mudança |
 |---|---|
 | 2026-08-16 | Criação a partir da revisão do PO sobre a estrutura de `foundation/`. |
 | 2026-08-17 | Adiciona B005 (responsabilidade civil por dano ao imóvel), identificado em segunda revisão crítica do PO. |
-| 2026-08-17 | Adiciona B006 (percentual de reserva financeira de garantia), identificado em terceira revisão crítica do PO. |
+| 2026-08-17 | Adiciona bloqueador de percentual de reserva financeira de garantia, identificado em terceira revisão crítica do PO (depois fundido em B001, ver linha seguinte). |
+| 2026-08-17 | Quarta revisão do PO: funde o bloqueador de percentual de reserva em B001, mesmo parecer jurídico cobre responsabilidade da garantia e se a reserva financeira que a lastreia caracteriza retenção de fundo de terceiro (mesmo enquadramento que `ADR-002-financeiro.md` evitou). Não existe mais como item numerado separado. |

@@ -47,6 +47,8 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 ### Usuario
 
+`tipo` é único e fixo por registro, sem suporte a conta híbrida cliente+profissional no MVP (INV-001), se o mesmo CPF quiser os dois papéis, são dois cadastros distintos.
+
 | Campo | Tipo | Obrigatório | Índice |
 |---|---|---|---|
 | id | UUID | Sim | PK |
@@ -73,7 +75,9 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 ### Categoria
 
-**Campos**: id, nome, descricao, ativo
+**Campos**: id, nome, descricao, ativo, template_escopo (JSONB)
+
+**`template_escopo`**: schema dos campos estruturados que uma Solicitação dessa categoria precisa preencher (ex.: Pintura → `{comodos: int, area_m2: number, tipo_tinta: enum, paredes_ou_teto: enum}`; Elétrica → `{tipo_servico: enum, quantidade_pontos: int}`). É o que torna `Solicitacao.escopo` (abaixo) estruturado em vez de texto livre, e o que faz `Proposta` não ter campo de escopo próprio ser suficiente para garantir comparabilidade (INV-080, OBJ-MVP-03). Sem template por categoria, "propostas comparáveis" é intenção declarada sem modelo, não um comportamento garantido pelo schema.
 
 ### Property (Imóvel)
 
@@ -85,7 +89,7 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 **Campos**: id, cep, logradouro, numero, complemento, bairro, cidade, estado, latitude, longitude, apelido, chave_endereco (gerado, ver abaixo)
 
-**`chave_endereco`**: normalização de `cep + numero + complemento` (maiúsculas, sem acento, sem pontuação, trim) — ex.: `01310200|100|APTO101`. Índice `UNIQUE (chave_endereco)`. **Limite conhecido**: normalização de string não resolve variação livre de texto em `complemento` (ex.: "Bloco A Apto 101" vs. "BL A AP 101" geram chaves diferentes para a mesma unidade) — mitiga duplicata óbvia, não garante deduplicação perfeita sem autocomplete/validação de endereço na criação (fora de escopo do MVP).
+**`chave_endereco`**: normalização de `cep + numero + complemento` (maiúsculas, sem acento, sem pontuação, trim), ex.: `01310200|100|APTO101`. Índice `UNIQUE (chave_endereco)`. **Limite conhecido**: normalização de string não resolve variação livre de texto em `complemento` (ex.: "Bloco A Apto 101" vs. "BL A AP 101" geram chaves diferentes para a mesma unidade), mitiga duplicata óbvia, não garante deduplicação perfeita sem autocomplete/validação de endereço na criação (fora de escopo do MVP).
 
 **Relacionamentos**: 1:N Area · 1:N PropertyOwnership · 1:N PropertyOwnershipTransfer
 
@@ -97,11 +101,11 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 **Regra de integridade**: no máximo um registro com `ate IS NULL` por `property_id`.
 
-**Quem escreve aqui**: só o fluxo de `PropertyOwnershipTransfer` abaixo (aceite do novo dono). Corrigido em 2026-08-17 (3ª revisão do PO) — a versão anterior criava a tabela mas nenhum endpoint escrevia nela; a venda do imóvel, motivo original da refatoração, não tinha caminho executável.
+**Quem escreve aqui**: só o fluxo de `PropertyOwnershipTransfer` abaixo (aceite do novo dono). Corrigido em 2026-08-17 (3ª revisão do PO), a versão anterior criava a tabela mas nenhum endpoint escrevia nela; a venda do imóvel, motivo original da refatoração, não tinha caminho executável.
 
 ### PropertyOwnershipTransfer
 
-> Transferência de posse nunca é unilateral (INV-064) — dono atual só inicia, novo dono precisa aceitar. Evita que erro de digitação ou má-fé transfira um prontuário inteiro sem o outro lado saber.
+> Transferência de posse nunca é unilateral (INV-064), dono atual só inicia, novo dono precisa aceitar. Evita que erro de digitação ou má-fé transfira um prontuário inteiro sem o outro lado saber.
 
 **Campos**: id, property_id, de_cliente_id, para_cliente_id (nulo se `para_email` ainda sem conta na plataforma), para_email, status (`PENDENTE | ACEITO | RECUSADO | EXPIRADO`), criado_em, expira_em
 
@@ -125,9 +129,13 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 ### Solicitacao
 
-**Campos**: id, cliente_id, categoria_id, property_id, descricao, status, data_desejada, criado_em
+**Campos**: id, cliente_id, categoria_id, property_id, descricao, escopo (JSONB), status, data_desejada, criado_em
 
 > Campo renomeado de `endereco_id` para `property_id`, a versão anterior divergia de `06-apis.md`, que já usa `property_id` em `POST /requests`. Toda solicitação nasce vinculada a um imóvel (que carrega o endereço), não a um endereço solto, porque o prontuário (`Intervention`) precisa de um `Property` para existir.
+>
+> **`escopo`** (adicionado em 2026-08-17, quarta revisão do PO, modela INV-080): estrutura preenchida pelo cliente na criação, validada contra `Categoria.template_escopo` (campos obrigatórios do template presentes). `descricao` continua existindo como texto livre complementar, mas o escopo comparável entre propostas é este campo estruturado, não a descrição. É fixo depois de criada a solicitação (editar escopo depois de já existirem propostas quebraria a comparabilidade que gerou; se precisar mudar, cancela e recria).
+
+**Regra (INV-080)**: `Proposta` não tem campo de escopo (ver entidade abaixo), o profissional responde sobre o `escopo` da `Solicitacao` como está, só varia valor/prazo/garantia_dias/observacoes. A ausência do campo na tabela é o que impede a violação, não é só validação de API.
 
 **Relacionamentos**: Cliente, Categoria, Property, Fotos, Propostas
 
@@ -145,7 +153,7 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 **Campos**: id, proposta_id, inicio, fim, status
 
-> `contratacao_id` removido, não existe `Contratacao` (INV-020). O Serviço referencia a Proposta aceita diretamente; o evento `ProposalAccepted` que autorizou sua criação fica em `Auditoria`.
+> `contratacao_id` removido, não existe `Contratacao` (INV-020). O Serviço referencia a Proposta aceita diretamente; o evento `ProposalAccepted` que autorizou sua criação fica em `Auditoria`. Não existe entidade `Contract` neste modelo, decisão consciente enquanto não houver artefato jurídico próprio (assinatura eletrônica, aditivo), se isso surgir, nasce como entidade nova e explícita, não reaproveitando o antigo conceito de `Contratacao` (INV-022).
 
 ### Agenda
 
@@ -169,7 +177,9 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 **Campos**: id, servico_id, inicio, fim, status (`StatusGarantia`), payment_split_id (link para a reserva que a lastreia, INV-053)
 
-**Regra de encerramento (INV-053)**: quando `status` sai de `ATIVA` (vira `EXPIRADA` sem acionamento, ou `ENCERRADA` após `ACIONADA` resolvida), dispara `RESERVA_LIBERADA` sobre o `PaymentSplit` vinculado. Se `ACIONADA` e a resolução envolve reembolso ao cliente (não revisita), o `PaymentRefund` é limitado a `valor_reserva_garantia` — dano acima disso não é coberto por este mecanismo (a plataforma não é seguradora sob o Modelo B recomendado em `adr/ADR-003-garantia.md`; ver B005 para responsabilidade civil além desse teto).
+**Revisita dentro da garantia**: se o acionamento gera um novo `Serviço` do mesmo profissional para a mesma causa/escopo já coberto, esse `Serviço` não cria `PaymentAuthorization` nova, é uma revisita sem cobrança ao cliente (INV-033). Como isso se relaciona com B003 (cancelamento/revisita ainda bloqueado) não está detalhado, dependência registrada, não resolvida aqui.
+
+**Regra de encerramento (INV-053, proposta pendente de B001, ver nota acima)**: quando `status` sai de `ATIVA` (vira `EXPIRADA` sem acionamento, ou `ENCERRADA` após `ACIONADA` resolvida), dispara `RESERVA_LIBERADA` sobre o `PaymentSplit` vinculado. Se `ACIONADA` e a resolução envolve reembolso ao cliente (não revisita), o `PaymentRefund` é limitado a `valor_reserva_garantia`, dano acima disso não é coberto por este mecanismo (a plataforma não é seguradora sob o Modelo B recomendado em `adr/ADR-003-garantia.md`; ver B005 para responsabilidade civil além desse teto).
 
 ## Bounded Context: Payment (INV-040 a INV-045)
 
@@ -198,10 +208,12 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 ### PaymentSplit
 
 > Corrigido em 2026-08-17 (3ª revisão do PO): garantia acionada não tinha lastro financeiro, o repasse já ocorreu (~72h após aprovação, B002) muito antes de a garantia poder ser acionada (prazo pode ser 90 dias). `valor_profissional` agora se divide em liberado imediato e reserva de garantia (INV-053).
+>
+> **Proposta, não decisão fechada (4ª revisão do PO, 2026-08-17):** reter parte do repasse do profissional por até 90 dias tem o mesmo enquadramento regulatório que `adr/ADR-002-financeiro.md` rejeitou ao descartar escrow. `ADR-002-financeiro.md` e `ADR-003-garantia.md` foram reabertos, fundidos com B001 em `04-decisions-pending.md`. Os campos abaixo ficam como desenho de referência até o parecer jurídico, podem mudar (ex.: reserva sair de `valor_profissional` e passar a sair de `valor_plataforma`).
 
 **Campos**: id, payment_event_id (o evento de captura), valor_profissional_liberado, valor_reserva_garantia, valor_plataforma, aliquota_vigente, percentual_reserva_vigente
 
-**Regra**: calculado no momento da captura com a alíquota e o percentual de reserva vigentes naquele instante (B006, ainda sem valor definido); alterar comissão ou percentual depois não recalcula splits antigos (INV-044). `valor_profissional_liberado` é repassado normalmente (P6, B002); `valor_reserva_garantia` fica retido até a `Garantia` do serviço sair de `ATIVA` (INV-053) — gera `PaymentEvent` próprio (`RESERVA_LIBERADA`) quando isso acontece, não é liberado junto com o repasse principal.
+**Regra**: calculado no momento da captura com a alíquota e o percentual de reserva vigentes naquele instante (percentual ainda sem valor definido, ver B001); alterar comissão ou percentual depois não recalcula splits antigos (INV-044). `valor_profissional_liberado` é repassado normalmente (P6, B002); `valor_reserva_garantia` fica retido até a `Garantia` do serviço sair de `ATIVA` (INV-053), gera `PaymentEvent` próprio (`RESERVA_LIBERADA`) quando isso acontece, não é liberado junto com o repasse principal.
 
 ### PaymentRefund
 
@@ -314,8 +326,9 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 
 - Toda solicitação pertence a um cliente e a um property, e o cliente deve ser o dono vigente do property (`PropertyOwnership.ate IS NULL` com `cliente_id` igual ao da solicitação), INV-014.
 - Toda proposta pertence a uma solicitação.
+- Só o cliente dono da solicitação pode aceitar uma proposta dela, `POST /proposals/{id}/accept` checa `solicitacao.cliente_id` contra o usuário autenticado (ownership, INV-013).
 - No máximo uma proposta por solicitação pode estar `ACEITA` (índice parcial, não só validação de aplicação).
-- Todo serviço nasce de uma proposta aceita (nunca manual fora do fluxo administrativo auditado).
+- Todo serviço nasce de uma proposta aceita (nunca manual fora do fluxo administrativo auditado) e pertence, transitivamente, a exatamente uma solicitação, via `proposta_id` (INV-030).
 - Todo serviço possui no máximo uma `PaymentAuthorization`.
 - Todo serviço que chega a `APROVADO` gera exatamente uma garantia.
 - Toda avaliação pertence a um serviço em `APROVADO`.
@@ -339,5 +352,6 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 |---|---|
 | 2026-08-16 | Versão original (pré-DDD), com `Contratacao`, `Pagamento` simples e `HistoricoImovel`. |
 | 2026-08-17 (1ª passada) | Reescrita completa contra `00-domain-invariants.md`/`02-state-machine.md`: remove `Contratacao`, introduz bounded context `Payment` (5 entidades), substitui `HistoricoImovel` por `Property/Area/Asset/Intervention`, corrige enums divergentes da state machine, renomeia `Imovel`→`Property` e `endereco_id`→`property_id` em Solicitação, adiciona `PropertyOwnership`, avaliação bidirecional, índice parcial de proposta aceita. |
+| 2026-08-17 (4ª passada) | Rebaixa INV-053 de invariante fechada para proposta (ADR-002/003 reabertos, ver `foundation/00-domain-invariants.md`); referencia INV-001/013/022/030/033 (estavam órfãs, sem nenhum ponto de aplicação); modela INV-080 (`Categoria.template_escopo` + `Solicitacao.escopo`, `Proposta` sem campo de escopo por construção). |
 | 2026-08-17 (3ª passada) | Adiciona `chave_endereco` (CEP+numero+complemento normalizados, `UNIQUE`) em Property (INV-063, corrige duplicidade de imóvel); adiciona `PropertyOwnershipTransfer` e regra de aceite explícito (INV-064, corrige `PropertyOwnership` sem caminho executável); corrige INV-031 (`CONCLUIDO`→`APROVADO`, mesma classe de bug de INV-060). |
 | 2026-08-17 (2ª passada) | Corrige 4 contradições introduzidas na 1ª passada: `PaymentAuthorization` vira 1:N com reautorização (INV-046, não mais órfão financeiro em autorização expirada); `Property` passa a ter endereço próprio em vez de FK para `Endereco.usuario_id` (venda de imóvel não deixa mais o endereço preso ao dono anterior); `INV-060` corrigida para `APROVADO` (referenciava `FINALIZADO`, estado inexistente); adiciona INV-014 (ownership de Solicitação via `PropertyOwnership`). |
