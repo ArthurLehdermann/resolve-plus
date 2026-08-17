@@ -326,9 +326,14 @@ Parâmetros globais: comissão (%), prazo de garantia padrão, `AUTO_APPROVAL_HO
 **Campos**: usuario_id, titulo, mensagem, lida, data
 
 ### DocumentoProfissional
-Para validação documental (RF002, critérios de validação ainda não definidos, ver `foundation/04-decisions-pending.md`).
+Para validação documental (RF002). Critérios definidos provisoriamente por B005 (`foundation/04-decisions-pending.md`); parecer jurídico definitivo ainda bloqueado.
 
-**Campos**: tipo, arquivo, status
+**Campos**: id, profissional_id, tipo (`TipoDocumentoProfissional`), arquivo, status (`PENDENTE | APROVADO | REJEITADO | VENCIDO`), apolice_numero (obrigatório quando `tipo = SEGURO_RC`), vigencia_inicio (obrigatório quando `tipo = SEGURO_RC`), vigencia_fim (obrigatório quando `tipo = SEGURO_RC`), criado_em, atualizado_em
+
+**Regras (decisão provisória B005):**
+- `SEGURO_RC` é **obrigatório** para ativação do profissional (RF002): apólice de responsabilidade civil vigente, com comprovante (`arquivo`) validado por Admin.
+- Job diário marca `status = VENCIDO` quando `vigencia_fim < hoje`; profissional com `SEGURO_RC` vencido não recebe novas solicitações até revalidar (RN001 continua exigindo verificação, detalhe de bloqueio operacional fica para implementação).
+- Outros tipos documentais (identidade, comprovante de endereço, certificações por categoria) permanecem **NECESSITA VALIDAÇÃO**; só `SEGURO_RC` tem critério fechado nesta decisão provisória.
 
 ## Relacionamentos
 
@@ -386,6 +391,8 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 
 **OrigemIntervention**: `PLATAFORMA`, `MANUAL`, `IMPORTADO`
 
+**TipoDocumentoProfissional**: `SEGURO_RC`, `IDENTIDADE`, `COMPROVANTE_ENDERECO`, `CERTIFICACAO_CATEGORIA` (últimos três sem critério fechado, reservados para RF002 futuro)
+
 **StatusPropertyOwnershipTransfer**: `PENDENTE`, `ACEITO`, `RECUSADO`, `EXPIRADO`
 
 ## Índices Recomendados
@@ -437,7 +444,7 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 - Haverá emissão de nota fiscal pela plataforma?
 - A contratação poderá envolver mais de um profissional?
 - Exclusão LGPD por anonimização (proposta acima) precisa de validação jurídica, mesma pendência de B001/ADR-002.
-- Responsabilidade civil por dano ao imóvel durante a execução do serviço não tem mecanismo nem entidade, maior risco reputacional de marketplace presencial e não citado em nenhum documento até 2026-08-17 (ver B005 em `foundation/04-decisions-pending.md`).
+- Valor mínimo de cobertura da apólice RC e demais documentos obrigatórios além de `SEGURO_RC` (identidade, certificações por categoria) dependem de parecer jurídico definitivo de B005.
 - Valores reais de `TabelaPreco` na cidade piloto (os exemplos de `10-motor-precificacao.md` §2.1 são chutes operacionais, não copiar para produção sem revisão).
 - Quais campos de cada `template_escopo` carregam `ajuste_preco` no lançamento.
 
@@ -453,3 +460,4 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 | 2026-08-17 (2ª passada) | Corrige 4 contradições introduzidas na 1ª passada: `PaymentAuthorization` vira 1:N com reautorização (INV-046, não mais órfão financeiro em autorização expirada); `Property` passa a ter endereço próprio em vez de FK para `Endereco.usuario_id` (venda de imóvel não deixa mais o endereço preso ao dono anterior); `INV-060` corrigida para `APROVADO` (referenciava `FINALIZADO`, estado inexistente); adiciona INV-014 (ownership de Solicitação via `PropertyOwnership`). |
 | 2026-08-17 | `PaymentAuthorization.metodo` fecha `CARTAO | PIX` (`adr/ADR-005-gateway-pagamento.md`, B006): Pix nasce `CAPTURADO`, cartão nasce `AUTORIZADO`. |
 | 2026-08-17 (issue #2) | Adiciona `TabelaPreco` (categoria+cidade, editável por Admin) e snapshot `faixa_preco_min`/`faixa_preco_max`/`faixa_preco_fator_bp`/`tabela_preco_id` em `Solicitacao`; `Configuração.PRECO_ARREDONDAMENTO_CENTAVOS`. Heurística em `10-motor-precificacao.md`. |
+| 2026-08-17 (6ª passada) | B005: `DocumentoProfissional` ganha campos de apólice RC (`SEGURO_RC`, vigência, número); enum `TipoDocumentoProfissional`; sinistro durante execução usa disputa existente, sem entidade própria no MVP. |

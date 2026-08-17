@@ -42,7 +42,7 @@ Se o parecer jurídico de B001 (`04-decisions-pending.md`) mudar essa decisão p
 
 ## Por que este ADR não fecha a decisão definitivamente
 
-Responsabilidade sobre garantia é matéria de direito do consumidor, exige validação jurídica antes de virar contrato ou termo de uso vinculante. A decisão provisória acima existe para que modelo de dados e fluxo de disputa (`foundation/02-state-machine.md` §5, transição `Garantia: Acionada → Encerrada`) tenham uma hipótese de trabalho **sem expor a plataforma a risco financeiro além da comissão**, o que reduz a urgência do parecer jurídico (não há dinheiro retido de terceiro em jogo) sem eliminá-la (responsabilidade legal por dano segue em aberto, ver B005).
+Responsabilidade sobre garantia é matéria de direito do consumidor, exige validação jurídica antes de virar contrato ou termo de uso vinculante. A decisão provisória acima existe para que modelo de dados e fluxo de disputa (`foundation/02-state-machine.md` §5, transição `Garantia: Acionada → Encerrada`) tenham uma hipótese de trabalho **sem expor a plataforma a risco financeiro além da comissão**, o que reduz a urgência do parecer jurídico (não há dinheiro retido de terceiro em jogo) sem eliminá-la (responsabilidade legal por dano ao imóvel segue com parecer jurídico definitivo pendente, decisão provisória de B005 registrada em 2026-08-17).
 
 ## Consequências
 
