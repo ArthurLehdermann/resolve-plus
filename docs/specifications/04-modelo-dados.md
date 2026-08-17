@@ -77,7 +77,72 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 **Campos**: id, nome, descricao, ativo, template_escopo (JSONB)
 
-**`template_escopo`**: schema dos campos estruturados que uma Solicitação dessa categoria precisa preencher (ex.: Pintura → `{comodos: int, area_m2: number, tipo_tinta: enum, paredes_ou_teto: enum}`; Elétrica → `{tipo_servico: enum, quantidade_pontos: int}`). É o que torna `Solicitacao.escopo` (abaixo) estruturado em vez de texto livre, e o que faz `Proposta` não ter campo de escopo próprio ser suficiente para garantir comparabilidade (INV-080, OBJ-MVP-03). Sem template por categoria, "propostas comparáveis" é intenção declarada sem modelo, não um comportamento garantido pelo schema.
+**`template_escopo`**: schema dos campos estruturados que uma Solicitação dessa categoria precisa preencher. É o que torna `Solicitacao.escopo` (abaixo) estruturado em vez de texto livre, e o que faz `Proposta` não ter campo de escopo próprio ser suficiente para garantir comparabilidade (INV-080, OBJ-MVP-03). Sem template por categoria, "propostas comparáveis" é intenção declarada sem modelo, não um comportamento garantido pelo schema.
+
+**Formato de cada campo do template** (chave = nome do campo em `Solicitacao.escopo`):
+
+| Propriedade | Tipo | Obrigatório | Descrição |
+|---|---|---|---|
+| `tipo` | `int` \| `number` \| `enum` \| `bool` \| `string` | Sim | Tipo do valor em `escopo` |
+| `obrigatorio` | bool | Sim | Se `true`, ausência no `escopo` da solicitação gera 422 |
+| `rotulo` | string | Sim | Rótulo para o formulário no app |
+| `valores` | string[] | Só se `tipo = enum` | Valores permitidos (UPPER_SNAKE_CASE) |
+| `min` | number | Não | Limite inferior para `int`/`number` |
+
+**Seed/fixture MVP**: definições canônicas em `database/fixtures/categorias_mvp.json`, carregáveis via `Database\Seeders\CategoriaSeeder::definitions()` (persistência no banco fica para a issue de Categorias).
+
+#### Templates das 5 categorias do MVP (`01-visao-geral.md` §10)
+
+##### Elétrica (`codigo: eletrica`)
+
+| Campo | Tipo | Obrigatório | Valores / restrições |
+|---|---|---|---|
+| `tipo_servico` | enum | Sim | `INSTALACAO_PONTO`, `TROCA_DISJUNTOR`, `REVISAO_QUADRO`, `INSTALACAO_LUMINARIA`, `INSTALACAO_CHUVEIRO_ELETRICO`, `SUBSTITUICAO_FIO`, `DIAGNOSTICO` |
+| `quantidade_pontos` | int | Sim | min 1 |
+
+##### Hidráulica (`codigo: hidraulica`)
+
+| Campo | Tipo | Obrigatório | Valores / restrições |
+|---|---|---|---|
+| `tipo_servico` | enum | Sim | `DESENTUPIMENTO`, `REPARO_VAZAMENTO`, `TROCA_TORNEIRA`, `TROCA_REGISTRO`, `INSTALACAO_LOUCA`, `TROCA_SIFAO`, `CAIXA_DAGUA`, `DIAGNOSTICO` |
+| `quantidade_pontos` | int | Sim | min 1 |
+| `ambiente` | enum | Sim | `BANHEIRO`, `COZINHA`, `AREA_SERVICO`, `AREA_EXTERNA`, `OUTRO` |
+
+##### Pintura (`codigo: pintura`)
+
+| Campo | Tipo | Obrigatório | Valores / restrições |
+|---|---|---|---|
+| `comodos` | int | Sim | min 1 |
+| `area_m2` | number | Sim | min 1 |
+| `tipo_tinta` | enum | Sim | `LATEX_PVA`, `ACRILICA`, `EPOXI`, `ESMALTE` |
+| `paredes_ou_teto` | enum | Sim | `PAREDES`, `TETO`, `PAREDES_E_TETO` |
+
+##### Pequenos Reparos (`codigo: pequenos_reparos`)
+
+| Campo | Tipo | Obrigatório | Valores / restrições |
+|---|---|---|---|
+| `tipo_reparo` | enum | Sim | `PORTA_JANELA`, `FECHADURA`, `PISO_REVESTIMENTO`, `AZULEJO`, `GESSO`, `PERSIANA`, `MOVEL_FIXO`, `OUTRO` |
+| `quantidade` | int | Sim | min 1 |
+| `area_m2` | number | Não | min 0 (opcional; útil para reparos de superfície) |
+
+##### Montagem (`codigo: montagem`)
+
+| Campo | Tipo | Obrigatório | Valores / restrições |
+|---|---|---|---|
+| `tipo_item` | enum | Sim | `MOVEL_PRONTO`, `MOVEL_SOB_MEDIDA`, `ELETRODOMESTICO`, `SUPORTE_TV`, `PRATELEIRA`, `OUTRO` |
+| `quantidade` | int | Sim | min 1 |
+| `precisa_fixacao_parede` | bool | Sim | `true` ou `false` |
+
+**Exemplo de `escopo` válido (Pintura)**:
+
+```json
+{
+  "comodos": 2,
+  "area_m2": 35.5,
+  "tipo_tinta": "LATEX_PVA",
+  "paredes_ou_teto": "PAREDES_E_TETO"
+}
+```
 
 ### Property (Imóvel)
 
@@ -351,5 +416,6 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 | 2026-08-16 | Versão original (pré-DDD), com `Contratacao`, `Pagamento` simples e `HistoricoImovel`. |
 | 2026-08-17 (1ª passada) | Reescrita completa contra `00-domain-invariants.md`/`02-state-machine.md`: remove `Contratacao`, introduz bounded context `Payment` (5 entidades), substitui `HistoricoImovel` por `Property/Area/Asset/Intervention`, corrige enums divergentes da state machine, renomeia `Imovel`→`Property` e `endereco_id`→`property_id` em Solicitação, adiciona `PropertyOwnership`, avaliação bidirecional, índice parcial de proposta aceita. |
 | 2026-08-17 (4ª passada) | Rebaixa INV-053 de invariante fechada para proposta (ADR-002/003 reabertos, ver `foundation/00-domain-invariants.md`); referencia INV-001/013/022/030/033 (estavam órfãs, sem nenhum ponto de aplicação); modela INV-080 (`Categoria.template_escopo` + `Solicitacao.escopo`, `Proposta` sem campo de escopo por construção). |
+| 2026-08-17 (6ª passada) | Define `template_escopo` concreto das 5 categorias MVP (elétrica, hidráulica, pintura, pequenos reparos, montagem); fixture em `database/fixtures/categorias_mvp.json` + `CategoriaSeeder`. |
 | 2026-08-17 (3ª passada) | Adiciona `chave_endereco` (CEP+numero+complemento normalizados, `UNIQUE`) em Property (INV-063, corrige duplicidade de imóvel); adiciona `PropertyOwnershipTransfer` e regra de aceite explícito (INV-064, corrige `PropertyOwnership` sem caminho executável); corrige INV-031 (`CONCLUIDO`→`APROVADO`, mesma classe de bug de INV-060). |
 | 2026-08-17 (2ª passada) | Corrige 4 contradições introduzidas na 1ª passada: `PaymentAuthorization` vira 1:N com reautorização (INV-046, não mais órfão financeiro em autorização expirada); `Property` passa a ter endereço próprio em vez de FK para `Endereco.usuario_id` (venda de imóvel não deixa mais o endereço preso ao dono anterior); `INV-060` corrigida para `APROVADO` (referenciava `FINALIZADO`, estado inexistente); adiciona INV-014 (ownership de Solicitação via `PropertyOwnership`). |

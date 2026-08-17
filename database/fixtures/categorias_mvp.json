@@ -1,0 +1,179 @@
+[
+    {
+        "codigo": "eletrica",
+        "nome": "Elétrica",
+        "descricao": "Instalação e manutenção elétrica residencial (pontos, quadro, luminárias, chuveiro elétrico).",
+        "ativo": true,
+        "template_escopo": {
+            "tipo_servico": {
+                "tipo": "enum",
+                "obrigatorio": true,
+                "rotulo": "Tipo de serviço",
+                "valores": [
+                    "INSTALACAO_PONTO",
+                    "TROCA_DISJUNTOR",
+                    "REVISAO_QUADRO",
+                    "INSTALACAO_LUMINARIA",
+                    "INSTALACAO_CHUVEIRO_ELETRICO",
+                    "SUBSTITUICAO_FIO",
+                    "DIAGNOSTICO"
+                ]
+            },
+            "quantidade_pontos": {
+                "tipo": "int",
+                "obrigatorio": true,
+                "rotulo": "Quantidade de pontos",
+                "min": 1
+            }
+        }
+    },
+    {
+        "codigo": "hidraulica",
+        "nome": "Hidráulica",
+        "descricao": "Instalação e manutenção hidráulica residencial (vazamento, desentupimento, louças, caixa d'água).",
+        "ativo": true,
+        "template_escopo": {
+            "tipo_servico": {
+                "tipo": "enum",
+                "obrigatorio": true,
+                "rotulo": "Tipo de serviço",
+                "valores": [
+                    "DESENTUPIMENTO",
+                    "REPARO_VAZAMENTO",
+                    "TROCA_TORNEIRA",
+                    "TROCA_REGISTRO",
+                    "INSTALACAO_LOUCA",
+                    "TROCA_SIFAO",
+                    "CAIXA_DAGUA",
+                    "DIAGNOSTICO"
+                ]
+            },
+            "quantidade_pontos": {
+                "tipo": "int",
+                "obrigatorio": true,
+                "rotulo": "Quantidade de pontos",
+                "min": 1
+            },
+            "ambiente": {
+                "tipo": "enum",
+                "obrigatorio": true,
+                "rotulo": "Ambiente",
+                "valores": [
+                    "BANHEIRO",
+                    "COZINHA",
+                    "AREA_SERVICO",
+                    "AREA_EXTERNA",
+                    "OUTRO"
+                ]
+            }
+        }
+    },
+    {
+        "codigo": "pintura",
+        "nome": "Pintura",
+        "descricao": "Pintura residencial de paredes e teto.",
+        "ativo": true,
+        "template_escopo": {
+            "comodos": {
+                "tipo": "int",
+                "obrigatorio": true,
+                "rotulo": "Cômodos",
+                "min": 1
+            },
+            "area_m2": {
+                "tipo": "number",
+                "obrigatorio": true,
+                "rotulo": "Área (m²)",
+                "min": 1
+            },
+            "tipo_tinta": {
+                "tipo": "enum",
+                "obrigatorio": true,
+                "rotulo": "Tipo de tinta",
+                "valores": [
+                    "LATEX_PVA",
+                    "ACRILICA",
+                    "EPOXI",
+                    "ESMALTE"
+                ]
+            },
+            "paredes_ou_teto": {
+                "tipo": "enum",
+                "obrigatorio": true,
+                "rotulo": "Superfície",
+                "valores": [
+                    "PAREDES",
+                    "TETO",
+                    "PAREDES_E_TETO"
+                ]
+            }
+        }
+    },
+    {
+        "codigo": "pequenos_reparos",
+        "nome": "Pequenos Reparos",
+        "descricao": "Reparos pontuais residenciais (porta, fechadura, piso, azulejo, gesso, persiana).",
+        "ativo": true,
+        "template_escopo": {
+            "tipo_reparo": {
+                "tipo": "enum",
+                "obrigatorio": true,
+                "rotulo": "Tipo de reparo",
+                "valores": [
+                    "PORTA_JANELA",
+                    "FECHADURA",
+                    "PISO_REVESTIMENTO",
+                    "AZULEJO",
+                    "GESSO",
+                    "PERSIANA",
+                    "MOVEL_FIXO",
+                    "OUTRO"
+                ]
+            },
+            "quantidade": {
+                "tipo": "int",
+                "obrigatorio": true,
+                "rotulo": "Quantidade",
+                "min": 1
+            },
+            "area_m2": {
+                "tipo": "number",
+                "obrigatorio": false,
+                "rotulo": "Área (m²)",
+                "min": 0
+            }
+        }
+    },
+    {
+        "codigo": "montagem",
+        "nome": "Montagem",
+        "descricao": "Montagem de móveis, eletrodomésticos, suporte de TV e prateleiras.",
+        "ativo": true,
+        "template_escopo": {
+            "tipo_item": {
+                "tipo": "enum",
+                "obrigatorio": true,
+                "rotulo": "Tipo de item",
+                "valores": [
+                    "MOVEL_PRONTO",
+                    "MOVEL_SOB_MEDIDA",
+                    "ELETRODOMESTICO",
+                    "SUPORTE_TV",
+                    "PRATELEIRA",
+                    "OUTRO"
+                ]
+            },
+            "quantidade": {
+                "tipo": "int",
+                "obrigatorio": true,
+                "rotulo": "Quantidade",
+                "min": 1
+            },
+            "precisa_fixacao_parede": {
+                "tipo": "bool",
+                "obrigatorio": true,
+                "rotulo": "Precisa de fixação na parede"
+            }
+        }
+    }
+]

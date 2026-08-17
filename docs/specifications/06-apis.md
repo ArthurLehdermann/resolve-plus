@@ -74,7 +74,7 @@ Erros: 400, 409, 422
 
 **GET /categories**, Lista categorias disponíveis.
 
-**GET /categories/{id}**, Detalhes, inclui `template_escopo` (schema dos campos estruturados que `POST /requests` exige para essa categoria, INV-080). App usa isso pra renderizar o formulário de escopo antes de criar a solicitação.
+**GET /categories/{id}**, Detalhes, inclui `template_escopo` (schema dos campos estruturados que `POST /requests` exige para essa categoria, INV-080). App usa isso pra renderizar o formulário de escopo antes de criar a solicitação. Os 5 templates do MVP (elétrica, hidráulica, pintura, pequenos reparos, montagem) estão na seção Categoria de `04-modelo-dados.md`.
 
 ## Imóveis
 
