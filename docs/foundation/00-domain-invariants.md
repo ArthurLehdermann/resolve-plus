@@ -31,13 +31,13 @@
 ## 4. Serviço
 
 - INV-030, Um serviço pertence a exatamente uma solicitação e a exatamente uma proposta aceita.
-- INV-031, Um serviço só entra em `APROVADO` após o profissional registrar conclusão **e** o cliente confirmar, ou o prazo de aceite automático (RN010, ainda **Necessita Validação** o valor do prazo) se esgotar sem contestação. (Corrigido em 2026-08-17, mesma classe de bug de INV-060: referenciava `CONCLUIDO`, estado que não existe em `02-state-machine.md`.)
-- INV-032, Um serviço `CANCELADO` não gera garantia nem libera pagamento normal (pode gerar reembolso parcial/multa, regras de cancelamento ainda pendentes de definição de negócio).
+- INV-031, Um serviço só entra em `APROVADO` após o profissional registrar conclusão **e** o cliente confirmar, ou o prazo de aceite automático (RN010, `AUTO_APPROVAL_HOURS` = 72h, `adr/ADR-004-prazo-aceite-automatico.md`) se esgotar sem contestação. (Corrigido em 2026-08-17, mesma classe de bug de INV-060: referenciava `CONCLUIDO`, estado que não existe em `02-state-machine.md`.)
+- INV-032, Um serviço `CANCELADO` não gera garantia nem libera pagamento normal (pode gerar reembolso parcial/multa, rascunho de regras em `foundation/03-cancellation-rules.md`, B003, percentual de multa e mecânica de reembolso parcial ainda pendentes).
 - INV-033, Um serviço em garantia ativa que sofra nova intervenção pela **mesma causa/escopo coberto** não pode gerar nova cobrança ao cliente (regra herdada da nota de revisão, mantida).
 
 ## 5. Financeiro (bounded context `Payment`)
 
-> Decisão de 2026-08-16 (PO): Pagamento deixa de ser modelado como entidade simples 1:1 com Serviço. Vira bounded context próprio, ver `ADR-002-financeiro.md` (modalidade) e `04-decisions-pending.md` (B002, prazo de repasse).
+> Decisão de 2026-08-16 (PO): Pagamento deixa de ser modelado como entidade simples 1:1 com Serviço. Vira bounded context próprio, ver `ADR-002-financeiro.md` (modalidade) e `adr/ADR-004-prazo-aceite-automatico.md` (prazo de repasse, resolvido).
 
 - INV-040, Todo movimento financeiro é um **evento imutável** (`PaymentEvent`), nunca se faz `UPDATE` destrutivo em histórico financeiro, só inserção de novos eventos/estados.
 - INV-041, Um pagamento nunca pode ser **liberado** (capturado + repassado) antes da conclusão **e** aprovação do serviço, salvo exceção administrativa, que é sempre registrada em auditoria com usuário responsável e justificativa (RN de `02-funcionalidades.md`, elevada a invariante).
@@ -47,14 +47,14 @@
 - INV-044, Split de comissão (`PaymentSplit`) é calculado no momento da captura, com a alíquota vigente **naquele momento**, mudança futura na comissão não altera splits já calculados.
 - INV-045, Uma disputa de pagamento (`PaymentDispute`) bloqueia liberação/repasse até resolução, mas não bloqueia o registro de novos eventos (histórico continua sendo escrito).
 
-> Modalidade financeira decidida (provisório, PO 2026-08-16): **Autorizar → Capturar → Repassar**, não escrow bancário, ver `ADR-002-financeiro.md`. Momento exato do repasse (janela de contestação de 48h ou 72h) permanece **bloqueador**, ver `04-decisions-pending.md` (B002).
+> Modalidade financeira decidida (provisório, PO 2026-08-16): **Autorizar → Capturar → Repassar**, não escrow bancário, ver `ADR-002-financeiro.md`. Momento exato do repasse é janela de 72h (`AUTO_APPROVAL_HOURS`), decidido em `adr/ADR-004-prazo-aceite-automatico.md` (B002, resolvido provisoriamente).
 
 ## 6. Garantia
 
 - INV-050, Toda conclusão aprovada de serviço gera exatamente uma garantia (RN005).
 - INV-051, Garantia tem prazo definido no momento da criação (herdado da proposta aceita); alterar o prazo padrão de uma categoria não afeta garantias já emitidas.
 - INV-052, Acionamento de garantia é sempre registrado como evento com evidências (fotos, descrição), nunca como simples mudança de status sem payload.
-- INV-053, Toda `Garantia` precisa ter lastro financeiro definido antes de poder ser acionada, não pode ser promessa sem mecanismo (identificado em 2026-08-17, terceira revisão crítica do PO). **O desenho concreto ainda não é invariante fechada, é proposta em `adr/ADR-003-garantia.md`** (retenção de fração do repasse ao profissional por prazo determinado): quarta revisão do PO apontou que reter dinheiro de terceiro (o profissional) por prazo determinado após a captura tem o mesmo enquadramento regulatório que `adr/ADR-002-financeiro.md` rejeitou ao descartar escrow. ADR-002 foi reaberto em 2026-08-17 por causa disso, junto com B001 (`04-decisions-pending.md`), os dois viram parecer jurídico único, não dois separados.
+- INV-053, A responsabilidade financeira pela `Garantia` é do **profissional** (Modelo B, `adr/ADR-003-garantia.md`, decisão provisória de B001 em 2026-08-17): a plataforma media o acionamento, mas não retém nenhuma fração do repasse nem gera `PaymentEvent`/`PaymentRefund` da própria plataforma quando uma garantia é acionada. Substitui a versão anterior desta invariante, que propunha reter uma fração do repasse (`valor_reserva_garantia`), descartada por reintroduzir o enquadramento de escrow que `adr/ADR-002-financeiro.md` rejeitou. Decisão provisória, sem parecer jurídico definitivo, B001 continua bloqueado para isso.
 
 ## 7. Histórico do Imóvel (prontuário)
 
@@ -85,3 +85,4 @@
 | 2026-08-17 | Adiciona INV-063 (identidade de Property por endereço normalizado) e INV-064 (transferência de posse exige aceite, não é unilateral). |
 | 2026-08-17 | Adiciona INV-053 (garantia precisa de lastro financeiro) e o bloqueador de percentual de reserva em `04-decisions-pending.md` (depois fundido em B001, ver linha seguinte). |
 | 2026-08-17 | Quarta revisão crítica do PO: INV-053 reescrita, mecanismo concreto (retenção do repasse) rebaixado de invariante fechada para proposta pendente de parecer jurídico, reabre ADR-002 e funde o bloqueador de percentual de reserva em B001 (mesmo parecer). |
+| 2026-08-17 | Quinta revisão do PO: B002 resolvido provisoriamente (72h, `AUTO_APPROVAL_HOURS`, `adr/ADR-004-prazo-aceite-automatico.md`), INV-031 deixa de citar "Necessita Validação". B001 resolvido provisoriamente para permitir desenvolvimento (garantia é do profissional, plataforma só media, sem retenção sobre o repasse), INV-053 reescrita, mecanismo de reserva sobre `PaymentSplit` removido do modelo de dados até (se algum dia) o parecer jurídico mudar essa decisão provisória. |

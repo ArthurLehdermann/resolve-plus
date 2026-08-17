@@ -175,11 +175,11 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 ### Garantia
 
-**Campos**: id, servico_id, inicio, fim, status (`StatusGarantia`), payment_split_id (link para a reserva que a lastreia, INV-053)
+**Campos**: id, servico_id, inicio, fim, status (`StatusGarantia`), responsavel_financeiro (fixo `PROFISSIONAL`, INV-053/B001)
 
 **Revisita dentro da garantia**: se o acionamento gera um novo `Serviço` do mesmo profissional para a mesma causa/escopo já coberto, esse `Serviço` não cria `PaymentAuthorization` nova, é uma revisita sem cobrança ao cliente (INV-033). Como isso se relaciona com B003 (cancelamento/revisita ainda bloqueado) não está detalhado, dependência registrada, não resolvida aqui.
 
-**Regra de encerramento (INV-053, proposta pendente de B001, ver nota acima)**: quando `status` sai de `ATIVA` (vira `EXPIRADA` sem acionamento, ou `ENCERRADA` após `ACIONADA` resolvida), dispara `RESERVA_LIBERADA` sobre o `PaymentSplit` vinculado. Se `ACIONADA` e a resolução envolve reembolso ao cliente (não revisita), o `PaymentRefund` é limitado a `valor_reserva_garantia`, dano acima disso não é coberto por este mecanismo (a plataforma não é seguradora sob o Modelo B recomendado em `adr/ADR-003-garantia.md`; ver B005 para responsabilidade civil além desse teto).
+**Regra de encerramento (INV-053, decisão provisória de B001, `adr/ADR-003-garantia.md`)**: quando `status` sai de `ATIVA` (vira `EXPIRADA` sem acionamento, ou `ENCERRADA` após `ACIONADA` resolvida), **não dispara nenhum evento financeiro**. A plataforma já repassou 100% do `valor_profissional` ao profissional 72h após aprovação (`adr/ADR-004-prazo-aceite-automatico.md`), não há reserva a liberar. Se `ACIONADA`, a resolução é entre profissional e cliente, a plataforma só media (não gera `PaymentRefund` da própria plataforma). Não modelar fundo garantidor/caução/reserva enquanto B001 não tiver parecer jurídico definitivo.
 
 ## Bounded Context: Payment (INV-040 a INV-045)
 
@@ -207,13 +207,11 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 ### PaymentSplit
 
-> Corrigido em 2026-08-17 (3ª revisão do PO): garantia acionada não tinha lastro financeiro, o repasse já ocorreu (~72h após aprovação, B002) muito antes de a garantia poder ser acionada (prazo pode ser 90 dias). `valor_profissional` agora se divide em liberado imediato e reserva de garantia (INV-053).
->
-> **Proposta, não decisão fechada (4ª revisão do PO, 2026-08-17):** reter parte do repasse do profissional por até 90 dias tem o mesmo enquadramento regulatório que `adr/ADR-002-financeiro.md` rejeitou ao descartar escrow. `ADR-002-financeiro.md` e `ADR-003-garantia.md` foram reabertos, fundidos com B001 em `04-decisions-pending.md`. Os campos abaixo ficam como desenho de referência até o parecer jurídico, podem mudar (ex.: reserva sair de `valor_profissional` e passar a sair de `valor_plataforma`).
+> Revisado em 2026-08-17 (5ª revisão do PO): a proposta de reter uma fração do repasse do profissional como reserva de garantia (versões anteriores deste documento) foi descartada pela decisão provisória de B001 (`adr/ADR-003-garantia.md`), reintroduzia o enquadramento de escrow que `adr/ADR-002-financeiro.md` rejeitou. `valor_profissional` volta a ser um valor único, sem reserva.
 
-**Campos**: id, payment_event_id (o evento de captura), valor_profissional_liberado, valor_reserva_garantia, valor_plataforma, aliquota_vigente, percentual_reserva_vigente
+**Campos**: id, payment_event_id (o evento de captura), valor_profissional, valor_plataforma, aliquota_vigente
 
-**Regra**: calculado no momento da captura com a alíquota e o percentual de reserva vigentes naquele instante (percentual ainda sem valor definido, ver B001); alterar comissão ou percentual depois não recalcula splits antigos (INV-044). `valor_profissional_liberado` é repassado normalmente (P6, B002); `valor_reserva_garantia` fica retido até a `Garantia` do serviço sair de `ATIVA` (INV-053), gera `PaymentEvent` próprio (`RESERVA_LIBERADA`) quando isso acontece, não é liberado junto com o repasse principal.
+**Regra**: calculado no momento da captura com a alíquota vigente naquele instante; alterar a comissão depois não recalcula splits antigos (INV-044). `valor_profissional` é repassado integralmente ao profissional na janela de 72h (`adr/ADR-004-prazo-aceite-automatico.md`), sem retenção adicional (INV-053).
 
 ### PaymentRefund
 
@@ -234,7 +232,7 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 ## Tabelas Auxiliares
 
 ### Configuração
-Parâmetros globais: comissão (%), prazo de garantia padrão, tempo limite para aceite automático (B002), raio máximo de atendimento.
+Parâmetros globais: comissão (%), prazo de garantia padrão, `AUTO_APPROVAL_HOURS` (tempo limite para aceite automático, 72h, `adr/ADR-004-prazo-aceite-automatico.md`), raio máximo de atendimento.
 
 ### Notificação
 **Campos**: usuario_id, titulo, mensagem, lida, data
@@ -288,7 +286,7 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 
 **StatusPaymentAuthorization**: `AUTORIZADO`, `CAPTURADO`, `CANCELADO`, `EXPIRADO`
 
-**TipoPaymentEvent**: `AUTORIZADO`, `CAPTURADO`, `REPASSADO`, `CANCELADO`, `EXPIRADO`, `REEMBOLSADO`, `REAUTORIZADO`, `RESERVA_LIBERADA`
+**TipoPaymentEvent**: `AUTORIZADO`, `CAPTURADO`, `REPASSADO`, `CANCELADO`, `EXPIRADO`, `REEMBOLSADO`, `REAUTORIZADO`
 
 **StatusGarantia**: `ATIVA`, `EXPIRADA`, `ACIONADA`, `ENCERRADA`
 

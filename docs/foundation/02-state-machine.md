@@ -38,15 +38,17 @@ Enviada --(profissional: retira antes do aceite)--> Retirada
 Agendado --(profissional: comparece e inicia)--> Em Andamento
 Em Andamento --(profissional: registra conclusão)--> Aguardando Aprovação [FP003]
 Aguardando Aprovação --(cliente: confirma)--> Aprovado [P4/P5 do Event Storm: captura pagamento + emite garantia]
-Aguardando Aprovação --(sistema: janela de aceite automático expira sem contestação)--> Aprovado [B002, prazo ainda não definido]
+Aguardando Aprovação --(sistema: janela de aceite automático expira sem contestação)--> Aprovado [AUTO_APPROVAL_HOURS = 72h, adr/ADR-004-prazo-aceite-automatico.md]
 Aguardando Aprovação --(cliente: contesta)--> Em Contestação [FA004]
 Em Contestação --(fluxo de mediação, NECESSITA VALIDAÇÃO, ver B003)--> Aprovado | Cancelado
-Agendado|Em Andamento --(cliente/profissional/admin: cancela)--> Cancelado [regras de quem/até quando/multa pendentes, B003]
+Agendado --(cliente: cancela)--> Cancelado [Cenário B, foundation/03-cancellation-rules.md, multa/reembolso parcial NECESSITA VALIDAÇÃO]
+Em Andamento --(cliente/profissional: solicita cancelamento)--> Em Contestação [Cenário C, foundation/03-cancellation-rules.md: nunca cancela direto depois de iniciado, sempre abre disputa]
 ```
 
 - `Aprovado` é o único estado que pode gerar `PaymentEvent` de captura (INV-041) e `Garantia` (INV-050).
 - `Cancelado` nunca gera garantia nem libera pagamento normal (INV-032).
-- Transição `Em Contestação → ?` está **bloqueada** até B003 ser resolvido, hoje não há resolução determinística no domínio.
+- Transição `Em Contestação → ?` está **bloqueada** até B003 ser resolvido, hoje não há resolução determinística no domínio (vale tanto para contestação de conclusão quanto para disputa aberta por cancelamento durante execução, Cenário C).
+- `Agendado → Cancelado` é decisão de produto já registrada (Cenário B), mas o **percentual de multa** e a **mecânica de reembolso parcial sobre uma `PaymentAuthorization` ainda não capturada** (INV-043 só cobre reembolso sobre valor capturado) continuam pendentes, ver `foundation/03-cancellation-rules.md`.
 
 ## 4. Pagamento (`PaymentAuthorization` × `PaymentEvent`, duas máquinas, não uma)
 
@@ -67,7 +69,7 @@ Expirado --(sistema: Serviço ainda não Cancelado/Aprovado)--> nova PaymentAuth
 **4b. Eventos registrados sobre uma autorização `Capturado` (o histórico, `PaymentEvent.tipo`)**
 
 ```
-[PaymentAuthorization = Capturado] --(sistema: janela de contestação decorrida)--> evento REPASSADO [P6, prazo B002]
+[PaymentAuthorization = Capturado] --(sistema: janela de contestação decorrida)--> evento REPASSADO [P6, AUTO_APPROVAL_HOURS = 72h]
 [PaymentAuthorization = Capturado] --(cliente/admin: reembolso sobre valor já capturado)--> evento REEMBOLSADO [INV-043]
 ```
 
@@ -78,13 +80,13 @@ Expirado --(sistema: Serviço ainda não Cancelado/Aprovado)--> nova PaymentAuth
 
 ```
 (criada a partir de ServicoAprovado) --> Ativa [INV-050, prazo herdado da proposta, INV-051]
-Ativa --(prazo expira sem acionamento)--> Expirada [dispara evento RESERVA_LIBERADA sobre PaymentSplit, INV-053]
+Ativa --(prazo expira sem acionamento)--> Expirada [nenhum evento financeiro, INV-053]
 Ativa --(cliente: aciona com evidências)--> Acionada [INV-052]
-Acionada --(resolução, responsável pendente de B001)--> Encerrada [dispara evento RESERVA_LIBERADA ou PaymentRefund limitado a valor_reserva_garantia, INV-053]
+Acionada --(mediação entre profissional e cliente, plataforma não é parte financeira)--> Encerrada [nenhum evento financeiro da plataforma, INV-053]
 ```
 
-- Responsabilidade sobre quem resolve `Acionada → Encerrada` depende de B001 (garantia do profissional, da plataforma, ou compartilhada), mas o mecanismo financeiro que sustenta a resolução (reserva sobre o split) não depende de B001 fechar, está desenhado em INV-053 desde 2026-08-17.
-- `Expirada` e `Encerrada` liberam a reserva (total ou o que sobrar dela); nenhum outro estado de `Garantia` toca `PaymentSplit`.
+- Responsabilidade financeira é do profissional (Modelo B, decisão provisória de B001, `adr/ADR-003-garantia.md`); a plataforma media `Acionada → Encerrada` mas não gera `PaymentEvent`/`PaymentRefund` própria, o repasse ao profissional já ocorreu integralmente 72h após aprovação.
+- Nenhum estado de `Garantia` toca `PaymentSplit` (mecanismo de reserva descartado em 2026-08-17, ver `adr/ADR-003-garantia.md`).
 
 ## 6. Conta
 
@@ -100,9 +102,8 @@ Ativa --(usuário: solicita exclusão)--> Excluída
 
 ## Pendências deste documento
 
-- Transição de `Em Contestação` no Serviço não é determinística (depende de B003).
-- Prazo exato da janela de aceite automático/contestação (B002) não está fixado, hoje é parâmetro simbólico.
-- Resolução de `Garantia: Acionada` depende de B001.
+- Transição de `Em Contestação` no Serviço não é determinística (depende de B003, ver `foundation/03-cancellation-rules.md`).
+- Resolução de `Garantia: Acionada` é mediação entre profissional e cliente (Modelo B, `adr/ADR-003-garantia.md`, decisão provisória de B001), plataforma não participa financeiramente.
 
 ## Changelog
 
@@ -112,3 +113,6 @@ Ativa --(usuário: solicita exclusão)--> Excluída
 | 2026-08-17 | Adiciona transição `Expirado → Autorizado` (reautorização, INV-046), motivado por revisão do PO. |
 | 2026-08-17 | 3ª revisão: separa §4 em duas máquinas (`PaymentAuthorization.status` vs. `PaymentEvent.tipo`), a versão anterior tratava `Repassado`/`Reembolsado` como status de autorização, quando são eventos sobre uma autorização já `Capturado` (terminal). |
 | 2026-08-17 | §5 Garantia: adiciona gatilho de `RESERVA_LIBERADA` em `Expirada`/`Encerrada` (INV-053), garantia acionada agora tem lastro financeiro desenhado, mesmo com B001 (responsabilidade) ainda bloqueado. |
+| 2026-08-17 | §5 Garantia revisada: decisão provisória de B001 remove o mecanismo de reserva, `Acionada`/`Encerrada`/`Expirada` não tocam mais `PaymentSplit`, responsabilidade financeira é do profissional, plataforma só media. |
+| 2026-08-17 | §3 Serviço: prazo de aceite automático fixado em 72h (`AUTO_APPROVAL_HOURS`, `adr/ADR-004-prazo-aceite-automatico.md`), deixa de ser "prazo ainda não definido" (B002 resolvido). |
+| 2026-08-17 | §3 Serviço: divide `Agendado\|Em Andamento --cancela--> Cancelado` em dois, `Agendado` cancela direto (Cenário B), `Em Andamento` nunca cancela direto, abre `Em Contestação` (Cenário C), rascunho em `foundation/03-cancellation-rules.md` (B003, decisão parcial do PO). |

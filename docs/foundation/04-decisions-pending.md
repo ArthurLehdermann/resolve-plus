@@ -4,56 +4,53 @@
 
 ## B001, Responsabilidade da Garantia (inclui o mecanismo financeiro que a lastreia)
 
-**Status:** Bloqueado. Ampliado em 2026-08-17 (quarta revisão do PO) para incluir a pergunta financeira/regulatória abaixo, antes um bloqueador separado, "e agora é um item só" (PO).
+**Status:** Parcialmente resolvido. Decisão provisória de produto registrada em 2026-08-17 (quinta revisão do PO) para **destravar desenvolvimento**, mas o parecer jurídico definitivo continua bloqueado, esta decisão pode mudar.
 
 **Impacta:** Modelo de Dados · APIs · Fluxo Financeiro · Termos de Uso · Enquadramento Regulatório
 
-**Alternativas (responsabilidade):**
-- Profissional responde sozinho pela garantia (Modelo A).
-- Plataforma assume o risco financeiro da garantia (Modelo C).
-- Responsabilidade compartilhada, profissional executa e responde primeiro, plataforma media (Modelo B).
+**Decisão provisória do PO (2026-08-17):**
+- A garantia é de responsabilidade do **profissional** (Modelo A/B, ver `adr/ADR-003-garantia.md`).
+- A plataforma atua como **mediadora**, não como parte financeiramente responsável.
+- **Nenhuma retenção adicional** sobre o repasse do profissional além da comissão normal da plataforma.
+- **Não modelar ainda**: fundo garantidor, caução, reserva financeira, retenção percentual para cobrir garantia. Esses itens alteram o contexto financeiro e continuam exigindo validação jurídica/regulatória antes de qualquer implementação.
 
-**Recomendação registrada (não é decisão final):** Modelo B, reduz risco jurídico da plataforma e evita que ela vire seguradora, mantendo confiança do cliente.
+Isso resolve, por consequência, a reabertura de `adr/ADR-002-financeiro.md`: sem retenção do repasse do profissional, o enquadramento de escrow que motivou a reabertura deixa de se aplicar (ver changelog daquele ADR).
 
-**Pergunta financeira/regulatória (bloqueador separado até 2026-08-17, fundido aqui na mesma data):** `ADR-003-garantia.md` propõe lastrear a garantia retendo uma fração do repasse ao profissional (`valor_reserva_garantia`) por até o prazo de garantia (pode passar de 90 dias). `adr/ADR-002-financeiro.md` rejeitou escrow bancário especificamente para não reter dinheiro de terceiro, reter parte do repasse do profissional por prazo determinado após a captura tem o mesmo enquadramento. Os dois ADRs precisam do mesmo parecer jurídico, não podem ser decididos em separado: se reter o repasse não é viável, a alternativa a avaliar é lastrear a garantia com uma fração da comissão da própria plataforma (`valor_plataforma`, já é dela por direito, não é retenção de fundo de terceiro), ou reduzir a janela de exposição.
+**O que continua bloqueado (parecer jurídico definitivo):** se essa decisão provisória (sem retenção) é juridicamente suficiente para sustentar "plataforma media, profissional responde", ou se algum mecanismo de lastro financeiro (reserva, caução, fundo) acaba sendo exigido mais adiante. Se o parecer mudar a decisão provisória, `adr/ADR-003-garantia.md`, `adr/ADR-002-financeiro.md`, `00-domain-invariants.md` (INV-053) e `specifications/04-modelo-dados.md` (`PaymentSplit`) precisam ser revisados juntos, mesma dependência de antes.
 
-**Se Modelo B + retenção do repasse forem confirmados, fica pendente também:**
-- Percentual de reserva: 10% · 15% · 20% do `valor_profissional` no split. Trade-off: percentual alto cobre mais risco de garantia, mas atrasa mais dinheiro do profissional (afeta adesão do lado profissional, ver `08-planejamento.md`, "aquisição de oferta"). Sem preferência provisória registrada, precisa dado de ticket médio por categoria.
-
-**Responsável:** Jurídico + Produto + Financeiro.
+**Responsável:** Jurídico + Produto + Financeiro (parecer definitivo). Decisão provisória já registrada pelo PO.
 
 ---
 
 ## B002, Prazo para Aceite Automático / Repasse
 
-**Status:** Bloqueado
+**Status:** Resolvido provisoriamente (2026-08-17, decisão de Produto do PO). Registrado como `ADR-004-prazo-aceite-automatico.md`, decisão de produto, não é bloqueador jurídico, pode ser alterada por configuração sem migration.
 
 **Impacta:** State Machine · Fluxo Financeiro · Pagamento · Notificações
 
-**Alternativas:** 24h · 48h · 72h · sem aceite automático.
-
-**Preferência provisória do PO:** 72 horas, precisa validação de Produto.
+**Decisão:** 72 horas, modelado como parâmetro `AUTO_APPROVAL_HOURS` (tabela `Configuração`, `04-modelo-dados.md`), não como valor fixo em código. Ver `adr/ADR-004-prazo-aceite-automatico.md`.
 
 Relacionado a `INV-031` e `INV-041` (`00-domain-invariants.md`): o pagamento só é capturado/repassado após aprovação do cliente **ou** o esgotamento desta janela sem contestação.
 
-**Responsável:** Produto.
+**Responsável:** Produto (decidido). Fica aberto apenas o ajuste fino do valor após dado real de uso, não bloqueia desenvolvimento.
 
 ---
 
 ## B003, Cancelamento
 
-**Status:** Bloqueado
+**Status:** Em elaboração (2026-08-17, quinta revisão do PO). Rascunho de regras registrado em `foundation/03-cancellation-rules.md`, com os 4 cenários (antes de proposta, após proposta aceita, durante execução, após conclusão) mapeados para os estados de `02-state-machine.md`. **Não desbloqueia o fluxo principal**: percentual de multa e mecanismo de resolução de disputa continuam sem resposta.
 
-Falta definir:
-- Quem pode cancelar (cliente, profissional, ambos, admin).
-- Até quando (antes do agendamento, durante execução, depois).
-- Multa aplicável.
-- Estorno parcial.
-- Impacto na reputação.
-- Impacto na garantia.
-- Impacto na agenda.
+**Definido no rascunho:**
+- Antes de proposta aceita: cliente cancela livremente, sem custo (nada foi cobrado ainda).
+- Após proposta aceita, antes de iniciar (`Agendado`): cliente cancela, pode gerar multa (percentual em aberto).
+- Durante execução (`Em Andamento`): nunca cancela direto, sempre abre disputa (`Em Contestação`).
+- Após conclusão (`Aprovado`): não existe cancelamento, existe garantia (INV-053/B001) ou, se ainda dentro da janela de aceite automático, contestação de conclusão (já existente, FA004).
 
-Merece um documento de regras próprio quando destravado, referenciado a partir de `00-domain-invariants.md`, não antecipar aqui.
+**Ainda falta definir** (`foundation/03-cancellation-rules.md`, seção "O que fica pendente"):
+- Percentual de multa (Cenário B).
+- Mecânica de captura parcial/reembolso sobre autorização não capturada (Cenário B, depende de capacidade do gateway).
+- Resolução determinística de `Em Contestação → Aprovado | Cancelado` (Cenários C/D).
+- Impacto de cancelamento/contestação recorrente na reputação.
 
 **Responsável:** Produto + Jurídico.
 
@@ -91,3 +88,4 @@ Nenhum documento até 2026-08-17 tratava de quem responde quando um profissional
 | 2026-08-17 | Adiciona B005 (responsabilidade civil por dano ao imóvel), identificado em segunda revisão crítica do PO. |
 | 2026-08-17 | Adiciona bloqueador de percentual de reserva financeira de garantia, identificado em terceira revisão crítica do PO (depois fundido em B001, ver linha seguinte). |
 | 2026-08-17 | Quarta revisão do PO: funde o bloqueador de percentual de reserva em B001, mesmo parecer jurídico cobre responsabilidade da garantia e se a reserva financeira que a lastreia caracteriza retenção de fundo de terceiro (mesmo enquadramento que `ADR-002-financeiro.md` evitou). Não existe mais como item numerado separado. |
+| 2026-08-17 | Quinta revisão do PO: B001 parcialmente resolvido (decisão provisória sem retenção, destrava desenvolvimento, parecer jurídico definitivo continua bloqueado). B002 resolvido provisoriamente (72h, `adr/ADR-004-prazo-aceite-automatico.md`). B003 sai de "Bloqueado" simples para "Em elaboração", rascunho de regras em `03-cancellation-rules.md`. |

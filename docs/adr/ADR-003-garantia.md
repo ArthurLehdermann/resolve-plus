@@ -1,8 +1,8 @@
 # ADR-003: Modelo de Responsabilidade da Garantia
 
-**Status:** Recomendação registrada, **não é decisão final**, depende de parecer jurídico (ver `foundation/04-decisions-pending.md`, B001)
+**Status:** Decisão provisória de produto para permitir desenvolvimento (2026-08-17, PO). **Não é decisão jurídica final**, B001 continua bloqueado para o parecer definitivo, mas deixa de bloquear modelagem/implementação, ver `foundation/04-decisions-pending.md`.
 
-**Data:** 2026-08-16 (PO)
+**Data:** 2026-08-16 (PO), decisão provisória 2026-08-17
 
 ## Contexto
 
@@ -12,47 +12,48 @@ Responsabilidade pela garantia não é decisão de arquitetura, é decisão de d
 - **Modelo B, Garantia compartilhada.** Profissional executa e responde primeiro; plataforma media conflito.
 - **Modelo C, Garantia da plataforma.** Plataforma assume o risco financeiro. Mais caro, aproxima a plataforma de uma seguradora.
 
-## Recomendação (não decisão)
+## Decisão provisória (2026-08-17, PO), para permitir desenvolvimento
 
-**Modelo B.**
+**Modelo B, sem retenção financeira adicional.**
 
 ```
 Profissional executa
       ↓
-Profissional responde pela garantia
+Profissional responde pela garantia (sozinho, financeiramente)
       ↓
-Plataforma apenas media conflito
+Plataforma apenas media conflito, não retém nem reembolsa
 ```
 
-Reduz risco jurídico da plataforma, mantém a confiança percebida pelo cliente, evita transformar a plataforma em seguradora de fato.
+- A garantia é de responsabilidade do **profissional**.
+- A plataforma atua como **mediadora** do conflito, não como parte financeiramente responsável.
+- **Nenhuma retenção adicional** sobre o repasse do profissional além da comissão normal da plataforma (`PaymentSplit.valor_plataforma`, já cobrada em toda captura).
 
-## Por que este ADR não fecha a decisão
+Reduz risco jurídico da plataforma, mantém a confiança percebida pelo cliente (existe processo de mediação), evita transformar a plataforma em seguradora de fato, e evita o problema regulatório descrito abaixo (retenção de fundo de terceiro).
 
-Responsabilidade sobre garantia é matéria de direito do consumidor, exige validação jurídica antes de virar contrato ou termo de uso vinculante. Este documento registra a recomendação arquitetural/de produto para que modelo de dados e fluxo de disputa (`foundation/02-state-machine.md`, transição `Garantia: Acionada → Encerrada`) tenham uma hipótese de trabalho, não para autorizar implementação de responsabilidade legal sem revisão.
+## O que fica explicitamente fora do modelo, por ora
 
-## Consequências se confirmado
+Não modelar enquanto B001 não tiver parecer jurídico definitivo:
+- Fundo garantidor.
+- Caução do profissional.
+- Reserva financeira sobre o `PaymentSplit` (`valor_reserva_garantia`).
+- Qualquer retenção percentual do repasse do profissional para cobrir garantia.
 
-- `Property`/`Service`/`Warranty` no modelo de dados precisam de campo explícito de parte responsável.
-- Fluxo de disputa de garantia tem a plataforma como mediadora, não como parte financeiramente responsável primária.
-- Termos de Uso precisam declarar isso explicitamente ao profissional no momento do cadastro/verificação.
+Se o parecer jurídico de B001 (`04-decisions-pending.md`) mudar essa decisão provisória no futuro, este ADR é revisado e os campos de reserva voltam para `specifications/04-modelo-dados.md` (`PaymentSplit`). Até lá, o mecanismo descrito nas revisões anteriores deste documento (retenção de `valor_reserva_garantia`) **não é implementado**.
 
-## Mecanismo financeiro (desenhado em 2026-08-17, independente do parecer jurídico de B001)
+## Por que este ADR não fecha a decisão definitivamente
 
-Identificado em terceira revisão crítica do PO: mesmo com Modelo B recomendado, garantia acionada não tinha nenhum lastro financeiro. O repasse ao profissional ocorre ~72h após aprovação (B002); a garantia pode ser acionada até o fim do prazo de garantia (pode passar de 90 dias). Sem retenção, "profissional responde pela garantia" (Modelo B) não tem como ser cobrado na prática, o dinheiro já saiu.
+Responsabilidade sobre garantia é matéria de direito do consumidor, exige validação jurídica antes de virar contrato ou termo de uso vinculante. A decisão provisória acima existe para que modelo de dados e fluxo de disputa (`foundation/02-state-machine.md` §5, transição `Garantia: Acionada → Encerrada`) tenham uma hipótese de trabalho **sem expor a plataforma a risco financeiro além da comissão**, o que reduz a urgência do parecer jurídico (não há dinheiro retido de terceiro em jogo) sem eliminá-la (responsabilidade legal por dano segue em aberto, ver B005).
 
-**Desenho**: uma fração do `valor_profissional` no `PaymentSplit` (INV-044) fica retida como `valor_reserva_garantia` até a `Garantia` do serviço sair de `ATIVA` (INV-053, `04-modelo-dados.md`, `02-state-machine.md` §5). Se a garantia expira sem acionamento, a reserva é liberada integralmente ao profissional (`RESERVA_LIBERADA`). Se é acionada e a resolução envolve reembolso ao cliente, o reembolso é **limitado ao valor da reserva**, dano acima disso não é coberto por este mecanismo, a plataforma continua não sendo seguradora (ver B005, responsabilidade civil por dano ao imóvel, para o que fica fora do teto).
+## Consequências
 
-Este desenho depende de B001 fechar, e agora inclui o parecer sobre reter repasse do profissional (ver seção abaixo, reaberto em 2026-08-17). O percentual retido, se confirmado, também está dentro de B001 (`04-decisions-pending.md`), ainda sem valor definido.
+- `Serviço`/`Garantia` no modelo de dados têm campo explícito indicando que a parte responsável é o profissional (Modelo B).
+- Fluxo de disputa de garantia tem a plataforma como mediadora, não como parte financeiramente responsável primária, e não gera nenhum `PaymentEvent`/`PaymentRefund` da plataforma (o dinheiro já foi integralmente repassado ao profissional 72h após aprovação, `adr/ADR-004-prazo-aceite-automatico.md`).
+- Termos de Uso precisam declarar isso explicitamente ao profissional no momento do cadastro/verificação: ele responde financeiramente pela garantia fora da plataforma, a plataforma só media.
+- Resolve, por consequência, a reabertura de `ADR-002-financeiro.md` (ver changelog daquele documento): sem retenção do repasse do profissional, não há mais enquadramento de escrow pela garantia.
 
-**O que este mecanismo não resolve**: se o dano exceder a reserva, ou se o profissional simplesmente não tiver mais conta ativa na plataforma para reter contra, o mecanismo não cobre a diferença. Isso é o próprio limite do Modelo B (plataforma medeia, não segura), se o PO validar juridicamente que a plataforma precisa cobrir mais que isso, o percentual de reserva sobe, ou o modelo muda para C.
+## Por que a versão anterior deste ADR (retenção sobre o repasse) foi descartada por ora
 
-## Reaberto em 2026-08-17, INV-053 pode reintroduzir escrow pela porta dos fundos
-
-Quarta revisão crítica do PO: reter uma fração do repasse ao profissional (dinheiro de terceiro) por prazo determinado após a captura (até o fim do prazo de garantia, pode passar de 90 dias) tem o mesmo enquadramento regulatório que `adr/ADR-002-financeiro.md` rejeitou ao descartar escrow bancário, com prazo de retenção maior que o escrow original teria. Além disso, retenção parcial com liberação posterior sobre uma transação já capturada é um produto de gateway separado, nem sempre disponível (Asaas e Pagar.me fazem split no momento da captura; `ADR-002-financeiro.md` lista reautorização como pendência de gateway, mas não lista isto).
-
-**O mecanismo em si está certo no domínio** (garantia precisa de lastro financeiro, INV-053). **O problema é que ele muda a resposta de `ADR-002-financeiro.md` e esse ADR não foi reaberto até agora.** Os dois ADRs (`002` e `003`) e B001 (`04-decisions-pending.md`) viram um parecer jurídico único, não é possível decidir responsabilidade da garantia sem decidir também se o mecanismo que a financia é viável.
-
-**Alternativa a avaliar, se reter o repasse do profissional não passar no parecer**: lastrear a garantia com uma fração da comissão da própria plataforma (`PaymentSplit.valor_plataforma`), que já é dela por direito, não é retenção de fundo de terceiro. Reduz a margem da plataforma em vez de atrasar o pagamento do profissional. Não avaliado em detalhe, registrado aqui como caminho alternativo para quando isso voltar à mesa.
+Registrado para não perder o raciocínio: reter uma fração do repasse ao profissional (dinheiro de terceiro) por prazo determinado após a captura (até o fim do prazo de garantia, pode passar de 90 dias) tem o mesmo enquadramento regulatório que `adr/ADR-002-financeiro.md` rejeitou ao descartar escrow bancário, com prazo de retenção maior que o escrow original teria. Além disso, retenção parcial com liberação posterior sobre uma transação já capturada é um produto de gateway separado, nem sempre disponível (Asaas e Pagar.me fazem split no momento da captura). Em vez de resolver isso com parecer jurídico antes de poder desenvolver, o PO optou por remover a retenção do desenho provisório e reavaliar apenas se/quando o parecer jurídico de B001 exigir um mecanismo de lastro financeiro.
 
 ## Changelog
 
@@ -61,3 +62,4 @@ Quarta revisão crítica do PO: reter uma fração do repasse ao profissional (d
 | 2026-08-16 | Recomendação registrada pelo PO como arquiteto responsável, pendente de parecer jurídico (B001). |
 | 2026-08-17 | Adiciona mecanismo financeiro de reserva (INV-053), desenhado antes do parecer jurídico, como pedido pelo PO. |
 | 2026-08-17 | Reaberto na mesma data: mecanismo de reserva pode reintroduzir escrow, contradiz `ADR-002-financeiro.md`. Funde a pergunta de percentual em B001 (`04-decisions-pending.md`), registra alternativa (lastrear com comissão da plataforma em vez do repasse do profissional). |
+| 2026-08-17 | Quinta revisão do PO: decisão provisória para destravar desenvolvimento. Garantia é do profissional, plataforma só media, **sem** retenção financeira adicional. Mecanismo de reserva removido do desenho ativo (fica registrado como histórico), campos de reserva removidos de `specifications/04-modelo-dados.md`. B001 permanece bloqueado apenas para o parecer jurídico definitivo, não bloqueia mais o desenvolvimento. |

@@ -173,7 +173,7 @@ Erros: 422 (`scope` não bate com `template_escopo` da categoria)
 
 **POST /services/{id}/contest**, Cliente contesta. Requer `Idempotency-Key` (RNF010).
 
-**POST /services/{id}/cancel**, Cancela serviço (`Agendado`/`Em Andamento` → `Cancelado`). Regras de quem pode, até quando e multa aplicável dependem de B003 (`foundation/04-decisions-pending.md`), endpoint existe, mas corpo/validação ficam bloqueados até B003 destravar.
+**POST /services/{id}/cancel**, Cancela serviço. Só válido em `Agendado` (→ `Cancelado`, Cenário B, `foundation/03-cancellation-rules.md`); em `Em Andamento` o mesmo endpoint abre disputa (→ `Em Contestação`, Cenário C) em vez de cancelar, nunca cancela direto depois que a execução começou. Multa aplicável (Cenário B) e critério de resolução da disputa (Cenário C) continuam **NECESSITA VALIDAÇÃO**, ver `foundation/03-cancellation-rules.md` (B003).
 
 ## Chat
 
@@ -229,7 +229,7 @@ Request
 
 **POST /services/{id}/disputes**, Abre disputa sobre o serviço (`PaymentDispute`, INV-045). Bloqueia repasse até resolução, não bloqueia novos `PaymentEvent`.
 
-**PUT /disputes/{id}/resolve**, Admin resolve disputa. Fluxo de mediação depende de B003 (`foundation/04-decisions-pending.md`), endpoint existe, critério de resolução ainda não definido.
+**PUT /disputes/{id}/resolve**, Admin resolve disputa (Serviço `Em Contestação` → `Aprovado`/`Cancelado`, inclui as disputas abertas por cancelamento durante execução, Cenário C de `foundation/03-cancellation-rules.md`). Fluxo de mediação depende de B003 (`foundation/04-decisions-pending.md`), endpoint existe, critério de resolução ainda não definido.
 
 ## Histórico
 

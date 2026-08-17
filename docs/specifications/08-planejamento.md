@@ -124,8 +124,8 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 ## Perguntas em Aberto
 
 **Críticas**
-- Quem será o responsável legal pela garantia: plataforma ou profissional? (B001, ainda bloqueado)
-- Como ocorrerá a mediação de conflitos? (B003, ainda bloqueado)
+- Quem será o responsável legal pela garantia: plataforma ou profissional? (B001, decisão provisória: profissional, sem retenção; parecer jurídico definitivo ainda bloqueado)
+- Como ocorrerá a mediação de conflitos? (B003, em elaboração, ver `foundation/03-cancellation-rules.md`)
 - Quais documentos serão obrigatórios para validar um profissional? (RF002, ainda sem critério)
 - Quais categorias estarão disponíveis no lançamento?
 - Quem responde por dano ao imóvel causado pelo profissional? (B005, novo em 2026-08-17)
@@ -174,7 +174,7 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 
 **Pontos Prontos**: visão de produto definida, fluxos principais mapeados, escopo do MVP delimitado, arquitetura definida, APIs especificadas, requisitos não funcionais levantados, roadmap e backlog estruturados.
 
-**Bloqueadores**: definição do gateway de pagamento (e se ele suporta reautorização + split nativo, ver `adr/ADR-002-financeiro.md`), regras jurídicas de garantia (B001), mediação (B003) e responsabilidade civil por dano ao imóvel (B005), critérios de validação de profissionais (RF002), políticas de cancelamento e reembolso, protótipos de interface em alta fidelidade.
+**Bloqueadores**: definição do gateway de pagamento (e se ele suporta reautorização + split nativo, ver `adr/ADR-002-financeiro.md`), parecer jurídico definitivo de garantia (B001, decisão provisória já permite desenvolver), mediação/cancelamento (B003, rascunho em elaboração) e responsabilidade civil por dano ao imóvel (B005), critérios de validação de profissionais (RF002), protótipos de interface em alta fidelidade.
 
 ## Análise Crítica da Conversa
 

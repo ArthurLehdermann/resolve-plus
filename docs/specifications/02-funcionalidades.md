@@ -111,7 +111,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 | RN007 | Profissionais possuem reputação baseada em desempenho. |
 | RN008 | Cancelamentos impactam reputação. |
 | RN009 | Fotos podem ser exigidas na conclusão. |
-| RN010 | Serviço só pode ser encerrado após confirmação ou prazo de aceite (**Necessita Validação**). |
+| RN010 | Serviço só pode ser encerrado após confirmação ou prazo de aceite automático de 72h sem contestação (`AUTO_APPROVAL_HOURS`, `adr/ADR-004-prazo-aceite-automatico.md`). |
 
 ## 8. Perfis de Usuário
 
