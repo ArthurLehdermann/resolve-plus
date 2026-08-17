@@ -104,7 +104,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 |---|---|
 | RN001 | Apenas profissionais verificados podem receber solicitações. |
 | RN002 | Cliente só pode contratar uma proposta por solicitação. |
-| RN003 | Pagamento é autorizado no aceite da proposta e só é capturado/repassado após conclusão e aprovação do serviço, não é escrow, é autorizar→capturar→repassar (ver `adr/ADR-002-financeiro.md`, INV-041). Redigido em 2026-08-16 com vocabulário de escrow ("retido"), corrigido em 2026-08-17. |
+| RN003 | Cartão: pagamento é autorizado no aceite da proposta e só é capturado após conclusão e aprovação. Pix: captura imediata no aceite, nasce `CAPTURADO`, só o **repasse** espera aprovação (`adr/ADR-005-gateway-pagamento.md`, INV-041). Não é escrow bancário, é autorizar→capturar→repassar no cartão (ver `adr/ADR-002-financeiro.md`). Redigido em 2026-08-16 com vocabulário de escrow ("retido"), corrigido em 2026-08-17, ajustado para Pix em 2026-08-17. |
 | RN004 | Avaliação só é permitida com o Serviço em `APROVADO` (não existe estado "concluído" separado, ver `foundation/02-state-machine.md`). |
 | RN005 | Todo Serviço que atinge `APROVADO` gera garantia (INV-050). |
 | RN006 | Todo Serviço que atinge `APROVADO` entra no prontuário do imóvel via `Intervention` (INV-060). |

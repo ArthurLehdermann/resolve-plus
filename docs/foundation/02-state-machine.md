@@ -65,6 +65,7 @@ Expirado --(sistema: Serviço ainda não Cancelado/Aprovado)--> nova PaymentAuth
 
 - Toda `PaymentAuthorization` termina em `Capturado`, `Cancelado` ou `Expirado`, nunca fica pendente indefinidamente (INV-042). `Capturado` é terminal: não existe transição de `status` para fora dele.
 - Uma autorização que expira sem o Serviço ter chegado a `Aprovado`/`Cancelado` gera automaticamente uma **nova** `PaymentAuthorization` (linha própria, não mudança de status), cobre o caso de serviço agendado além da janela de autorização do gateway (cartão expira em ~5-7 dias; agendamento pode passar de 2 semanas). Nunca mais de uma `PaymentAuthorization` `Autorizado` por serviço ao mesmo tempo.
+- Pix (`metodo = PIX`, `adr/ADR-005-gateway-pagamento.md`): a autorização **nasce** `Capturado` no aceite da proposta (captura imediata no Asaas). Não passa por `Autorizado`, INV-046 não dispara, `expira_em` é nulo. O diagrama acima é o fluxo de cartão.
 
 **4b. Eventos registrados sobre uma autorização `Capturado` (o histórico, `PaymentEvent.tipo`)**
 
@@ -115,4 +116,5 @@ Ativa --(usuário: solicita exclusão)--> Excluída
 | 2026-08-17 | §5 Garantia: adiciona gatilho de `RESERVA_LIBERADA` em `Expirada`/`Encerrada` (INV-053), garantia acionada agora tem lastro financeiro desenhado, mesmo com B001 (responsabilidade) ainda bloqueado. |
 | 2026-08-17 | §5 Garantia revisada: decisão provisória de B001 remove o mecanismo de reserva, `Acionada`/`Encerrada`/`Expirada` não tocam mais `PaymentSplit`, responsabilidade financeira é do profissional, plataforma só media. |
 | 2026-08-17 | §3 Serviço: prazo de aceite automático fixado em 72h (`AUTO_APPROVAL_HOURS`, `adr/ADR-004-prazo-aceite-automatico.md`), deixa de ser "prazo ainda não definido" (B002 resolvido). |
-| 2026-08-17 | §3 Serviço: divide `Agendado\|Em Andamento --cancela--> Cancelado` em dois, `Agendado` cancela direto (Cenário B), `Em Andamento` nunca cancela direto, abre `Em Contestação` (Cenário C), rascunho em `foundation/03-cancellation-rules.md` (B003, decisão parcial do PO). |
+| 2026-08-17 | §3 Serviço: divide `Agendado|Em Andamento --cancela--> Cancelado` em dois, `Agendado` cancela direto (Cenário B), `Em Andamento` nunca cancela direto, abre `Em Contestação` (Cenário C), rascunho em `foundation/03-cancellation-rules.md` (B003, decisão parcial do PO). |
+| 2026-08-17 | §4a: Pix nasce `Capturado` no aceite (`adr/ADR-005-gateway-pagamento.md`, B006); o diagrama de `Autorizado → Capturado` permanece o fluxo de cartão. |

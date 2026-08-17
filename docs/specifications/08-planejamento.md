@@ -8,7 +8,7 @@ Transformar a visão do produto em um plano de execução incremental, reduzindo
 
 ### Fase 0 • Descoberta (1 a 2 semanas)
 
-**Objetivos**: validar regras de negócio, definir identidade visual, escolher stack definitiva, validar gateway de pagamento, validar aspectos jurídicos (LGPD, termos de uso e mediação).
+**Objetivos**: validar regras de negócio, definir identidade visual, escolher stack definitiva, integrar gateway de pagamento (Asaas, `adr/ADR-005-gateway-pagamento.md`), validar aspectos jurídicos (LGPD, termos de uso e mediação).
 
 **Entregáveis**: documentação funcional, protótipos (Figma), arquitetura, backlog priorizado.
 
@@ -72,7 +72,7 @@ O MVP será considerado pronto quando permitir: cadastro e autenticação de cli
 
 ## Dependências
 
-**Técnicas**: gateway de pagamento, Firebase Cloud Messaging, serviço de mapas, Object Storage, Redis, PostgreSQL.
+**Técnicas**: Asaas (pagamentos, `adr/ADR-005-gateway-pagamento.md`), Firebase Cloud Messaging, serviço de mapas, Object Storage, Redis, PostgreSQL.
 
 **Organizacionais**: definição da marca, política de garantia, política de cancelamento, política de mediação, termos de uso, política de privacidade.
 
@@ -130,7 +130,7 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 - Quais categorias estarão disponíveis no lançamento?
 - Quem responde por dano ao imóvel causado pelo profissional? (B005, novo em 2026-08-17)
 
-> "Pagamento em escrow ou autorizado/capturado depois?" removida desta lista em 2026-08-17, respondida por `adr/ADR-002-financeiro.md` (autorizar→capturar→repassar, não escrow). Pendências residuais dessa decisão (Pix, reautorização, split nativo) estão documentadas no próprio ADR-002, não aqui.
+> "Pagamento em escrow ou autorizado/capturado depois?" removida desta lista em 2026-08-17, respondida por `adr/ADR-002-financeiro.md` (autorizar→capturar→repassar, não escrow). Pendências residuais (Pix, reautorização, split nativo) resolvidas em 2026-08-17 por `adr/ADR-005-gateway-pagamento.md` (Asaas, Pix aceito com captura imediata, B006).
 
 **Altas**
 - Comissão fixa ou variável?
@@ -174,7 +174,7 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 
 **Pontos Prontos**: visão de produto definida, fluxos principais mapeados, escopo do MVP delimitado, arquitetura definida, APIs especificadas, requisitos não funcionais levantados, roadmap e backlog estruturados.
 
-**Bloqueadores**: definição do gateway de pagamento (e se ele suporta reautorização + split nativo, ver `adr/ADR-002-financeiro.md`), parecer jurídico definitivo de garantia (B001, decisão provisória já permite desenvolver), mediação/cancelamento (B003, rascunho em elaboração) e responsabilidade civil por dano ao imóvel (B005), critérios de validação de profissionais (RF002), protótipos de interface em alta fidelidade.
+**Bloqueadores**: parecer jurídico definitivo de garantia (B001, decisão provisória já permite desenvolver), mediação/cancelamento (B003, rascunho em elaboração) e responsabilidade civil por dano ao imóvel (B005), critérios de validação de profissionais (RF002), protótipos de interface em alta fidelidade. Gateway de pagamento deixou de ser bloqueador em 2026-08-17 (`adr/ADR-005-gateway-pagamento.md`, B006).
 
 ## Análise Crítica da Conversa
 
