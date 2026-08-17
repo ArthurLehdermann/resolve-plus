@@ -1,4 +1,4 @@
-# 05 — Arquitetura do MVP
+# 05, Arquitetura do MVP
 
 ## Objetivo
 
@@ -24,18 +24,17 @@ PostgreSQL   Redis         Object Storage   Serviços Externos
 
 ## Stack Recomendada
 
+> Stack decidida em `adr/ADR-001-stack.md` (Status: Decidido, 2026-08-16). O que estava aqui como "recomendação"/"alternativa" já é decisão fechada, mantido como referência de motivação, não como pergunta em aberto.
+
 ### Frontend
 
-- Flutter (Android/iOS com uma base de código)
+- Flutter (Android/iOS com uma base de código), decisão ADR-001.
 - Web Admin: React + Next.js
 - UI: Material 3 ou Shadcn/UI (Admin)
-- Alternativa: React Native
 
 ### Backend
 
-**Recomendação principal**: Laravel 12, PHP 8.4, Laravel Octane (quando necessário)
-
-**Alternativa**: NestJS
+Laravel 12, PHP 8.4, Laravel Octane (quando necessário), decisão ADR-001.
 
 **Motivo da escolha**: Laravel oferece excelente produtividade para CRUDs, autenticação, filas, notificações e integrações, acelerando o MVP.
 
@@ -53,7 +52,9 @@ Object Storage (S3 compatível), para armazenar fotos, documentos, evidências, 
 
 ## Módulos do Sistema
 
-Autenticação, Usuários, Perfis, Categorias, Solicitações, Propostas, Contratações, Agenda, Chat, Pagamentos, Garantias, Histórico do Imóvel, Avaliações, Notificações, Administração.
+Autenticação, Usuários, Perfis, Categorias, Solicitações, Propostas, Serviços, Agenda, Chat, Pagamentos, Garantias, Prontuário do Imóvel, Avaliações, Notificações, Administração.
+
+> "Contratações" removido em 2026-08-17, não existe entidade `Contratação` (INV-020). O que a proposta aceita gera é o módulo `Serviços` diretamente.
 
 Cada módulo deve ser isolado por domínio, mesmo dentro do monólito.
 
@@ -75,7 +76,7 @@ Ferramentas sugeridas: Sentry (erros), Laravel Telescope (desenvolvimento), Open
 
 ## Logs
 
-Registrar: login, logout, cadastro, contratação, pagamentos, cancelamentos, alterações cadastrais, disputas. Formato estruturado (JSON).
+Registrar: login, logout, cadastro, aceite de proposta, pagamentos, cancelamentos, alterações cadastrais, disputas. Formato estruturado (JSON).
 
 ## Auditoria
 
@@ -92,9 +93,9 @@ Executar em filas: envio de e-mails, push notifications, SMS, geração de hist�
 | Usuário cadastrado | Enviar boas-vindas |
 | Solicitação criada | Notificar profissionais |
 | Proposta enviada | Notificar cliente |
-| Proposta aceita | Criar contratação |
-| Serviço concluído | Gerar garantia |
-| Serviço finalizado | Atualizar reputação |
+| Proposta aceita | Evento `ProposalAccepted` (INV-020) → cria Serviço diretamente, sem entidade `Contratação` |
+| Serviço aprovado | Captura pagamento + gera garantia + gera `Intervention` no prontuário |
+| Avaliação registrada | Atualizar reputação |
 | Avaliação criada | Recalcular nota |
 
 ## Integrações Externas
@@ -103,7 +104,7 @@ Executar em filas: envio de e-mails, push notifications, SMS, geração de hist�
 
 **Push**: Firebase Cloud Messaging (FCM)
 
-**Mapas**: Google Maps, Mapbox — usados para geolocalização, distância, endereços.
+**Mapas**: Google Maps, Mapbox, usados para geolocalização, distância, endereços.
 
 **CEP**: ViaCEP (Brasil), para preenchimento automático do endereço.
 
@@ -115,7 +116,7 @@ Executar em filas: envio de e-mails, push notifications, SMS, geração de hist�
 
 **Vertical**: escalar banco e Redis inicialmente.
 
-**Futuro**: separar módulos de maior carga — chat, notificações, pagamentos, IA.
+**Futuro**: separar módulos de maior carga, chat, notificações, pagamentos, IA.
 
 ## Segurança
 
@@ -127,7 +128,7 @@ HTTPS obrigatório, senhas com Argon2id, criptografia de dados sensíveis, rate 
 
 **CI/CD**: GitHub Actions. Pipeline: testes, análise estática, build, deploy.
 
-**Infraestrutura**: ambiente inicial — VPS 4 vCPU, 8 GB RAM, SSD NVMe, Ubuntu LTS. Escalável para AWS, Azure ou DigitalOcean posteriormente.
+**Infraestrutura**: ambiente inicial, VPS 4 vCPU, 8 GB RAM, SSD NVMe, Ubuntu LTS. Escalável para AWS, Azure ou DigitalOcean posteriormente.
 
 ## Monitoramento
 
@@ -190,8 +191,8 @@ Evitar estrutura baseada apenas em Controllers e Models. Organizar por domínio 
 
 ## Pendências para Validação
 
-- Flutter ou React Native?
-- Laravel ou NestJS?
+> Flutter/Laravel removidos desta lista em 2026-08-17, decididos em ADR-001, listá-los aqui como pendência contradizia o próprio ADR.
+
 - Gateway de pagamento oficial?
 - Google Maps ou Mapbox?
 - Chat via polling no MVP ou WebSocket?

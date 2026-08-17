@@ -1,4 +1,4 @@
-# 06 — Especificação da API REST (MVP)
+# 06, Especificação da API REST (MVP)
 
 ## Padrões
 
@@ -31,7 +31,7 @@
 
 ## Autenticação
 
-**POST /auth/register** — Cadastro de cliente ou profissional.
+**POST /auth/register**, Cadastro de cliente ou profissional.
 
 Request
 ```json
@@ -54,43 +54,43 @@ Response
 
 Erros: 400, 409, 422
 
-**POST /auth/login** — Retorna token de acesso.
+**POST /auth/login**, Retorna token de acesso.
 
-**POST /auth/logout** — Invalida token.
+**POST /auth/logout**, Invalida token.
 
-**POST /auth/forgot-password** — Solicita redefinição.
+**POST /auth/forgot-password**, Solicita redefinição.
 
-**POST /auth/reset-password** — Redefine senha.
+**POST /auth/reset-password**, Redefine senha.
 
 ## Usuários
 
-**GET /users/me** — Retorna usuário autenticado.
+**GET /users/me**, Retorna usuário autenticado.
 
-**PUT /users/me** — Atualiza perfil.
+**PUT /users/me**, Atualiza perfil.
 
-**POST /users/photo** — Upload de avatar.
+**POST /users/photo**, Upload de avatar.
 
 ## Categorias
 
-**GET /categories** — Lista categorias disponíveis.
+**GET /categories**, Lista categorias disponíveis.
 
 ## Imóveis
 
-**GET /properties** — Lista imóveis do cliente.
+**GET /properties**, Lista imóveis do cliente.
 
-**POST /properties** — Cadastrar imóvel.
+**POST /properties**, Cadastrar imóvel.
 
-**PUT /properties/{id}** — Editar imóvel.
+**PUT /properties/{id}**, Editar imóvel.
 
-**DELETE /properties/{id}** — Excluir (soft delete).
+**DELETE /properties/{id}**, Excluir (soft delete).
 
 ## Solicitações
 
-**GET /requests** — Lista solicitações do usuário.
+**GET /requests**, Lista solicitações do usuário.
 
 Filtros: `status`, `categoria`, `data`
 
-**POST /requests** — Criar solicitação.
+**POST /requests**, Criar solicitação.
 
 Request
 ```json
@@ -102,19 +102,19 @@ Request
 }
 ```
 
-**GET /requests/{id}** — Detalhes.
+**GET /requests/{id}**, Detalhes.
 
-**PUT /requests/{id}** — Editar enquanto aberta.
+**PUT /requests/{id}**, Editar enquanto aberta.
 
-**DELETE /requests/{id}** — Cancelar.
+**DELETE /requests/{id}**, Cancelar.
 
-**POST /requests/{id}/photos** — Upload de imagens.
+**POST /requests/{id}/photos**, Upload de imagens.
 
 ## Propostas
 
-**GET /requests/{id}/proposals** — Lista propostas.
+**GET /requests/{id}/proposals**, Lista propostas.
 
-**POST /requests/{id}/proposals** — Profissional envia proposta.
+**POST /requests/{id}/proposals**, Profissional envia proposta.
 ```json
 {
   "price": 350,
@@ -124,19 +124,21 @@ Request
 }
 ```
 
-**POST /proposals/{id}/accept** — Aceita proposta.
+**POST /proposals/{id}/accept**, Aceita proposta. Recusa automática de todas as demais propostas da mesma solicitação é efeito colateral do sistema, não uma chamada separada (INV-011).
 
-**POST /proposals/{id}/reject** — Recusa proposta.
+**POST /proposals/{id}/withdraw**, Profissional retira a proposta antes do aceite (`Retirada`, `02-state-machine.md` §2).
+
+> `POST /proposals/{id}/reject` removido em 2026-08-17, não existe recusa manual de proposta individual pelo cliente na state machine. Recusa é sempre automática (efeito colateral do aceite de outra proposta, INV-011). Se Produto quiser um "descartar" puramente de UI (sem mudar `status`), isso é estado local do app, não uma mutação de API.
 
 ## Serviços
 
-**GET /services** — Lista serviços.
+**GET /services**, Lista serviços.
 
-**GET /services/{id}** — Detalhes.
+**GET /services/{id}**, Detalhes.
 
-**POST /services/{id}/start** — Marca início.
+**POST /services/{id}/start**, Marca início.
 
-**POST /services/{id}/finish** — Finaliza.
+**POST /services/{id}/finish**, Finaliza.
 ```json
 {
   "notes": "",
@@ -144,31 +146,35 @@ Request
 }
 ```
 
-**POST /services/{id}/approve** — Cliente aprova.
+**POST /services/{id}/approve**, Cliente aprova. Dispara captura de pagamento + garantia + Intervention no prontuário (INV-041/050/060). Requer header `Idempotency-Key` (RNF010, operação crítica, nunca duplicar captura).
 
-**POST /services/{id}/contest** — Cliente contesta.
+**POST /services/{id}/contest**, Cliente contesta. Requer `Idempotency-Key` (RNF010).
+
+**POST /services/{id}/cancel**, Cancela serviço (`Agendado`/`Em Andamento` → `Cancelado`). Regras de quem pode, até quando e multa aplicável dependem de B003 (`foundation/04-decisions-pending.md`), endpoint existe, mas corpo/validação ficam bloqueados até B003 destravar.
 
 ## Chat
 
-**GET /services/{id}/messages** — Lista mensagens. Paginação obrigatória.
+**GET /services/{id}/messages**, Lista mensagens. Paginação obrigatória.
 
-**POST /services/{id}/messages** — Enviar mensagem.
+**POST /services/{id}/messages**, Enviar mensagem.
 
 ## Agenda
 
-**GET /schedule** — Agenda do usuário.
+**GET /schedule**, Agenda do usuário.
 
-**POST /schedule** — Agendar.
+**POST /schedule**, Agendar.
 
-**PUT /schedule/{id}** — Reagendar.
+**PUT /schedule/{id}**, Reagendar.
 
 ## Pagamentos
 
-**GET /payments** — Histórico.
+**GET /payments**, Histórico (lista `PaymentAuthorization`, uma ou mais por serviço, INV-046).
 
-**GET /payments/{id}** — Detalhes.
+**GET /payments/{id}**, Detalhes de uma `PaymentAuthorization`.
 
-**POST /payments/{id}/release** — Liberação manual (Admin), gera `PaymentEvent` fora do fluxo automático (INV-041 exige justificativa e responsável registrados em auditoria).
+**GET /payments/{id}/events**, Extrato de `PaymentEvent` (append-only) daquela autorização, inclui `REAUTORIZADO` quando houver.
+
+**POST /payments/{id}/release**, Liberação manual (Admin), gera `PaymentEvent` fora do fluxo automático (INV-041 exige justificativa e responsável registrados em auditoria). Requer `Idempotency-Key` (RNF010).
 
 Request
 ```json
@@ -182,17 +188,33 @@ Erros: 403 (fora do papel Admin), 409 (serviço não `APROVADO` e sem exceção 
 
 ## Garantias
 
-**GET /warranties** — Lista garantias.
+**GET /warranties**, Lista garantias.
 
-**GET /warranties/{id}** — Detalhes.
+**GET /warranties/{id}**, Detalhes.
+
+**POST /warranties/{id}/claim**, Cliente aciona garantia com evidências (INV-052).
+
+Request
+```json
+{
+  "descricao": "",
+  "photos": []
+}
+```
+
+## Disputas
+
+**POST /services/{id}/disputes**, Abre disputa sobre o serviço (`PaymentDispute`, INV-045). Bloqueia repasse até resolução, não bloqueia novos `PaymentEvent`.
+
+**PUT /disputes/{id}/resolve**, Admin resolve disputa. Fluxo de mediação depende de B003 (`foundation/04-decisions-pending.md`), endpoint existe, critério de resolução ainda não definido.
 
 ## Histórico
 
-**GET /properties/{id}/history** — Histórico do imóvel.
+**GET /properties/{id}/history**, Prontuário do imóvel: `Area → Asset → Intervention` aninhado (não são recursos CRUD próprios no MVP, gerados automaticamente pelo fluxo de Serviço, INV-060/061).
 
 ## Avaliações
 
-**POST /services/{id}/rating** — Enviar avaliação.
+**POST /services/{id}/rating**, Enviar avaliação.
 ```json
 {
   "score": 5,
@@ -202,19 +224,19 @@ Erros: 403 (fora do papel Admin), 409 (serviço não `APROVADO` e sem exceção 
 
 ## Notificações
 
-**GET /notifications** — Lista.
+**GET /notifications**, Lista.
 
-**PUT /notifications/{id}/read** — Marca como lida.
+**PUT /notifications/{id}/read**, Marca como lida.
 
 ## Administração
 
-**GET /admin/users** — Usuários.
+**GET /admin/users**, Usuários.
 
-**GET /admin/services** — Serviços.
+**GET /admin/services**, Serviços.
 
-**GET /admin/payments** — Pagamentos.
+**GET /admin/payments**, Pagamentos.
 
-**GET /admin/dashboard** — Indicadores gerais.
+**GET /admin/dashboard**, Indicadores gerais.
 
 ## Paginação
 
@@ -287,6 +309,8 @@ Executar em background: envio de e-mail, push notification, SMS, upload/processa
 Authorization: Bearer TOKEN
 Content-Type: application/json
 Accept: application/json
+Idempotency-Key: <uuid>  (obrigatório em POST /proposals/{id}/accept, /services/{id}/approve,
+                          /services/{id}/contest, /payments/{id}/release, RNF010)
 ```
 
 **Convenções**: UUID em todas as entidades, soft delete, datas ISO-8601, valores monetários em centavos (inteiro) para evitar erros de ponto flutuante, respostas padronizadas.

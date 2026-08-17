@@ -1,4 +1,4 @@
-# ADR-001 — Stack Tecnológica
+# ADR-001, Stack Tecnológica
 
 **Status:** Decidido
 
@@ -6,7 +6,7 @@
 
 ## Contexto
 
-Havia inconsistência editorial entre documentos: alguns tratavam a stack como decidida, outros como pendente (Grupo A de inconsistências apontado pelo PO). `specifications/08-planejamento.md` já lista a stack em "Decisões Técnicas Consolidadas" — este ADR formaliza isso como decisão única, encerrando a ambiguidade.
+Havia inconsistência editorial entre documentos: alguns tratavam a stack como decidida, outros como pendente (Grupo A de inconsistências apontado pelo PO). `specifications/08-planejamento.md` já lista a stack em "Decisões Técnicas Consolidadas", este ADR formaliza isso como decisão única, encerrando a ambiguidade.
 
 ## Decisão
 

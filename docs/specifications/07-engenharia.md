@@ -1,4 +1,4 @@
-# 07 — Requisitos Não Funcionais
+# 07, Requisitos Não Funcionais
 
 ## Visão Geral
 
@@ -93,7 +93,7 @@ MVP: português (pt-BR). Preparar arquitetura para múltiplos idiomas sem refato
 
 **Aplicativo**: Android 10+, iOS 16+
 
-**Web**: Chrome, Edge, Safari, Firefox — últimas duas versões estáveis.
+**Web**: Chrome, Edge, Safari, Firefox, últimas duas versões estáveis.
 
 ## RNF016 • Custos Operacionais
 

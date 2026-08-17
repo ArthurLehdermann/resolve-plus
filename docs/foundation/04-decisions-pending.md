@@ -1,8 +1,8 @@
-# 04 — Decisions Pending (Bloqueadores Formais)
+# 04, Decisions Pending (Bloqueadores Formais)
 
-> Bloqueadores de arquitetura/negócio, com status explícito. Nenhum item aqui é "detalhe a resolver depois" — são pontos que **mudam** modelo de dados, API ou fluxo financeiro dependendo da resposta. Registrado pelo PO em 2026-08-16.
+> Bloqueadores de arquitetura/negócio, com status explícito. Nenhum item aqui é "detalhe a resolver depois", são pontos que **mudam** modelo de dados, API ou fluxo financeiro dependendo da resposta. Registrado pelo PO em 2026-08-16.
 
-## B001 — Responsabilidade da Garantia
+## B001, Responsabilidade da Garantia
 
 **Status:** Bloqueado
 
@@ -11,15 +11,15 @@
 **Alternativas:**
 - Profissional responde sozinho pela garantia (Modelo A).
 - Plataforma assume o risco financeiro da garantia (Modelo C).
-- Responsabilidade compartilhada — profissional executa e responde primeiro, plataforma media (Modelo B).
+- Responsabilidade compartilhada, profissional executa e responde primeiro, plataforma media (Modelo B).
 
-**Recomendação registrada (não é decisão final):** Modelo B — reduz risco jurídico da plataforma e evita que ela vire seguradora, mantendo confiança do cliente.
+**Recomendação registrada (não é decisão final):** Modelo B, reduz risco jurídico da plataforma e evita que ela vire seguradora, mantendo confiança do cliente.
 
 **Responsável:** Jurídico + Produto.
 
 ---
 
-## B002 — Prazo para Aceite Automático / Repasse
+## B002, Prazo para Aceite Automático / Repasse
 
 **Status:** Bloqueado
 
@@ -27,7 +27,7 @@
 
 **Alternativas:** 24h · 48h · 72h · sem aceite automático.
 
-**Preferência provisória do PO:** 72 horas — precisa validação de Produto.
+**Preferência provisória do PO:** 72 horas, precisa validação de Produto.
 
 Relacionado a `INV-031` e `INV-041` (`00-domain-invariants.md`): o pagamento só é capturado/repassado após aprovação do cliente **ou** o esgotamento desta janela sem contestação.
 
@@ -35,7 +35,7 @@ Relacionado a `INV-031` e `INV-041` (`00-domain-invariants.md`): o pagamento só
 
 ---
 
-## B003 — Cancelamento
+## B003, Cancelamento
 
 **Status:** Bloqueado
 
@@ -48,26 +48,39 @@ Falta definir:
 - Impacto na garantia.
 - Impacto na agenda.
 
-Merece um documento de regras próprio quando destravado, referenciado a partir de `00-domain-invariants.md` — não antecipar aqui.
+Merece um documento de regras próprio quando destravado, referenciado a partir de `00-domain-invariants.md`, não antecipar aqui.
 
 **Responsável:** Produto + Jurídico.
 
 ---
 
-## B004 — Histórico Manual do Imóvel
+## B004, Histórico Manual do Imóvel
 
 **Status:** Bloqueado (decisão provisória do PO já registrada, falta validação)
 
 **Alternativas avaliadas:**
-- **A — Somente registros gerados pela plataforma.** Prós: dados confiáveis. Contras: histórico incompleto.
-- **B — Permitir registros manuais.** Prós: aumenta o valor do prontuário. Contras: reduz confiabilidade.
+- **A, Somente registros gerados pela plataforma.** Prós: dados confiáveis. Contras: histórico incompleto.
+- **B, Permitir registros manuais.** Prós: aumenta o valor do prontuário. Contras: reduz confiabilidade.
 
-**Decisão provisória do PO (2026-08-16): modelo híbrido.** Todo registro tem uma `origem` (`PLATAFORMA | MANUAL | IMPORTADO`) com selo de confiabilidade próprio — um comprador futuro do imóvel distingue manutenção comprovada por serviço contratado na plataforma de anotação manual do proprietário. Refletido em `00-domain-invariants.md` (INV-062).
+**Decisão provisória do PO (2026-08-16): modelo híbrido.** Todo registro tem uma `origem` (`PLATAFORMA | MANUAL | IMPORTADO`) com selo de confiabilidade próprio, um comprador futuro do imóvel distingue manutenção comprovada por serviço contratado na plataforma de anotação manual do proprietário. Refletido em `00-domain-invariants.md` (INV-062).
 
 **Responsável:** Produto (validar antes de fechar `specifications/04-modelo-dados.md`).
+
+## B005, Responsabilidade Civil por Dano ao Imóvel
+
+**Status:** Bloqueado
+
+**Impacta:** Termos de Uso · Fluxo Financeiro · Verificação de Profissional (RF002)
+
+Nenhum documento até 2026-08-17 tratava de quem responde quando um profissional causa dano ao imóvel durante a execução (ex.: vazamento em serviço hidráulico, dano elétrico). É o maior risco reputacional de um marketplace presencial e ficou de fora de toda a análise financeira/jurídica até agora, identificado em revisão crítica do PO sobre `specifications/04-modelo-dados.md`.
+
+**Responsável:** Jurídico + Produto.
+
+---
 
 ## Changelog
 
 | Data | Mudança |
 |---|---|
 | 2026-08-16 | Criação a partir da revisão do PO sobre a estrutura de `foundation/`. |
+| 2026-08-17 | Adiciona B005 (responsabilidade civil por dano ao imóvel), identificado em segunda revisão crítica do PO. |

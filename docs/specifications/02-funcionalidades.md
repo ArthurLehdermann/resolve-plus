@@ -1,4 +1,4 @@
-# 02 — Funcionalidades
+# 02, Funcionalidades
 
 ## 1. Casos de Uso
 
@@ -35,7 +35,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 
 ## 4. Fluxos Principais
 
-**FP001 — Solicitar serviço**
+**FP001, Solicitar serviço**
 1. Cliente escolhe categoria.
 2. Informa descrição.
 3. Anexa imagens.
@@ -43,14 +43,14 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 5. Sistema cria solicitação.
 6. Profissionais elegíveis recebem notificação.
 
-**FP002 — Contratação**
+**FP002, Contratação**
 1. Cliente recebe propostas.
 2. Compara valores.
 3. Escolhe profissional.
 4. Sistema cria contratação.
 5. Chat é habilitado.
 
-**FP003 — Execução**
+**FP003, Execução**
 1. Profissional comparece.
 2. Executa serviço.
 3. Envia evidências.
@@ -60,10 +60,10 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 
 ## 5. Fluxos Alternativos
 
-- **FA001** — Nenhum profissional respondeu: sistema informa indisponibilidade e mantém solicitação aberta por período configurável.
-- **FA002** — Cliente cancela antes da contratação: solicitação encerrada.
-- **FA003** — Profissional cancela: solicitação retorna para busca de novos profissionais.
-- **FA004** — Cliente rejeita conclusão: pagamento permanece bloqueado, status muda para "Em Contestação". **Necessita Validação**: fluxo de mediação.
+- **FA001**, Nenhum profissional respondeu: sistema informa indisponibilidade e mantém solicitação aberta por período configurável.
+- **FA002**, Cliente cancela antes da contratação: solicitação encerrada.
+- **FA003**, Profissional cancela: solicitação retorna para busca de novos profissionais.
+- **FA004**, Cliente rejeita conclusão: pagamento permanece bloqueado, status muda para "Em Contestação". **Necessita Validação**: fluxo de mediação.
 
 ## 6. Requisitos Funcionais
 
@@ -104,7 +104,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 |---|---|
 | RN001 | Apenas profissionais verificados podem receber solicitações. |
 | RN002 | Cliente só pode contratar uma proposta por solicitação. |
-| RN003 | Pagamento permanece retido até aceite. |
+| RN003 | Pagamento é autorizado no aceite da proposta e só é capturado/repassado após conclusão e aprovação do serviço, não é escrow, é autorizar→capturar→repassar (ver `adr/ADR-002-financeiro.md`, INV-041). Redigido em 2026-08-16 com vocabulário de escrow ("retido"), corrigido em 2026-08-17. |
 | RN004 | Avaliação somente após conclusão. |
 | RN005 | Toda conclusão gera garantia. |
 | RN006 | Todo serviço concluído entra no histórico do imóvel. |
@@ -159,13 +159,15 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 
 ## 10. Estados do Sistema
 
+> Este documento é o desenho original (2026-08-16), anterior à revisão de invariantes. Fonte de verdade de transição de estados é `foundation/02-state-machine.md`; abaixo mantido como registro histórico, com a linha de Pagamento corrigida em 2026-08-17 para não usar vocabulário de escrow (rejeitado por `adr/ADR-002-financeiro.md`).
+
 **Solicitação**: Criada → Aberta → Recebendo propostas → Expirada / Cancelada / Contratada
 
-**Serviço**: Agendado → Em andamento → Concluído → Contestação → Finalizado
+**Serviço**: Agendado → Em andamento → Aguardando Aprovação → Aprovado / Em Contestação → Cancelado
 
-**Pagamento**: Aguardando → Retido → Liberado → Pago → Reembolsado (Futuro)
+**PaymentAuthorization**: Autorizado → Capturado → Repassado (evento) | Cancelado | Expirado → Reautorizado (INV-046) | Reembolsado (sobre capturado)
 
-**Garantia**: Ativa → Expirada → Acionada (Futuro)
+**Garantia**: Ativa → Expirada → Acionada → Encerrada
 
 **Conta**: Pendente de verificação → Ativa → Suspensa → Bloqueada → Excluída
 

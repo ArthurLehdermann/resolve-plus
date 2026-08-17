@@ -1,4 +1,4 @@
-# 08 — Planejamento do MVP
+# 08, Planejamento do MVP
 
 ## Objetivo
 
@@ -14,19 +14,19 @@ Transformar a visão do produto em um plano de execução incremental, reduzindo
 
 ### Fase 1 • MVP (8 a 12 semanas)
 
-**Épico 1 — Autenticação**: cadastro, login, recuperação de senha, perfil.
+**Épico 1, Autenticação**: cadastro, login, recuperação de senha, perfil.
 
-**Épico 2 — Solicitações**: criar solicitação, upload de fotos, endereço, categorias.
+**Épico 2, Solicitações**: criar solicitação, upload de fotos, endereço, categorias.
 
-**Épico 3 — Propostas**: recebimento, comparação, aceite, rejeição.
+**Épico 3, Propostas**: recebimento, comparação, aceite, rejeição.
 
-**Épico 4 — Execução**: agenda, chat, conclusão, evidências.
+**Épico 4, Execução**: agenda, chat, conclusão, evidências.
 
-**Épico 5 — Financeiro**: pagamento protegido, liberação, histórico.
+**Épico 5, Financeiro**: pagamento protegido, liberação, histórico.
 
-**Épico 6 — Avaliações**: avaliação, reputação, garantia, histórico do imóvel.
+**Épico 6, Avaliações**: avaliação, reputação, garantia, histórico do imóvel.
 
-**Épico 7 — Administração**: gestão de usuários, categorias, serviços, relatórios básicos.
+**Épico 7, Administração**: gestão de usuários, categorias, serviços, relatórios básicos.
 
 ### Pós-MVP (V1)
 
@@ -54,17 +54,17 @@ Marketplace de materiais, seguro para serviços, assinatura de manutenção prev
 
 ## User Stories
 
-**US001** — Como cliente, quero solicitar um serviço, para receber propostas de profissionais.
+**US001**, Como cliente, quero solicitar um serviço, para receber propostas de profissionais.
 Critérios de Aceite: categoria obrigatória, descrição obrigatória, endereço válido, solicitação criada com sucesso.
 
-**US002** — Como profissional, quero enviar uma proposta, para disputar uma oportunidade.
+**US002**, Como profissional, quero enviar uma proposta, para disputar uma oportunidade.
 Critérios: valor obrigatório, prazo obrigatório, garantia informada.
 
-**US003** — Como cliente, quero comparar propostas, para contratar o melhor profissional.
+**US003**, Como cliente, quero comparar propostas, para contratar o melhor profissional.
 
-**US004** — Como profissional, quero finalizar um serviço, para receber meu pagamento.
+**US004**, Como profissional, quero finalizar um serviço, para receber meu pagamento.
 
-**US005** — Como cliente, quero avaliar o profissional, para contribuir com sua reputação.
+**US005**, Como cliente, quero avaliar o profissional, para contribuir com sua reputação.
 
 ## Critérios de Aceite do MVP
 
@@ -108,6 +108,8 @@ Total estimado: 12 a 15 semanas.
 
 Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas, dependendo da experiência da equipe.
 
+> **Não recalculado desde 2026-08-16.** O escopo do módulo Pagamentos cresceu de uma tabela simples para 5 entidades com reautorização (INV-046), e o módulo Histórico do Imóvel de um log para `Property/Area/Asset/Intervention` com `PropertyOwnership`. Tratar "Alta"/"Média" na tabela de complexidade acima e as 12-15 semanas como desatualizadas até nova estimativa.
+
 ## Dívidas Técnicas Aceitáveis no MVP
 
 - Chat via polling em vez de WebSocket.
@@ -122,11 +124,13 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 ## Perguntas em Aberto
 
 **Críticas**
-- Quem será o responsável legal pela garantia: plataforma ou profissional?
-- Como ocorrerá a mediação de conflitos?
-- O pagamento ficará em conta escrow ou será apenas autorizado e capturado depois?
-- Quais documentos serão obrigatórios para validar um profissional?
+- Quem será o responsável legal pela garantia: plataforma ou profissional? (B001, ainda bloqueado)
+- Como ocorrerá a mediação de conflitos? (B003, ainda bloqueado)
+- Quais documentos serão obrigatórios para validar um profissional? (RF002, ainda sem critério)
 - Quais categorias estarão disponíveis no lançamento?
+- Quem responde por dano ao imóvel causado pelo profissional? (B005, novo em 2026-08-17)
+
+> "Pagamento em escrow ou autorizado/capturado depois?" removida desta lista em 2026-08-17, respondida por `adr/ADR-002-financeiro.md` (autorizar→capturar→repassar, não escrow). Pendências residuais dessa decisão (Pix, reautorização, split nativo) estão documentadas no próprio ADR-002, não aqui.
 
 **Altas**
 - Comissão fixa ou variável?
@@ -166,11 +170,11 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 
 ## Prontidão para Desenvolvimento
 
-**Avaliação**: 88%
+**Avaliação**: 88%, **número obsoleto, não usar.** `foundation/notas-revisao-arquitetural.md` (2026-08-16) já tinha rebaixado para 70-75%; o modelo de dados só foi corrigido de fato em 2026-08-17 (duas rodadas de revisão crítica), e o escopo cresceu no processo (bounded context Payment com 5 entidades + reautorização, `PropertyOwnership`, avaliação bidirecional, mecanismo antidesintermediação). Não há uma reavaliação numérica pós-correção, pendente de nova rodada de Planejamento antes de citar qualquer percentual.
 
-**Pontos Prontos**: visão de produto definida, fluxos principais mapeados, escopo do MVP delimitado, modelo de dados consistente, arquitetura definida, APIs especificadas, requisitos não funcionais levantados, roadmap e backlog estruturados.
+**Pontos Prontos**: visão de produto definida, fluxos principais mapeados, escopo do MVP delimitado, arquitetura definida, APIs especificadas, requisitos não funcionais levantados, roadmap e backlog estruturados.
 
-**Bloqueadores**: definição do gateway de pagamento, regras jurídicas de garantia e mediação, critérios de validação de profissionais, políticas de cancelamento e reembolso, protótipos de interface em alta fidelidade.
+**Bloqueadores**: definição do gateway de pagamento (e se ele suporta reautorização + split nativo, ver `adr/ADR-002-financeiro.md`), regras jurídicas de garantia (B001), mediação (B003) e responsabilidade civil por dano ao imóvel (B005), critérios de validação de profissionais (RF002), políticas de cancelamento e reembolso, protótipos de interface em alta fidelidade.
 
 ## Análise Crítica da Conversa
 

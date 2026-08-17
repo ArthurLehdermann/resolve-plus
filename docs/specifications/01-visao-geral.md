@@ -1,10 +1,10 @@
-# 01 — Visão Geral e Negócio
+# 01, Visão Geral e Negócio
 
 > Documento gerado a partir do briefing de origem (conversa de ideação do produto). Nível de detalhamento: especificação de arquiteto sênior, servindo de base para os documentos 02–08.
 
 ## 1. Resumo Executivo
 
-**Resolve+** é um marketplace de serviços residenciais e prediais (elétrica, hidráulica, pintura, montagem, ar-condicionado, limpeza, jardinagem, pequenos reparos) cujo diferencial não é apenas conectar cliente e profissional — a plataforma **participa da transação inteira**: orçamento assistido por IA, comparação de propostas sobre o mesmo escopo, pagamento protegido, garantia digital registrada e um histórico de manutenção do imóvel ("Prontuário do Imóvel") que gera recorrência.
+**Resolve+** é um marketplace de serviços residenciais e prediais (elétrica, hidráulica, pintura, montagem, ar-condicionado, limpeza, jardinagem, pequenos reparos) cujo diferencial não é apenas conectar cliente e profissional, a plataforma **participa da transação inteira**: orçamento assistido por IA, comparação de propostas sobre o mesmo escopo, pagamento protegido, garantia digital registrada e um histórico de manutenção do imóvel ("Prontuário do Imóvel") que gera recorrência.
 
 A promessa de marca: **"Do problema à solução, com preço, profissional e garantia no mesmo lugar."**
 
@@ -12,7 +12,7 @@ Modelo de receita combina comissão por serviço (~10%), assinatura profissional
 
 ## 2. Contexto de Negócio
 
-O mercado de contratação de mão de obra para reparos e manutenção residencial/predial hoje é resolvido por meios informais (indicação, grupos de WhatsApp, classificados) ou por marketplaces de leads que **encerram sua responsabilidade na indicação do contato** — não participam do orçamento, da execução, do pagamento nem da garantia. Isso deixa três dores sem solução estrutural:
+O mercado de contratação de mão de obra para reparos e manutenção residencial/predial hoje é resolvido por meios informais (indicação, grupos de WhatsApp, classificados) ou por marketplaces de leads que **encerram sua responsabilidade na indicação do contato**, não participam do orçamento, da execução, do pagamento nem da garantia. Isso deixa três dores sem solução estrutural:
 
 1. **Confiança**: não há como saber, antes de contratar, se o profissional é competente e idôneo.
 2. **Preço comparável**: orçamentos de profissionais diferentes cobrem escopos diferentes, tornando a comparação inútil.
@@ -24,7 +24,7 @@ Cliente residencial/predial não tem, num único lugar, a capacidade de: (a) des
 
 ## 4. Oportunidade
 
-Transformar um marketplace de leads em uma **plataforma transacional completa**: orçamento inteligente + marketplace + pagamento protegido + garantia registrada + histórico de imóvel + (futuro) venda de materiais. Cada camada aumenta o custo de sair da plataforma tanto para cliente quanto para profissional, o que ataca diretamente o maior risco do modelo — a desintermediação ("fechar por fora").
+Transformar um marketplace de leads em uma **plataforma transacional completa**: orçamento inteligente + marketplace + pagamento protegido + garantia registrada + histórico de imóvel + (futuro) venda de materiais. Cada camada aumenta o custo de sair da plataforma tanto para cliente quanto para profissional, o que ataca diretamente o maior risco do modelo, a desintermediação ("fechar por fora").
 
 A extensão para **Resolve Empresas** (redes de lojas, condomínios, imobiliárias, construtoras com manutenção recorrente) é identificada como possivelmente mais lucrativa que o consumidor residencial, por ticket médio maior e recorrência contratual.
 
@@ -67,7 +67,7 @@ A extensão para **Resolve Empresas** (redes de lojas, condomínios, imobiliári
 ## 9. Objetivos Técnicos
 
 - OBJ-TEC-01: Suportar captura estruturada de solicitação (mídia + IA) com baixa fricção para o cliente.
-- OBJ-TEC-02: Gerar estimativa de preço a partir de região, categoria e histórico de serviços — sem exigir motor de pricing complexo no MVP (heurística inicial, evoluindo para modelo orientado a dados).
+- OBJ-TEC-02: Gerar estimativa de preço a partir de região, categoria e histórico de serviços, sem exigir motor de pricing complexo no MVP (heurística inicial, evoluindo para modelo orientado a dados).
 - OBJ-TEC-03: Garantir rastreabilidade completa do ciclo de vida do serviço (solicitação → proposta → aceite → execução → pagamento → garantia), com estados explícitos (detalhado em 02-funcionalidades.md e 05-arquitetura.md).
 - OBJ-TEC-04: Suportar pagamento protegido (escrow) com liberação condicionada a evento de conclusão/aceite.
 - OBJ-TEC-05: Arquitetura que comporte, sem retrabalho estrutural, a expansão para materiais (Fase 2) e B2B (Fase 3).
@@ -95,7 +95,7 @@ Incluído:
 - Resolve Empresas / módulo B2B multi-unidade (Fase 3).
 - Categorias adicionais (pedreiro estrutural, telhadista, ar-condicionado, jardinagem) além das 5 iniciais.
 - Motor de pricing orientado a dados/ML (MVP usa heurística por região+categoria+histórico simples).
-- Nota fiscal/recibo fiscal automatizado (avaliar dependência jurídica/contábil antes de comprometer prazo — ver bloqueadores em 07-engenharia.md).
+- Nota fiscal/recibo fiscal automatizado (avaliar dependência jurídica/contábil antes de comprometer prazo, ver bloqueadores em 07-engenharia.md).
 - Cashback/pontos e programas de fidelidade.
 - Expansão multi-cidade.
 
@@ -103,14 +103,14 @@ Incluído:
 
 - Existe oferta suficiente de profissionais dispostos a se cadastrar e passar por verificação na cidade de lançamento.
 - O cliente aceita pagar uma faixa de preço "estimada" (não fechada) antes de escolher o profissional.
-- É possível impedir/desincentivar fechamento por fora o suficiente para sustentar a comissão (ver RN e mitigação em 02-funcionalidades.md — este ponto é tratado como **risco central do modelo**, não um detalhe).
+- É possível impedir/desincentivar fechamento por fora o suficiente para sustentar a comissão (ver RN e mitigação em 02-funcionalidades.md, este ponto é tratado como **risco central do modelo**, não um detalhe).
 - Pagamento protegido (escrow) é operacionalmente viável via parceiro de pagamento (adquirente/PSP) desde o MVP.
 
 ## 13. Restrições
 
 - Orçamento e prazo de lançamento ainda não formalizados neste documento (ver 08-planejamento.md).
-- Enquadramento jurídico da "garantia digital" (é garantia contratual da plataforma, do profissional, ou ambos?) ainda não resolvido — **bloqueador de arquitetura**, não deve ser tratado como detalhe editorial (ver 07-engenharia.md).
-- Modelo de repasse ao profissional (quando exatamente o profissional recebe: na conclusão, no aceite do cliente, ou em prazo fixo pós-conclusão) impacta diretamente o modelo de dados e o fluxo financeiro — precisa de decisão antes da modelagem (ver 04-modelo-dados.md).
+- Enquadramento jurídico da "garantia digital" (é garantia contratual da plataforma, do profissional, ou ambos?) ainda não resolvido, **bloqueador de arquitetura**, não deve ser tratado como detalhe editorial (ver 07-engenharia.md).
+- Modelo de repasse ao profissional (quando exatamente o profissional recebe: na conclusão, no aceite do cliente, ou em prazo fixo pós-conclusão) impacta diretamente o modelo de dados e o fluxo financeiro, precisa de decisão antes da modelagem (ver 04-modelo-dados.md).
 
 ## 14. Glossário Inicial
 
@@ -119,12 +119,12 @@ Incluído:
 | Resolve+ | Nome provisório do produto/plataforma. |
 | Prontuário do Imóvel | Histórico digital de serviços executados em um imóvel específico, vinculado ao endereço/unidade, não à pessoa. |
 | Orçamento Inteligente | Estimativa de preço gerada a partir de categoria, região e histórico de serviços similares, antes da escolha do profissional. |
-| Escopo Padronizado | Descrição estruturada do serviço solicitado, usada como base comum para todas as propostas recebidas — permite comparação direta entre profissionais. |
+| Escopo Padronizado | Descrição estruturada do serviço solicitado, usada como base comum para todas as propostas recebidas, permite comparação direta entre profissionais. |
 | Pagamento Protegido | Modalidade em que o valor pago pelo cliente fica retido pela plataforma até a conclusão/aceite do serviço (escrow). |
 | Garantia Digital | Registro formal, dentro da plataforma, de cobertura pós-serviço (prazo, escopo coberto, evidências antes/depois). |
 | Nível de Confiança | Classificação do profissional (Verificado → Bronze → Prata → Ouro → Elite) baseada em avaliações, volume de serviços, cancelamentos e reincidência de reclamação. |
 | Resolve Empresas | Módulo B2B para clientes com múltiplas unidades (redes de lojas, condomínios, imobiliárias, construtoras) com painel consolidado de chamados e custos. |
-| Fechar por fora | Cliente e profissional combinarem o serviço fora da plataforma após o contato inicial, para evitar a comissão — risco central do modelo de negócio. |
+| Fechar por fora | Cliente e profissional combinarem o serviço fora da plataforma após o contato inicial, para evitar a comissão, risco central do modelo de negócio. |
 
 ---
 *Fonte: briefing de ideação do produto (conversa original). Próximo documento: `02-funcionalidades.md`.*

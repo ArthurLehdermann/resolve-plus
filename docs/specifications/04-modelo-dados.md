@@ -1,10 +1,10 @@
-# 04 — Modelo de Dados do MVP
+# 04, Modelo de Dados do MVP
 
-> Revisado em 2026-08-17 para eliminar contradições com `foundation/00-domain-invariants.md` e `foundation/02-state-machine.md`, apontadas em análise crítica do PO. A versão anterior mantinha uma entidade `Contratacao` (proibida por INV-020), um `Pagamento` 1:1 simples (proibido por INV-040 a INV-045) e um `HistoricoImovel` de log raso (proibido por INV-060 a INV-062). Onde este documento e `00-domain-invariants.md` divergirem no futuro, o invariante vence — ver regra no topo de `00-domain-invariants.md`.
+> Revisado em 2026-08-17 para eliminar contradições com `foundation/00-domain-invariants.md` e `foundation/02-state-machine.md`, apontadas em análise crítica do PO. A versão anterior mantinha uma entidade `Contratacao` (proibida por INV-020), um `Pagamento` 1:1 simples (proibido por INV-040 a INV-045) e um `HistoricoImovel` de log raso (proibido por INV-060 a INV-062). Onde este documento e `00-domain-invariants.md` divergirem no futuro, o invariante vence, ver regra no topo de `00-domain-invariants.md`.
 
 ## Visão Geral
 
-O domínio é centrado em uma **Solicitação de Serviço**, que recebe **Propostas**. O aceite de uma proposta é um **evento** (`ProposalAccepted`), não uma entidade — ele dispara a criação de um **Serviço**. O Serviço gera eventos de **Pagamento** (bounded context próprio), uma **Garantia** e ao menos uma **Intervention** no prontuário do **Property** (imóvel).
+O domínio é centrado em uma **Solicitação de Serviço**, que recebe **Propostas**. O aceite de uma proposta é um **evento** (`ProposalAccepted`), não uma entidade, ele dispara a criação de um **Serviço**. O Serviço gera eventos de **Pagamento** (bounded context próprio), uma **Garantia** e ao menos uma **Intervention** no prontuário do **Property** (imóvel).
 
 ## Diagrama Conceitual
 
@@ -39,9 +39,9 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 ## Convenções
 
 - UUID como chave primária em todas as entidades.
-- Todo valor monetário é `INTEGER` em centavos (alinhado a `06-apis.md`) — nunca `DECIMAL`/`FLOAT`.
+- Todo valor monetário é `INTEGER` em centavos (alinhado a `06-apis.md`), nunca `DECIMAL`/`FLOAT`.
 - `criado_em`/`atualizado_em` em todas as tabelas.
-- Enums deste documento são espelho direto dos estados definidos em `02-state-machine.md` — qualquer enum aqui que não tenha transição correspondente lá é bug de documentação, não uma opção válida.
+- Enums deste documento são espelho direto dos estados definidos em `02-state-machine.md`, qualquer enum aqui que não tenha transição correspondente lá é bug de documentação, não uma opção válida.
 
 ## Entidades
 
@@ -59,15 +59,17 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 | status | ENUM(`StatusConta`) | Sim | Sim |
 | criado_em | TIMESTAMP | Sim | |
 
-**Exclusão (LGPD, ainda sem validação jurídica final — ver `foundation/04-decisions-pending.md`):** nunca hard-delete. `status = EXCLUIDA` (INV-003/state machine §6) + anonimização dos campos identificáveis (`nome`, `email`, `telefone`, `foto` substituídos por placeholder). Preserva integridade referencial com Auditoria, Pagamento e Avaliação, que são append-only e não podem perder FK.
+**Exclusão (LGPD, ainda sem validação jurídica final, ver `foundation/04-decisions-pending.md`):** nunca hard-delete. `status = EXCLUIDA` (INV-003/state machine §6) + anonimização dos campos identificáveis (`nome`, `email`, `telefone`, `foto` substituídos por placeholder). Preserva integridade referencial com Auditoria, Pagamento e Avaliação, que são append-only e não podem perder FK.
 
 **Relacionamentos**: 1:N Solicitações, 1:N Propostas, 1:N Serviços, 1:N Avaliações, 1:N Endereço
 
 ### Endereco
 
+> Corrigido em 2026-08-17: só existe para o **profissional** (base de atuação, usada em RF010, busca por proximidade). `Property` não referencia mais esta tabela, ver abaixo. A versão anterior tinha `Property` 1:1 `Endereco`, e `Endereco.usuario_id` sobrevivia à venda do imóvel: o endereço do prontuário ficava preso ao dono anterior, mesmo depois de `PropertyOwnership` mudar de mão.
+
 **Campos**: id, usuario_id, cep, logradouro, numero, complemento, bairro, cidade, estado, latitude, longitude
 
-**Relacionamento**: Usuário 1:N Endereço
+**Relacionamento**: Usuário (profissional) 1:N Endereço
 
 ### Categoria
 
@@ -75,15 +77,17 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 ### Property (Imóvel)
 
-> Renomeado de `Imovel` para alinhar com `06-apis.md` (`/properties`, `property_id`) e com INV-061/062. Antes ligado a `cliente_id` como FK fixa — isso contradizia o glossário ("vinculado ao endereço/unidade, não à pessoa") e quebrava o prontuário na venda do imóvel. Agora o vínculo com o dono é mutável e separado da identidade do registro.
+> Renomeado de `Imovel` para alinhar com `06-apis.md` (`/properties`, `property_id`) e com INV-061/062. Antes ligado a `cliente_id` como FK fixa, isso contradizia o glossário ("vinculado ao endereço/unidade, não à pessoa") e quebrava o prontuário na venda do imóvel. Agora o vínculo com o dono é mutável (via `PropertyOwnership`) e separado da identidade do registro.
+>
+> Corrigido em 2026-08-17: o endereço passou a ser **campo próprio de Property**, não mais FK para `Endereco`. A versão anterior (`Property` 1:1 `Endereco`, com `Endereco.usuario_id`) deixava o endereço do imóvel pendurado no dono anterior depois de uma venda, o desacoplamento via `PropertyOwnership` não tinha efeito nenhum enquanto o endereço em si continuasse amarrado a um usuário.
 
-**Campos**: id, endereco_id, apelido
+**Campos**: id, cep, logradouro, numero, complemento, bairro, cidade, estado, latitude, longitude, apelido
 
-**Relacionamentos**: 1:1 Endereço · 1:N Area · 1:N PropertyOwnership
+**Relacionamentos**: 1:N Area · 1:N PropertyOwnership
 
 ### PropertyOwnership
 
-> Histórico de posse — permite trocar o dono (venda do imóvel) sem apagar nem reatribuir o histórico de `Intervention`, que referencia `Asset`/`Area`/`Property`, nunca o cliente diretamente.
+> Histórico de posse, permite trocar o dono (venda do imóvel) sem apagar nem reatribuir o histórico de `Intervention`, que referencia `Asset`/`Area`/`Property`, nunca o cliente diretamente.
 
 **Campos**: id, property_id, cliente_id, desde, ate (NULL = dono atual)
 
@@ -91,11 +95,11 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 ### Area
 
-**Campos**: id, property_id, nome (ex.: "Cozinha"; usar `"Não especificado"` como fallback — INV-061)
+**Campos**: id, property_id, nome (ex.: "Cozinha"; usar `"Não especificado"` como fallback, INV-061)
 
 ### Asset
 
-**Campos**: id, area_id, nome/tipo (ex.: "Torneira"; mesmo fallback de Area — INV-061)
+**Campos**: id, area_id, nome/tipo (ex.: "Torneira"; mesmo fallback de Area, INV-061)
 
 ### Intervention
 
@@ -103,13 +107,13 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 **Campos**: id, asset_id, servico_id (NULL se `origem != PLATAFORMA`), data, categoria, resumo, origem (ENUM `PLATAFORMA | MANUAL | IMPORTADO`), confiabilidade (derivada da origem, não editável manualmente)
 
-**Regra de criação**: todo `Serviço` que atinge `Aprovado`/`Finalizado` (INV-060) gera automaticamente Area/Asset "Não especificado" quando a granularidade não foi capturada no fluxo, e uma `Intervention` com `origem = PLATAFORMA`.
+**Regra de criação**: todo `Serviço` que atinge `APROVADO` (INV-060, não existe estado `FINALIZADO`, corrigido em 2026-08-17) gera automaticamente Area/Asset "Não especificado" quando a granularidade não foi capturada no fluxo, e uma `Intervention` com `origem = PLATAFORMA`.
 
 ### Solicitacao
 
 **Campos**: id, cliente_id, categoria_id, property_id, descricao, status, data_desejada, criado_em
 
-> Campo renomeado de `endereco_id` para `property_id` — a versão anterior divergia de `06-apis.md`, que já usa `property_id` em `POST /requests`. Toda solicitação nasce vinculada a um imóvel (que carrega o endereço), não a um endereço solto, porque o prontuário (`Intervention`) precisa de um `Property` para existir.
+> Campo renomeado de `endereco_id` para `property_id`, a versão anterior divergia de `06-apis.md`, que já usa `property_id` em `POST /requests`. Toda solicitação nasce vinculada a um imóvel (que carrega o endereço), não a um endereço solto, porque o prontuário (`Intervention`) precisa de um `Property` para existir.
 
 **Relacionamentos**: Cliente, Categoria, Property, Fotos, Propostas
 
@@ -121,13 +125,13 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 **Campos**: id, solicitacao_id, profissional_id, valor (INTEGER, centavos), prazo_dias, garantia_dias, observacoes, status
 
-**Índice obrigatório**: `UNIQUE (solicitacao_id) WHERE status = 'ACEITA'` — é o mecanismo físico que garante INV-010 (no máximo uma proposta aceita por solicitação); sem ele a invariante depende só de disciplina de aplicação.
+**Índice obrigatório**: `UNIQUE (solicitacao_id) WHERE status = 'ACEITA'`, é o mecanismo físico que garante INV-010 (no máximo uma proposta aceita por solicitação); sem ele a invariante depende só de disciplina de aplicação.
 
 ### Servico
 
 **Campos**: id, proposta_id, inicio, fim, status
 
-> `contratacao_id` removido — não existe `Contratacao` (INV-020). O Serviço referencia a Proposta aceita diretamente; o evento `ProposalAccepted` que autorizou sua criação fica em `Auditoria`.
+> `contratacao_id` removido, não existe `Contratacao` (INV-020). O Serviço referencia a Proposta aceita diretamente; o evento `ProposalAccepted` que autorizou sua criação fica em `Auditoria`.
 
 ### Agenda
 
@@ -153,21 +157,27 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 ## Bounded Context: Payment (INV-040 a INV-045)
 
-> Substitui integralmente a antiga tabela `Pagamento` (`status: PENDENTE/RETIDO/LIBERADO/PAGO`), que usava vocabulário de escrow — rejeitado por `ADR-002-financeiro.md`. Modelo abaixo é o de eventos imutáveis já descrito em `00-domain-invariants.md` e nas transições de `02-state-machine.md` §4.
+> Substitui integralmente a antiga tabela `Pagamento` (`status: PENDENTE/RETIDO/LIBERADO/PAGO`), que usava vocabulário de escrow, rejeitado por `ADR-002-financeiro.md`. Modelo abaixo é o de eventos imutáveis já descrito em `00-domain-invariants.md` e nas transições de `02-state-machine.md` §4.
 
 ### PaymentAuthorization
 
+> Corrigido em 2026-08-17: cardinalidade era `Serviço` 1:1 `PaymentAuthorization`. Isso tornava reautorização impossível, autorização de cartão expira em ~5-7 dias, mas um serviço pode ser agendado para 2+ semanas depois. Sem caminho de volta, o serviço virava órfão financeiro assim que a autorização expirasse antes da conclusão. Agora é `Serviço` 1:N `PaymentAuthorization` (INV-046).
+
 **Campos**: id, servico_id, valor (INTEGER, centavos), metodo, status (`StatusPaymentAuthorization`: `AUTORIZADO | CAPTURADO | CANCELADO | EXPIRADO`), criado_em, expira_em
 
-**Regra**: toda autorização termina em `CAPTURADO`, `CANCELADO` ou `EXPIRADO` — nunca fica em `AUTORIZADO` indefinidamente (INV-042). `expira_em` é o campo que sustenta essa regra via job.
+**Índice obrigatório**: `UNIQUE (servico_id) WHERE status = 'AUTORIZADO'`, no máximo uma autorização ativa por serviço a qualquer momento, física, não só de aplicação (mesmo padrão do índice parcial de Proposta).
+
+**Regra**: toda autorização termina em `CAPTURADO`, `CANCELADO` ou `EXPIRADO`, nunca fica em `AUTORIZADO` indefinidamente (INV-042). `expira_em` é o campo que sustenta essa regra via job. Se expira e o Serviço ainda não está `CANCELADO`/`APROVADO`, o job cria automaticamente uma nova `PaymentAuthorization`, registrado como evento `REAUTORIZADO` em `PaymentEvent` (INV-046).
 
 ### PaymentEvent
 
-> Log append-only. Fonte de verdade do histórico financeiro — `PaymentAuthorization.status` é uma projeção/cache do último evento, nunca editada diretamente (INV-040).
+> Log append-only. Fonte de verdade do histórico financeiro, `PaymentAuthorization.status` é uma projeção/cache do último evento, nunca editada diretamente (INV-040).
 
-**Campos**: id, payment_authorization_id, tipo (`AUTORIZADO | CAPTURADO | REPASSADO | CANCELADO | EXPIRADO | REEMBOLSADO`), payload (JSON), criado_em
+**Campos**: id, payment_authorization_id, tipo (`AUTORIZADO | CAPTURADO | REPASSADO | CANCELADO | EXPIRADO | REEMBOLSADO | REAUTORIZADO`), payload (JSON), criado_em
 
-**Regra de integridade**: sem `UPDATE`/`DELETE` — só `INSERT`.
+> `REAUTORIZADO` marca o evento em que uma `PaymentAuthorization` expirada gera a próxima (INV-046); o `payload` referencia o `id` da autorização anterior.
+
+**Regra de integridade**: sem `UPDATE`/`DELETE`, só `INSERT`.
 
 ### PaymentSplit
 
@@ -185,11 +195,11 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 **Campos**: id, servico_id, status (`ABERTA | RESOLVIDA`), aberta_em, resolvida_em
 
-**Regra**: enquanto `ABERTA`, bloqueia geração de evento `REPASSADO`, mas não bloqueia novos `PaymentEvent` de outro tipo (INV-045). Resolução de mérito depende de B003 (mediação) — ver `foundation/04-decisions-pending.md`.
+**Regra**: enquanto `ABERTA`, bloqueia geração de evento `REPASSADO`, mas não bloqueia novos `PaymentEvent` de outro tipo (INV-045). Resolução de mérito depende de B003 (mediação), ver `foundation/04-decisions-pending.md`.
 
 ## Auditoria
 
-**Campos**: id, usuario_id, acao, entidade, id_entidade, data, ip, justificativa (obrigatório quando `acao` é liberação/captura administrativa fora do fluxo normal — INV-041)
+**Campos**: id, usuario_id, acao, entidade, id_entidade, data, ip, justificativa (obrigatório quando `acao` é liberação/captura administrativa fora do fluxo normal, INV-041)
 
 ## Tabelas Auxiliares
 
@@ -200,7 +210,7 @@ Parâmetros globais: comissão (%), prazo de garantia padrão, tempo limite para
 **Campos**: usuario_id, titulo, mensagem, lida, data
 
 ### DocumentoProfissional
-Para validação documental (RF002 — critérios de validação ainda não definidos, ver `foundation/04-decisions-pending.md`).
+Para validação documental (RF002, critérios de validação ainda não definidos, ver `foundation/04-decisions-pending.md`).
 
 **Campos**: tipo, arquivo, status
 
@@ -211,7 +221,6 @@ Para validação documental (RF002 — critérios de validação ainda não defi
 | Usuário | Endereço | 1:N |
 | Usuário | Solicitação | 1:N |
 | Categoria | Solicitação | 1:N |
-| Property | Endereço | 1:1 |
 | Property | Area | 1:N |
 | Property | PropertyOwnership | 1:N |
 | Area | Asset | 1:N |
@@ -219,10 +228,10 @@ Para validação documental (RF002 — critérios de validação ainda não defi
 | Solicitação | Property | N:1 |
 | Solicitação | Foto | 1:N |
 | Solicitação | Proposta | 1:N |
-| Proposta | Serviço | 1:1 (opcional — só existe se aceita) |
-| Serviço | PaymentAuthorization | 1:1 |
+| Proposta | Serviço | 1:1 (opcional, só existe se aceita) |
+| Serviço | PaymentAuthorization | 1:N (no máx. uma `AUTORIZADO` por vez, INV-046) |
 | Serviço | Garantia | 1:1 |
-| Serviço | Avaliação | 1:N (máx. 2 — uma por direção) |
+| Serviço | Avaliação | 1:N (máx. 2, uma por direção) |
 | Serviço | Intervention | 1:N |
 | PaymentAuthorization | PaymentEvent | 1:N |
 | PaymentEvent (captura) | PaymentSplit | 1:1 |
@@ -230,7 +239,7 @@ Para validação documental (RF002 — critérios de validação ainda não defi
 
 ## Enumerações
 
-Espelho de `02-state-machine.md` — não editar aqui sem editar lá.
+Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 
 **TipoUsuario**: `CLIENTE`, `PROFISSIONAL`, `ADMIN`
 
@@ -240,7 +249,7 @@ Espelho de `02-state-machine.md` — não editar aqui sem editar lá.
 
 **StatusProposta**: `ENVIADA`, `ACEITA`, `RECUSADA`, `RETIRADA`
 
-> `CANCELADA` removida — `02-state-machine.md` só define `Retirada` (ação do profissional antes do aceite). Recusa automática por aceite de outra proposta é `RECUSADA` (INV-011).
+> `CANCELADA` removida, `02-state-machine.md` só define `Retirada` (ação do profissional antes do aceite). Recusa automática por aceite de outra proposta é `RECUSADA` (INV-011).
 
 **StatusServico**: `AGENDADO`, `EM_ANDAMENTO`, `AGUARDANDO_APROVACAO`, `APROVADO`, `EM_CONTESTACAO`, `CANCELADO`
 
@@ -248,11 +257,11 @@ Espelho de `02-state-machine.md` — não editar aqui sem editar lá.
 
 **StatusPaymentAuthorization**: `AUTORIZADO`, `CAPTURADO`, `CANCELADO`, `EXPIRADO`
 
-**TipoPaymentEvent**: `AUTORIZADO`, `CAPTURADO`, `REPASSADO`, `CANCELADO`, `EXPIRADO`, `REEMBOLSADO`
+**TipoPaymentEvent**: `AUTORIZADO`, `CAPTURADO`, `REPASSADO`, `CANCELADO`, `EXPIRADO`, `REEMBOLSADO`, `REAUTORIZADO`
 
 **StatusGarantia**: `ATIVA`, `EXPIRADA`, `ACIONADA`, `ENCERRADA`
 
-> `ENCERRADA` adicionada — faltava para representar a transição final de `Acionada` em `02-state-machine.md` §5.
+> `ENCERRADA` adicionada, faltava para representar a transição final de `Acionada` em `02-state-machine.md` §5.
 
 **OrigemIntervention**: `PLATAFORMA`, `MANUAL`, `IMPORTADO`
 
@@ -266,21 +275,21 @@ Espelho de `02-state-machine.md` — não editar aqui sem editar lá.
 
 **Serviço**: status, proposta_id
 
-**PaymentAuthorization**: servico_id, status, expira_em
+**PaymentAuthorization**: servico_id, status, expira_em, `UNIQUE (servico_id) WHERE status = 'AUTORIZADO'`
 
 **PaymentEvent**: payment_authorization_id, tipo, criado_em
 
-**Property**: endereco_id
+**Property**: latitude, longitude (bounding box, ver seção "Busca geográfica")
 
 **Intervention**: asset_id, servico_id, origem
 
-## Busca geográfica (P0, sem PostGIS — ver `08-planejamento.md`)
+## Busca geográfica (P0, sem PostGIS, ver `08-planejamento.md`)
 
-"Localizar profissionais próximos" é P0 mas PostGIS é pós-MVP (dívida técnica aceita). Sem índice geoespacial, a única estratégia viável no MVP é bounding box sobre `latitude`/`longitude` de `Endereco` (índice B-tree composto, não `GiST`). **Limitação conhecida e documentada**: não escala bem para alta densidade de profissionais nem para busca por raio preciso — reavaliar antes de qualquer expansão de cidade que dependa disso.
+"Localizar profissionais próximos" é P0 mas PostGIS é pós-MVP (dívida técnica aceita). Sem índice geoespacial, a única estratégia viável no MVP é bounding box comparando `latitude`/`longitude` de `Property` (localização da solicitação) contra `latitude`/`longitude` de `Endereco` do profissional (índice B-tree composto em cada tabela, não `GiST`). **Limitação conhecida e documentada**: não escala bem para alta densidade de profissionais nem para busca por raio preciso, reavaliar antes de qualquer expansão de cidade que dependa disso.
 
 ## Regras de Integridade
 
-- Toda solicitação pertence a um cliente e a um property.
+- Toda solicitação pertence a um cliente e a um property, e o cliente deve ser o dono vigente do property (`PropertyOwnership.ate IS NULL` com `cliente_id` igual ao da solicitação), INV-014.
 - Toda proposta pertence a uma solicitação.
 - No máximo uma proposta por solicitação pode estar `ACEITA` (índice parcial, não só validação de aplicação).
 - Todo serviço nasce de uma proposta aceita (nunca manual fora do fluxo administrativo auditado).
@@ -291,18 +300,20 @@ Espelho de `02-state-machine.md` — não editar aqui sem editar lá.
 
 ## Pendências para Validação
 
-- Um cliente poderá cadastrar vários imóveis no MVP ou apenas um? (Não bloqueia o modelo — `Property`/`PropertyOwnership` já suportam N:N ao longo do tempo.)
+- Um cliente poderá cadastrar vários imóveis no MVP ou apenas um? (Não bloqueia o modelo, `Property`/`PropertyOwnership` já suportam N:N ao longo do tempo.)
 - O chat será persistido indefinidamente?
 - Fotos serão armazenadas localmente ou em object storage?
 - Será permitido múltiplos pagamentos por serviço (parcelamento)? Hoje o modelo assume `Serviço` 1:1 `PaymentAuthorization`.
 - Como serão tratadas revisitas durante a garantia?
 - Haverá emissão de nota fiscal pela plataforma?
 - A contratação poderá envolver mais de um profissional?
-- Exclusão LGPD por anonimização (proposta acima) precisa de validação jurídica — mesma pendência de B001/ADR-002.
+- Exclusão LGPD por anonimização (proposta acima) precisa de validação jurídica, mesma pendência de B001/ADR-002.
+- Responsabilidade civil por dano ao imóvel durante a execução do serviço não tem mecanismo nem entidade, maior risco reputacional de marketplace presencial e não citado em nenhum documento até 2026-08-17 (ver B005 em `foundation/04-decisions-pending.md`).
 
 ## Changelog
 
 | Data | Mudança |
 |---|---|
 | 2026-08-16 | Versão original (pré-DDD), com `Contratacao`, `Pagamento` simples e `HistoricoImovel`. |
-| 2026-08-17 | Reescrita completa contra `00-domain-invariants.md`/`02-state-machine.md`: remove `Contratacao`, introduz bounded context `Payment` (5 entidades), substitui `HistoricoImovel` por `Property/Area/Asset/Intervention`, corrige enums divergentes da state machine, renomeia `Imovel`→`Property` e `endereco_id`→`property_id` em Solicitação, adiciona `PropertyOwnership`, avaliação bidirecional, índice parcial de proposta aceita. |
+| 2026-08-17 (1ª passada) | Reescrita completa contra `00-domain-invariants.md`/`02-state-machine.md`: remove `Contratacao`, introduz bounded context `Payment` (5 entidades), substitui `HistoricoImovel` por `Property/Area/Asset/Intervention`, corrige enums divergentes da state machine, renomeia `Imovel`→`Property` e `endereco_id`→`property_id` em Solicitação, adiciona `PropertyOwnership`, avaliação bidirecional, índice parcial de proposta aceita. |
+| 2026-08-17 (2ª passada) | Corrige 4 contradições introduzidas na 1ª passada: `PaymentAuthorization` vira 1:N com reautorização (INV-046, não mais órfão financeiro em autorização expirada); `Property` passa a ter endereço próprio em vez de FK para `Endereco.usuario_id` (venda de imóvel não deixa mais o endereço preso ao dono anterior); `INV-060` corrigida para `APROVADO` (referenciava `FINALIZADO`, estado inexistente); adiciona INV-014 (ownership de Solicitação via `PropertyOwnership`). |
