@@ -42,7 +42,7 @@ docker compose exec app php artisan test
 |-------|----------|
 | [`docs/foundation/`](docs/foundation/) | Invariantes, event storm, state machine |
 | [`docs/specifications/`](docs/specifications/) | Visão, funcionalidades, modelo, arquitetura, APIs |
-| [`docs/adr/`](docs/adr/) | Decisões (stack, financeiro, garantia, prazo de aceite) |
+| [`docs/adr/`](docs/adr/) | Decisões (stack, financeiro, garantia, prazo de aceite, gateway/Pix) |
 
 Organização do código por domínio: [`docs/specifications/05-arquitetura.md`](docs/specifications/05-arquitetura.md).
 

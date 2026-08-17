@@ -94,13 +94,13 @@ Executar em filas: envio de e-mails, push notifications, SMS, geração de hist�
 | Solicitação criada | Notificar profissionais |
 | Proposta enviada | Notificar cliente |
 | Proposta aceita | Evento `ProposalAccepted` (INV-020) → cria Serviço diretamente, sem entidade `Contratação` |
-| Serviço aprovado | Captura pagamento + gera garantia + gera `Intervention` no prontuário |
+| Serviço aprovado | Captura de cartão (Pix já capturado no aceite, `adr/ADR-005-gateway-pagamento.md`) + gera garantia + gera `Intervention` no prontuário |
 | Avaliação registrada | Atualizar reputação |
 | Avaliação criada | Recalcular nota |
 
 ## Integrações Externas
 
-**Pagamentos**: Mercado Pago, Stripe, Asaas. **Necessita Validação**: gateway oficial.
+**Pagamentos**: Asaas (único gateway no MVP). Cartão: autorizar/capturar com split nativo na captura. Pix: captura imediata, split de domínio no `CAPTURADO`, dinheiro no `REPASSADO`. Ver `adr/ADR-005-gateway-pagamento.md` (B006). Mercado Pago e Stripe foram avaliados e descartados para a v1.
 
 **Push**: Firebase Cloud Messaging (FCM)
 
@@ -174,6 +174,7 @@ Evitar estrutura baseada apenas em Controllers e Models. Organizar por domínio 
 | Flutter | Código único para Android/iOS |
 | Laravel | Alta produtividade e ecossistema maduro |
 | REST API | Simplicidade e ampla compatibilidade |
+| Asaas (pagamentos) | Split nativo, reautorização off-session, Pix first-class no BR (`adr/ADR-005-gateway-pagamento.md`) |
 
 ## Backlog Técnico (Pós-MVP)
 
@@ -191,9 +192,8 @@ Evitar estrutura baseada apenas em Controllers e Models. Organizar por domínio 
 
 ## Pendências para Validação
 
-> Flutter/Laravel removidos desta lista em 2026-08-17, decididos em ADR-001, listá-los aqui como pendência contradizia o próprio ADR.
+> Flutter/Laravel removidos desta lista em 2026-08-17, decididos em ADR-001, listá-los aqui como pendência contradizia o próprio ADR. Gateway de pagamento removido em 2026-08-17, decidido em `adr/ADR-005-gateway-pagamento.md` (Asaas, B006).
 
-- Gateway de pagamento oficial?
 - Google Maps ou Mapbox?
 - Chat via polling no MVP ou WebSocket?
 - Login social (Google/Apple) será incluído?

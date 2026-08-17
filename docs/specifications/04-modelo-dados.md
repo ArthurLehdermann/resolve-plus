@@ -189,11 +189,13 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 > Corrigido em 2026-08-17: cardinalidade era `Serviço` 1:1 `PaymentAuthorization`. Isso tornava reautorização impossível, autorização de cartão expira em ~5-7 dias, mas um serviço pode ser agendado para 2+ semanas depois. Sem caminho de volta, o serviço virava órfão financeiro assim que a autorização expirasse antes da conclusão. Agora é `Serviço` 1:N `PaymentAuthorization` (INV-046).
 
-**Campos**: id, servico_id, valor (INTEGER, centavos), metodo, status (`StatusPaymentAuthorization`: `AUTORIZADO | CAPTURADO | CANCELADO | EXPIRADO`), criado_em, expira_em
+**Campos**: id, servico_id, valor (INTEGER, centavos), metodo (`MetodoPagamento`: `CARTAO | PIX`), status (`StatusPaymentAuthorization`: `AUTORIZADO | CAPTURADO | CANCELADO | EXPIRADO`), criado_em, expira_em
 
 **Índice obrigatório**: `UNIQUE (servico_id) WHERE status = 'AUTORIZADO'`, no máximo uma autorização ativa por serviço a qualquer momento, física, não só de aplicação (mesmo padrão do índice parcial de Proposta).
 
 **Regra**: toda autorização termina em `CAPTURADO`, `CANCELADO` ou `EXPIRADO`, nunca fica em `AUTORIZADO` indefinidamente (INV-042). `expira_em` é o campo que sustenta essa regra via job. Se expira e o Serviço ainda não está `CANCELADO`/`APROVADO`, o job cria automaticamente uma nova `PaymentAuthorization`, registrado como evento `REAUTORIZADO` em `PaymentEvent` (INV-046).
+
+**Regra (Pix, `adr/ADR-005-gateway-pagamento.md`)**: `metodo = PIX` nasce `CAPTURADO` (captura imediata no Asaas); `expira_em` é nulo; INV-046 não dispara. `metodo = CARTAO` nasce `AUTORIZADO`. Gateway do MVP: Asaas (B006).
 
 ### PaymentEvent
 
@@ -211,7 +213,7 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 **Campos**: id, payment_event_id (o evento de captura), valor_profissional, valor_plataforma, aliquota_vigente
 
-**Regra**: calculado no momento da captura com a alíquota vigente naquele instante; alterar a comissão depois não recalcula splits antigos (INV-044). `valor_profissional` é repassado integralmente ao profissional na janela de 72h (`adr/ADR-004-prazo-aceite-automatico.md`), sem retenção adicional (INV-053).
+**Regra**: calculado no momento da captura com a alíquota vigente naquele instante; alterar a comissão depois não recalcula splits antigos (INV-044). `valor_profissional` é repassado integralmente ao profissional na janela de 72h (`adr/ADR-004-prazo-aceite-automatico.md`), sem retenção adicional (INV-053). Em Pix (`adr/ADR-005-gateway-pagamento.md`), a captura é o aceite da proposta: o `PaymentSplit` nasce aí, mas o dinheiro só sai da conta Asaas da plataforma no evento `REPASSADO` (transferência interna, sem `splits` na cobrança Pix).
 
 ### PaymentRefund
 
@@ -282,9 +284,11 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 
 **StatusServico**: `AGENDADO`, `EM_ANDAMENTO`, `AGUARDANDO_APROVACAO`, `APROVADO`, `EM_CONTESTACAO`, `CANCELADO`
 
-> Substituídos `CONCLUIDO`/`FINALIZADO`, que não existiam na state machine. `APROVADO` é o único estado que gera `PaymentEvent` de captura e `Garantia`.
+> Substituídos `CONCLUIDO`/`FINALIZADO`, que não existiam na state machine. `APROVADO` dispara captura de **cartão** (Pix já foi capturado no aceite, `adr/ADR-005-gateway-pagamento.md`) e `Garantia`.
 
 **StatusPaymentAuthorization**: `AUTORIZADO`, `CAPTURADO`, `CANCELADO`, `EXPIRADO`
+
+**MetodoPagamento**: `CARTAO`, `PIX` (MVP, `adr/ADR-005-gateway-pagamento.md`)
 
 **TipoPaymentEvent**: `AUTORIZADO`, `CAPTURADO`, `REPASSADO`, `CANCELADO`, `EXPIRADO`, `REEMBOLSADO`, `REAUTORIZADO`
 
@@ -353,3 +357,4 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 | 2026-08-17 (4ª passada) | Rebaixa INV-053 de invariante fechada para proposta (ADR-002/003 reabertos, ver `foundation/00-domain-invariants.md`); referencia INV-001/013/022/030/033 (estavam órfãs, sem nenhum ponto de aplicação); modela INV-080 (`Categoria.template_escopo` + `Solicitacao.escopo`, `Proposta` sem campo de escopo por construção). |
 | 2026-08-17 (3ª passada) | Adiciona `chave_endereco` (CEP+numero+complemento normalizados, `UNIQUE`) em Property (INV-063, corrige duplicidade de imóvel); adiciona `PropertyOwnershipTransfer` e regra de aceite explícito (INV-064, corrige `PropertyOwnership` sem caminho executável); corrige INV-031 (`CONCLUIDO`→`APROVADO`, mesma classe de bug de INV-060). |
 | 2026-08-17 (2ª passada) | Corrige 4 contradições introduzidas na 1ª passada: `PaymentAuthorization` vira 1:N com reautorização (INV-046, não mais órfão financeiro em autorização expirada); `Property` passa a ter endereço próprio em vez de FK para `Endereco.usuario_id` (venda de imóvel não deixa mais o endereço preso ao dono anterior); `INV-060` corrigida para `APROVADO` (referenciava `FINALIZADO`, estado inexistente); adiciona INV-014 (ownership de Solicitação via `PropertyOwnership`). |
+| 2026-08-17 | `PaymentAuthorization.metodo` fecha `CARTAO | PIX` (`adr/ADR-005-gateway-pagamento.md`, B006): Pix nasce `CAPTURADO`, cartão nasce `AUTORIZADO`. |

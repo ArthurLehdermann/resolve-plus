@@ -16,7 +16,7 @@
 
 Isso resolve, por consequência, a reabertura de `adr/ADR-002-financeiro.md`: sem retenção do repasse do profissional, o enquadramento de escrow que motivou a reabertura deixa de se aplicar (ver changelog daquele ADR).
 
-**O que continua bloqueado (parecer jurídico definitivo):** se essa decisão provisória (sem retenção) é juridicamente suficiente para sustentar "plataforma media, profissional responde", ou se algum mecanismo de lastro financeiro (reserva, caução, fundo) acaba sendo exigido mais adiante. Se o parecer mudar a decisão provisória, `adr/ADR-003-garantia.md`, `adr/ADR-002-financeiro.md`, `00-domain-invariants.md` (INV-053) e `specifications/04-modelo-dados.md` (`PaymentSplit`) precisam ser revisados juntos, mesma dependência de antes.
+**O que continua bloqueado (parecer jurídico definitivo):** se essa decisão provisória (sem retenção) é juridicamente suficiente para sustentar "plataforma media, profissional responde", ou se algum mecanismo de lastro financeiro (reserva, caução, fundo) acaba sendo exigido mais adiante. Se o parecer mudar a decisão provisória, `adr/ADR-003-garantia.md`, `adr/ADR-002-financeiro.md`, `adr/ADR-005-gateway-pagamento.md`, `00-domain-invariants.md` (INV-053) e `specifications/04-modelo-dados.md` (`PaymentSplit`) precisam ser revisados juntos, mesma dependência de antes.
 
 **Responsável:** Jurídico + Produto + Financeiro (parecer definitivo). Decisão provisória já registrada pelo PO.
 
@@ -30,7 +30,7 @@ Isso resolve, por consequência, a reabertura de `adr/ADR-002-financeiro.md`: se
 
 **Decisão:** 72 horas, modelado como parâmetro `AUTO_APPROVAL_HOURS` (tabela `Configuração`, `04-modelo-dados.md`), não como valor fixo em código. Ver `adr/ADR-004-prazo-aceite-automatico.md`.
 
-Relacionado a `INV-031` e `INV-041` (`00-domain-invariants.md`): o pagamento só é capturado/repassado após aprovação do cliente **ou** o esgotamento desta janela sem contestação.
+Relacionado a `INV-031` e `INV-041` (`00-domain-invariants.md`): o pagamento só é **repassado** após aprovação do cliente **ou** o esgotamento desta janela sem contestação. Captura de Pix é imediata no aceite (`adr/ADR-005-gateway-pagamento.md`); captura de cartão continua após aprovação.
 
 **Responsável:** Produto (decidido). Fica aberto apenas o ajuste fino do valor após dado real de uso, não bloqueia desenvolvimento.
 
@@ -48,7 +48,7 @@ Relacionado a `INV-031` e `INV-041` (`00-domain-invariants.md`): o pagamento só
 
 **Ainda falta definir** (`foundation/03-cancellation-rules.md`, seção "O que fica pendente"):
 - Percentual de multa (Cenário B).
-- Mecânica de captura parcial/reembolso sobre autorização não capturada (Cenário B, depende de capacidade do gateway).
+- Mecânica de captura parcial (cartão ainda `AUTORIZADO`) / reembolso parcial (Pix já `CAPTURADO`) no Cenário B. Gateway é Asaas (`adr/ADR-005-gateway-pagamento.md`); captura parcial continua **não** assumida.
 - Resolução determinística de `Em Contestação → Aprovado | Cancelado` (Cenários C/D).
 - Impacto de cancelamento/contestação recorrente na reputação.
 
@@ -80,6 +80,21 @@ Nenhum documento até 2026-08-17 tratava de quem responde quando um profissional
 
 ---
 
+## B006, Gateway de Pagamento e Pix no MVP
+
+**Status:** Resolvido provisoriamente (2026-08-17, decisão de Produto do PO). Registrado como `adr/ADR-005-gateway-pagamento.md`. Não é bloqueador jurídico por si só (o parecer de B001/B005 sobre enquadramento de conta de pagamento continua aberto), mas deixa de bloquear a especificação da integração real do épico Financeiro.
+
+**Impacta:** Modelo de Dados · APIs · Fluxo Financeiro · Integrações · Onboarding do profissional (subconta Asaas)
+
+**Decisão:**
+- Gateway único do MVP: **Asaas**. Pesquisa Mercado Pago × Stripe × Asaas no corpo do ADR-005 (reautorização, split nativo, taxas, presença no Brasil, Pix).
+- **Pix aceito no MVP**, com ajuste de modelo só nesse método: captura imediata, `PaymentAuthorization` nasce `CAPTURADO`, dinheiro retido na conta Asaas da plataforma até `REPASSADO`. Cartão permanece autorizar → capturar → repassar (`adr/ADR-002-financeiro.md`).
+- Resolve as três pendências residuais do ADR-002 (Pix, INV-046, INV-044).
+
+**Responsável:** Produto (decidido). Fica aberto apenas MCC/janela de 25 dias na abertura da conta e o parecer jurídico de B001 se contradisser a premissa de custódia no Asaas.
+
+---
+
 ## Changelog
 
 | Data | Mudança |
@@ -89,3 +104,4 @@ Nenhum documento até 2026-08-17 tratava de quem responde quando um profissional
 | 2026-08-17 | Adiciona bloqueador de percentual de reserva financeira de garantia, identificado em terceira revisão crítica do PO (depois fundido em B001, ver linha seguinte). |
 | 2026-08-17 | Quarta revisão do PO: funde o bloqueador de percentual de reserva em B001, mesmo parecer jurídico cobre responsabilidade da garantia e se a reserva financeira que a lastreia caracteriza retenção de fundo de terceiro (mesmo enquadramento que `ADR-002-financeiro.md` evitou). Não existe mais como item numerado separado. |
 | 2026-08-17 | Quinta revisão do PO: B001 parcialmente resolvido (decisão provisória sem retenção, destrava desenvolvimento, parecer jurídico definitivo continua bloqueado). B002 resolvido provisoriamente (72h, `adr/ADR-004-prazo-aceite-automatico.md`). B003 sai de "Bloqueado" simples para "Em elaboração", rascunho de regras em `03-cancellation-rules.md`. |
+| 2026-08-17 | B006 resolvido provisoriamente: Asaas no MVP, Pix aceito com captura imediata (`adr/ADR-005-gateway-pagamento.md`). Pendências residuais do ADR-002 deixam de bloquear o épico Financeiro. |

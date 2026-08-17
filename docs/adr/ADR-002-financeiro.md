@@ -34,13 +34,16 @@ Do ponto de vista do usuário, a experiência continua sendo "pagamento protegid
 
 - `00-domain-invariants.md` (INV-040 a INV-045) já modela pagamento como bounded context de eventos imutáveis, compatível com este modelo.
 - Momento exato do repasse é a janela de 72h após aprovação (`AUTO_APPROVAL_HOURS`), decidido em `adr/ADR-004-prazo-aceite-automatico.md` (B002, `foundation/04-decisions-pending.md`, resolvido).
+- Gateway, reautorização, split nativo e Pix no MVP: `adr/ADR-005-gateway-pagamento.md` (B006).
 - Se o modelo de negócio evoluir para marketplace com maior exigência regulatória, este ADR pode ser revisto, não é decisão irreversível, é a mais simples que atende o MVP.
 
 ## Pendências não tratadas por esta decisão (identificadas em 2026-08-17)
 
-- **Pix não tem autorizar/capturar.** Pix é o método dominante no Brasil. Aceitar Pix neste modelo implica captura imediata com saldo retido pela plataforma até o repasse, que é escrow de fato, com possível enquadramento como conta de pagamento pelo BCB. Este ADR não avalia essa implicação. Se Pix for aceito como método no MVP, revisar antes de implementar.
-- **Expiração de autorização de cartão** (~5-7 dias) vs. janela de serviço agendado (pode passar de 2 semanas): tratado no modelo de dados via `INV-046`/evento `REAUTORIZADO` (`04-modelo-dados.md`, 2026-08-17), mas ainda depende do gateway escolhido suportar reautorização, não confirmado, gateway segue "Necessita Validação" em `05-arquitetura.md`.
-- **Split de comissão no momento da captura** (INV-044) exige gateway com split nativo. Amarra a escolha de gateway a essa capacidade, ainda não validada.
+> Resolvidas em 2026-08-17 por `adr/ADR-005-gateway-pagamento.md` (B006). Esta decisão sozinha não escolhia provedor nem Pix; o ADR-005 fecha as três pontas abaixo.
+
+- **Pix não tem autorizar/capturar.** Aceito no MVP com captura imediata e retenção no Asaas (IP autorizada pelo BCB) até o evento `REPASSADO`. Cartão permanece autorizar → capturar → repassar. Não é escrow bancário em conta própria da plataforma.
+- **Expiração de autorização de cartão** (INV-046): Asaas cobre com nova cobrança `authorizeOnly` no `creditCardToken` (sem CVV na reautorização). Janela configurável de 3 a 25 dias. Gateway deixa de ser "Necessita Validação" em `05-arquitetura.md`.
+- **Split nativo na captura** (INV-044): Asaas `splits` na captura de cartão. Pix calcula `PaymentSplit` no `CAPTURADO` e move o dinheiro no `REPASSADO` via transferência interna (`walletId`).
 
 ## Reaberto e fechado em 2026-08-17: a garantia (INV-053) quase reintroduziu escrow
 
@@ -56,3 +59,4 @@ Este ADR rejeitou escrow bancário especificamente para não reter dinheiro de t
 | 2026-08-17 | Adiciona seção de pendências não tratadas (Pix, reautorização, split nativo), identificadas em revisão crítica do PO. |
 | 2026-08-17 | Reaberto: `INV-053` (reserva de garantia sobre repasse do profissional) tem o mesmo enquadramento regulatório que este ADR rejeitou. Fundido com B001. |
 | 2026-08-17 | Fechado novamente na mesma data: decisão provisória de B001 remove a retenção sobre o repasse do profissional (`ADR-003-garantia.md`), o enquadramento de escrow deixa de se aplicar. |
+| 2026-08-17 | Pendências residuais (Pix, reautorização, split nativo) resolvidas por `adr/ADR-005-gateway-pagamento.md` (B006): Asaas no MVP, Pix aceito com captura imediata. |

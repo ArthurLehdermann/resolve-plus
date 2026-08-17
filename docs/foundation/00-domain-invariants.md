@@ -37,17 +37,17 @@
 
 ## 5. Financeiro (bounded context `Payment`)
 
-> Decisão de 2026-08-16 (PO): Pagamento deixa de ser modelado como entidade simples 1:1 com Serviço. Vira bounded context próprio, ver `ADR-002-financeiro.md` (modalidade) e `adr/ADR-004-prazo-aceite-automatico.md` (prazo de repasse, resolvido).
+> Decisão de 2026-08-16 (PO): Pagamento deixa de ser modelado como entidade simples 1:1 com Serviço. Vira bounded context próprio, ver `ADR-002-financeiro.md` (modalidade), `adr/ADR-004-prazo-aceite-automatico.md` (prazo de repasse, resolvido) e `adr/ADR-005-gateway-pagamento.md` (Asaas e Pix no MVP, B006).
 
 - INV-040, Todo movimento financeiro é um **evento imutável** (`PaymentEvent`), nunca se faz `UPDATE` destrutivo em histórico financeiro, só inserção de novos eventos/estados.
-- INV-041, Um pagamento nunca pode ser **liberado** (capturado + repassado) antes da conclusão **e** aprovação do serviço, salvo exceção administrativa, que é sempre registrada em auditoria com usuário responsável e justificativa (RN de `02-funcionalidades.md`, elevada a invariante).
+- INV-041, Um pagamento nunca pode ser **repassado** ao profissional antes da conclusão **e** aprovação do serviço, salvo exceção administrativa, que é sempre registrada em auditoria com usuário responsável e justificativa (RN de `02-funcionalidades.md`, elevada a invariante). Captura imediata de Pix (`metodo = PIX` nasce `CAPTURADO` no aceite da proposta, `adr/ADR-005-gateway-pagamento.md`) não viola esta regra: o dinheiro permanece no gateway até o evento `REPASSADO`. Cartão permanece autorizar → capturar após aprovação. O parêntese antigo "capturado + repassado" descrevia só o cartão.
 - INV-042, Toda autorização de pagamento (`PaymentAuthorization`) deve ter uma captura, cancelamento ou expiração correspondente, não pode ficar em limbo indefinidamente.
 - INV-046, Se uma `PaymentAuthorization` expira antes da conclusão do serviço, o sistema gera uma nova autorização vinculada ao mesmo `Serviço` (evento `REAUTORIZADO`). Um `Serviço` pode ter várias `PaymentAuthorization` ao longo do tempo, mas nunca mais de uma com status `AUTORIZADO` simultaneamente. Sem isso, todo serviço agendado além da janela de autorização do gateway (cartão expira em ~5-7 dias) vira órfão financeiro. Decisão de 2026-08-17, motivada por revisão do PO sobre `04-modelo-dados.md`.
 - INV-043, Reembolso (`PaymentRefund`) só é possível sobre valor já capturado, nunca sobre valor apenas autorizado (nesse caso o correto é cancelar a autorização).
 - INV-044, Split de comissão (`PaymentSplit`) é calculado no momento da captura, com a alíquota vigente **naquele momento**, mudança futura na comissão não altera splits já calculados.
 - INV-045, Uma disputa de pagamento (`PaymentDispute`) bloqueia liberação/repasse até resolução, mas não bloqueia o registro de novos eventos (histórico continua sendo escrito).
 
-> Modalidade financeira decidida (provisório, PO 2026-08-16): **Autorizar → Capturar → Repassar**, não escrow bancário, ver `ADR-002-financeiro.md`. Momento exato do repasse é janela de 72h (`AUTO_APPROVAL_HOURS`), decidido em `adr/ADR-004-prazo-aceite-automatico.md` (B002, resolvido provisoriamente).
+> Modalidade financeira decidida (provisório, PO 2026-08-16): **Autorizar → Capturar → Repassar** no cartão, não escrow bancário, ver `ADR-002-financeiro.md`. Pix no MVP é captura imediata + retenção no Asaas até `REPASSADO`, ver `adr/ADR-005-gateway-pagamento.md` (B006). Momento exato do repasse é janela de 72h (`AUTO_APPROVAL_HOURS`), decidido em `adr/ADR-004-prazo-aceite-automatico.md` (B002, resolvido provisoriamente).
 
 ## 6. Garantia
 
@@ -60,7 +60,7 @@
 
 > Decisão de 2026-08-16 (PO): deixa de ser log raso (`id, serviço, data, categoria, resumo`) e passa a ser modelado como prontuário, ver `04-modelo-dados.md` revisado.
 
-- INV-060, Todo serviço que atinge `APROVADO` gera pelo menos uma `Intervention` no prontuário do imóvel (RN006, atualizada). Não existe estado `FINALIZADO` em `02-state-machine.md`, `APROVADO` é o único estado terminal positivo do Serviço, e é ele que dispara garantia, captura de pagamento e prontuário. (Corrigido em 2026-08-17, a versão anterior desta invariante referenciava um estado que não existe na state machine.)
+- INV-060, Todo serviço que atinge `APROVADO` gera pelo menos uma `Intervention` no prontuário do imóvel (RN006, atualizada). Não existe estado `FINALIZADO` em `02-state-machine.md`, `APROVADO` é o único estado terminal positivo do Serviço, e é ele que dispara garantia, captura de cartão (Pix já foi capturado no aceite, `adr/ADR-005-gateway-pagamento.md`) e prontuário. (Corrigido em 2026-08-17, a versão anterior desta invariante referenciava um estado que não existe na state machine.)
 - INV-061, Uma `Intervention` referencia sempre um `Asset` dentro de uma `Area` do `Property`, nunca é solta, mesmo quando a granularidade de ambiente/item não for capturada no MVP (usar `Area`/`Asset` genéricos "Não especificado" como fallback, nunca omitir o nível).
 - INV-062, Todo registro do prontuário carrega uma flag de origem (`origem: PLATAFORMA | MANUAL | IMPORTADO`) e um selo de confiabilidade correspondente, nunca misturado sem distinção com histórico de serviços reais. Modelo híbrido (decisão provisória do PO, 2026-08-16), ver `04-decisions-pending.md` (B004), ainda sem validação final de Produto.
 - INV-063, Um `Property` é identificado unicamente por CEP + número + complemento normalizados (`chave_endereco`, `04-modelo-dados.md`), não pode existir mais de um registro de `Property` para o mesmo endereço físico. Sem isso, o prontuário (diferencial competitivo declarado em OBJ-NEG-02) fragmenta entre registros duplicados da mesma casa. Adicionada em 2026-08-17, identificada em terceira revisão crítica do PO.
@@ -86,3 +86,4 @@
 | 2026-08-17 | Adiciona INV-053 (garantia precisa de lastro financeiro) e o bloqueador de percentual de reserva em `04-decisions-pending.md` (depois fundido em B001, ver linha seguinte). |
 | 2026-08-17 | Quarta revisão crítica do PO: INV-053 reescrita, mecanismo concreto (retenção do repasse) rebaixado de invariante fechada para proposta pendente de parecer jurídico, reabre ADR-002 e funde o bloqueador de percentual de reserva em B001 (mesmo parecer). |
 | 2026-08-17 | Quinta revisão do PO: B002 resolvido provisoriamente (72h, `AUTO_APPROVAL_HOURS`, `adr/ADR-004-prazo-aceite-automatico.md`), INV-031 deixa de citar "Necessita Validação". B001 resolvido provisoriamente para permitir desenvolvimento (garantia é do profissional, plataforma só media, sem retenção sobre o repasse), INV-053 reescrita, mecanismo de reserva sobre `PaymentSplit` removido do modelo de dados até (se algum dia) o parecer jurídico mudar essa decisão provisória. |
+| 2026-08-17 | B006 (`adr/ADR-005-gateway-pagamento.md`): INV-041 distingue **repasse** (nunca antes da aprovação) de captura imediata de Pix; INV-060 deixa de tratar captura de Pix como gatilho de `APROVADO`. |
