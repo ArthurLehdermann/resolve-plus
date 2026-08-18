@@ -2,6 +2,7 @@
 
 namespace App\Users\Http\Requests;
 
+use Database\Seeders\CategoriaSeeder;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -18,6 +19,7 @@ class UpdateProfileRequest extends FormRequest
     public function rules(): array
     {
         $usuarioId = $this->user()?->id;
+        $mvpCodigos = array_column(CategoriaSeeder::definitions(), 'codigo');
 
         return [
             'nome' => ['sometimes', 'required', 'string', 'max:150'],
@@ -29,6 +31,8 @@ class UpdateProfileRequest extends FormRequest
                 Rule::unique('usuarios', 'email')->ignore($usuarioId),
             ],
             'telefone' => ['sometimes', 'required', 'string', 'max:20'],
+            'categorias_atendidas' => ['sometimes', 'array', 'min:1'],
+            'categorias_atendidas.*' => ['string', Rule::in($mvpCodigos)],
         ];
     }
 }

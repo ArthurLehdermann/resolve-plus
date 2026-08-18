@@ -38,6 +38,14 @@ class UsuarioFactory extends Factory
         ]);
     }
 
+    public function profissionalAtivo(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'tipo' => TipoUsuario::Profissional,
+            'status' => StatusConta::Ativa,
+        ]);
+    }
+
     public function admin(): static
     {
         return $this->state(fn (array $attributes) => [

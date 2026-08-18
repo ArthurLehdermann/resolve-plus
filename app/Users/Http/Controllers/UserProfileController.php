@@ -2,12 +2,14 @@
 
 namespace App\Users\Http\Controllers;
 
+use App\Auth\Enums\TipoUsuario;
 use App\Http\Controllers\Controller;
 use App\Support\ApiResponse;
 use App\Users\Http\Requests\UpdateProfileRequest;
 use App\Users\Http\Requests\UploadPhotoRequest;
 use App\Users\Http\Resources\UsuarioMeResource;
 use App\Users\Jobs\ProcessUserAvatarJob;
+use App\Users\PerfilProfissional;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -35,6 +37,13 @@ class UserProfileController extends Controller
 
         $usuario->fill($request->safe()->only(['nome', 'email', 'telefone']));
         $usuario->save();
+
+        if ($usuario->tipo === TipoUsuario::Profissional && $request->has('categorias_atendidas')) {
+            PerfilProfissional::query()->updateOrCreate(
+                ['usuario_id' => $usuario->id],
+                ['categorias_atendidas' => $request->input('categorias_atendidas')]
+            );
+        }
 
         return ApiResponse::success(new UsuarioMeResource($usuario->refresh()));
     }
