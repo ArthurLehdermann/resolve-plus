@@ -1,6 +1,7 @@
 <?php
 
 use App\Auth\Http\Controllers\AuthController;
+use App\PropertyHistory\PropertyHistoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -20,4 +21,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/logout', [AuthController::class, 'logout'])
             ->middleware('auth:sanctum');
     });
+
+    Route::get('/properties/{id}/history', [PropertyHistoryController::class, 'show'])
+        ->whereUuid('id');
 });
