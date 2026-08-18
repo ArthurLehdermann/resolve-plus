@@ -19,6 +19,8 @@ class Proposta extends Model
 
     protected $table = 'propostas';
 
+    public ?string $contactLeakWarning = null;
+
     protected $fillable = [
         'solicitacao_id',
         'profissional_id',
@@ -26,6 +28,7 @@ class Proposta extends Model
         'prazo_dias',
         'garantia_dias',
         'observacoes',
+        'observacoes_original',
         'status',
     ];
 

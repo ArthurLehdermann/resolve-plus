@@ -19,6 +19,10 @@ class MensagemResource extends JsonResource
             'service_id' => $this->servico_id,
             'sender_id' => $this->remetente_id,
             'text' => $this->texto,
+            'warning' => $this->when(
+                $this->contactLeakWarning !== null,
+                $this->contactLeakWarning,
+            ),
             'attachment' => $this->anexo,
             'sent_at' => $this->enviado_em?->toIso8601String(),
         ];

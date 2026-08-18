@@ -22,6 +22,10 @@ class ProposalResource extends JsonResource
             'deadline_days' => $this->prazo_dias,
             'warranty_days' => $this->garantia_dias,
             'notes' => $this->observacoes,
+            'warning' => $this->when(
+                $this->contactLeakWarning !== null,
+                $this->contactLeakWarning,
+            ),
             'status' => $this->status->value,
             'professional' => [
                 'id' => $this->profissional?->id,

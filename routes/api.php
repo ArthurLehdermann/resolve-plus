@@ -15,6 +15,7 @@ use App\Requests\Http\Controllers\RequestController;
 use App\Services\Http\Controllers\MessageController;
 use App\Services\Http\Controllers\ScheduleController;
 use App\Services\Http\Controllers\ServiceController;
+use App\Trust\Http\Controllers\AdminDashboardController;
 use App\Users\Http\Controllers\UserProfileController;
 use App\Warranty\Http\Controllers\WarrantyController;
 use Illuminate\Support\Facades\Route;
@@ -122,6 +123,7 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/categories/{categoria}', [CategoryController::class, 'show']);
 
     Route::middleware('auth:sanctum')->prefix('admin')->group(function (): void {
+        Route::get('/dashboard', [AdminDashboardController::class, 'show']);
         Route::get('/categories', [AdminCategoryController::class, 'index']);
         Route::post('/categories', [AdminCategoryController::class, 'store']);
         Route::get('/categories/{categoria}', [AdminCategoryController::class, 'show']);
