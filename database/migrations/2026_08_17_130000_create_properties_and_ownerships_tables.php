@@ -9,6 +9,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('properties')) {
+            return;
+        }
+
         Schema::create('properties', function (Blueprint $table) {
             $table->uuid('id')->primary();
             $table->string('cep', 16);
