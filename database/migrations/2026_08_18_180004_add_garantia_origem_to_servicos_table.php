@@ -15,6 +15,10 @@ return new class extends Migration
                 ->constrained('garantias')
                 ->restrictOnDelete();
         });
+
+        Schema::table('servicos', function (Blueprint $table): void {
+            $table->uuid('proposta_id')->nullable()->change();
+        });
     }
 
     public function down(): void
