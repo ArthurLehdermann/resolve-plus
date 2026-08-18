@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Auth\Models\Usuario;
 use App\Payments\PaymentDispute;
 use App\Proposals\Proposta;
+use App\Warranty\Garantia;
 use Database\Factories\Services\ServicoFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -22,6 +23,7 @@ class Servico extends Model
 
     protected $fillable = [
         'proposta_id',
+        'garantia_origem_id',
         'inicio',
         'fim',
         'notas',
@@ -35,6 +37,22 @@ class Servico extends Model
     public function proposta(): BelongsTo
     {
         return $this->belongsTo(Proposta::class, 'proposta_id');
+    }
+
+    /**
+     * @return BelongsTo<Garantia, $this>
+     */
+    public function garantiaOrigem(): BelongsTo
+    {
+        return $this->belongsTo(Garantia::class, 'garantia_origem_id');
+    }
+
+    /**
+     * @return HasOne<Garantia, $this>
+     */
+    public function garantia(): HasOne
+    {
+        return $this->hasOne(Garantia::class, 'servico_id');
     }
 
     /**
@@ -61,8 +79,19 @@ class Servico extends Model
         return $this->hasMany(PaymentDispute::class, 'servico_id');
     }
 
+    public function isRevisitaGarantia(): bool
+    {
+        return $this->garantia_origem_id !== null;
+    }
+
     public function profissionalId(): string
     {
+        if ($this->isRevisitaGarantia()) {
+            $this->loadMissing('garantiaOrigem.servico.proposta');
+
+            return (string) $this->garantiaOrigem->servico->proposta->profissional_id;
+        }
+
         $this->loadMissing('proposta');
 
         return (string) $this->proposta->profissional_id;
@@ -70,6 +99,12 @@ class Servico extends Model
 
     public function clienteId(): string
     {
+        if ($this->isRevisitaGarantia()) {
+            $this->loadMissing('garantiaOrigem.servico.proposta.solicitacao');
+
+            return (string) $this->garantiaOrigem->servico->proposta->solicitacao->cliente_id;
+        }
+
         $this->loadMissing('proposta.solicitacao');
 
         return (string) $this->proposta->solicitacao->cliente_id;
@@ -77,6 +112,12 @@ class Servico extends Model
 
     public function propertyId(): string
     {
+        if ($this->isRevisitaGarantia()) {
+            $this->loadMissing('garantiaOrigem.servico.proposta.solicitacao');
+
+            return (string) $this->garantiaOrigem->servico->proposta->solicitacao->property_id;
+        }
+
         $this->loadMissing('proposta.solicitacao');
 
         return (string) $this->proposta->solicitacao->property_id;

@@ -11,6 +11,7 @@ use App\Services\Http\Controllers\MessageController;
 use App\Services\Http\Controllers\ScheduleController;
 use App\Services\Http\Controllers\ServiceController;
 use App\Users\Http\Controllers\UserProfileController;
+use App\Warranty\Http\Controllers\WarrantyController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('v1')->group(function (): void {
@@ -83,6 +84,12 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/payments/{id}/events', [PaymentController::class, 'events'])
             ->whereUuid('id');
         Route::post('/payments/{id}/release', [PaymentController::class, 'release'])
+            ->whereUuid('id');
+
+        Route::get('/warranties', [WarrantyController::class, 'index']);
+        Route::get('/warranties/{id}', [WarrantyController::class, 'show'])
+            ->whereUuid('id');
+        Route::post('/warranties/{id}/claim', [WarrantyController::class, 'claim'])
             ->whereUuid('id');
     });
 
