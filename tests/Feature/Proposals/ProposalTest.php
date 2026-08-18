@@ -330,6 +330,32 @@ class ProposalTest extends TestCase
             ->assertUnauthorized();
     }
 
+    public function test_lista_propostas_rejeita_cliente_que_nao_e_dono(): void
+    {
+        $solicitacao = Solicitacao::factory()->recebendoPropostas()->create();
+        Proposta::factory()->create(['solicitacao_id' => $solicitacao->id]);
+        $intruso = Usuario::factory()->create();
+
+        $this->withToken($this->token($intruso))
+            ->getJson("/api/v1/requests/{$solicitacao->id}/proposals")
+            ->assertForbidden();
+    }
+
+    public function test_nao_envia_proposta_em_solicitacao_cancelada_ou_expirada(): void
+    {
+        $profissional = $this->profissionalAtivo();
+
+        foreach ([StatusSolicitacao::Cancelada, StatusSolicitacao::Expirada] as $status) {
+            $solicitacao = Solicitacao::factory()->create(['status' => $status]);
+
+            $this->withToken($this->token($profissional))
+                ->postJson("/api/v1/requests/{$solicitacao->id}/proposals", $this->payload())
+                ->assertStatus(409);
+        }
+
+        $this->assertSame(0, Proposta::query()->count());
+    }
+
     /**
      * @return array<string, int>
      */
