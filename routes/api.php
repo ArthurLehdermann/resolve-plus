@@ -1,6 +1,7 @@
 <?php
 
 use App\Auth\Http\Controllers\AuthController;
+use App\PropertyHistory\PropertyHistoryController;
 use App\Users\Http\Controllers\UserProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,4 +29,7 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/users/photo', [UserProfileController::class, 'uploadPhoto'])
             ->middleware('throttle:upload');
     });
+
+    Route::get('/properties/{id}/history', [PropertyHistoryController::class, 'show'])
+        ->whereUuid('id');
 });
