@@ -8,6 +8,7 @@ use App\PropertyHistory\Http\Controllers\PropertyController;
 use App\PropertyHistory\Http\Controllers\PropertyTransferController;
 use App\PropertyHistory\PropertyHistoryController;
 use App\Proposals\Http\Controllers\ProposalController;
+use App\Ratings\Http\Controllers\RatingController;
 use App\Requests\Http\Controllers\RequestController;
 use App\Services\Http\Controllers\MessageController;
 use App\Services\Http\Controllers\ScheduleController;
@@ -92,6 +93,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/services/{id}/messages', [MessageController::class, 'store'])
             ->whereUuid('id')
             ->middleware('throttle:chat');
+        Route::post('/services/{id}/rating', [RatingController::class, 'store'])
+            ->whereUuid('id');
 
         Route::get('/payments', [PaymentController::class, 'index']);
         Route::get('/payments/{id}', [PaymentController::class, 'show'])

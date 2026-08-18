@@ -24,19 +24,29 @@ class UsuarioMeResource extends UsuarioResource
 
     /**
      * Projeção de confiança do profissional (RF005 / RN007).
-     * PerfilProfissional ainda não está persistido neste recorte — devolve
-     * zeros/nulos até o domínio de reputação materializar o registro.
      *
      * @return array<string, mixed>
      */
     private function trustProfile(): array
     {
+        $perfil = $this->perfilProfissional;
+
+        if ($perfil === null) {
+            return [
+                'nivel_confianca' => null,
+                'servicos_aprovados' => 0,
+                'nota_media' => null,
+                'taxa_cancelamento_pct' => 0,
+                'reclamacoes_12m' => 0,
+            ];
+        }
+
         return [
-            'nivel_confianca' => null,
-            'servicos_aprovados' => 0,
-            'nota_media' => null,
-            'taxa_cancelamento_pct' => 0,
-            'reclamacoes_12m' => 0,
+            'nivel_confianca' => $perfil->nivel_confianca->value,
+            'servicos_aprovados' => $perfil->servicos_aprovados,
+            'nota_media' => $perfil->notaMedia(),
+            'taxa_cancelamento_pct' => $perfil->taxa_cancelamento_pct,
+            'reclamacoes_12m' => $perfil->reclamacoes_12m,
         ];
     }
 }

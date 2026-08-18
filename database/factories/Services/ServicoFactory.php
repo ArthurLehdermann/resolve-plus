@@ -48,4 +48,13 @@ class ServicoFactory extends Factory
             'fim' => now(),
         ]);
     }
+
+    public function aprovado(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'status' => StatusServico::Aprovado,
+            'inicio' => now()->subHours(2),
+            'fim' => now()->subHour(),
+        ]);
+    }
 }
