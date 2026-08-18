@@ -62,7 +62,13 @@ class AppServiceProvider extends ServiceProvider
                 return false;
             }
 
-            return $user->tipo === TipoUsuario::Admin;
+            $tipo = $user->tipo;
+
+            // `tipo` pode chegar como enum (quando Eloquent aplica casts) ou como string
+            // (quando o usuário é carregado/serializado sem casts).
+            return $tipo instanceof TipoUsuario
+                ? $tipo === TipoUsuario::Admin
+                : $tipo === TipoUsuario::Admin->value;
         });
 
         RateLimiter::for('auth-register', function (Request $request) {
