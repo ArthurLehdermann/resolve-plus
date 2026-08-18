@@ -82,6 +82,7 @@ class RatingTest extends TestCase
         foreach ([
             StatusServico::Agendado,
             StatusServico::EmAndamento,
+            StatusServico::EmContestacao,
             StatusServico::Cancelado,
         ] as $status) {
             [$cliente, , $servico] = $this->contexto($status);
@@ -174,6 +175,13 @@ class RatingTest extends TestCase
         $this->assertSame(40, $perfil->nota_media_dez);
         $this->assertSame(3, $perfil->servicos_aprovados);
         $this->assertSame(NivelConfianca::Bronze, $perfil->nivel_confianca);
+
+        $this->asUser($profissional)
+            ->getJson('/api/v1/users/me')
+            ->assertOk()
+            ->assertJsonPath('data.trust_profile.nivel_confianca', 'BRONZE')
+            ->assertJsonPath('data.trust_profile.servicos_aprovados', 3)
+            ->assertJsonPath('data.trust_profile.nota_media', 4);
     }
 
     public function test_avaliacao_do_profissional_nao_altera_nota_media_do_perfil(): void

@@ -54,7 +54,7 @@ class RecalcularPerfilConfianca
 
             $podePromover = $usuario->status === StatusConta::Ativa;
             if ($podePromover) {
-                $diasConta = (int) $usuario->created_at->diffInDays(now());
+                $diasConta = (int) abs($usuario->created_at?->diffInDays(now()) ?? 0);
                 $novoNivel = ($this->calcularNivel)(
                     $servicosAprovados,
                     $notaMediaDez,

@@ -5,7 +5,7 @@ namespace Tests\Unit\Users;
 use App\Users\CalcularNivelConfianca;
 use App\Users\NivelConfianca;
 use PHPUnit\Framework\Attributes\DataProvider;
-use Tests\TestCase;
+use PHPUnit\Framework\TestCase;
 
 class CalcularNivelConfiancaTest extends TestCase
 {
