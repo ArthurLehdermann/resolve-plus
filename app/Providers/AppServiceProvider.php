@@ -4,6 +4,9 @@ namespace App\Providers;
 
 use App\Categories\Models\Categoria;
 use App\Categories\Policies\CategoriaPolicy;
+use App\Payments\Gateway\AsaasPaymentGateway;
+use App\Payments\Gateway\FakePaymentGateway;
+use App\Payments\Gateway\PaymentGateway;
 use App\Payments\Listeners\CapturePaymentOnApproval;
 use App\PropertyHistory\Listeners\RecordInterventionOnApproval;
 use App\Requests\Events\SolicitacaoCriada;
@@ -25,7 +28,15 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->singleton(FakePaymentGateway::class);
+
+        $this->app->bind(PaymentGateway::class, function ($app): PaymentGateway {
+            if ($app->environment('testing') || config('payments.gateway') === 'fake') {
+                return $app->make(FakePaymentGateway::class);
+            }
+
+            return $app->make(AsaasPaymentGateway::class);
+        });
     }
 
     /**
