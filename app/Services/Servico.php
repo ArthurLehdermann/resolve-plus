@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Auth\Models\Usuario;
 use App\Payments\PaymentDispute;
 use App\Proposals\Proposta;
+use App\Ratings\Avaliacao;
 use App\Warranty\Garantia;
 use Database\Factories\Services\ServicoFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -77,6 +78,14 @@ class Servico extends Model
     public function disputes(): HasMany
     {
         return $this->hasMany(PaymentDispute::class, 'servico_id');
+    }
+
+    /**
+     * @return HasMany<Avaliacao, $this>
+     */
+    public function avaliacoes(): HasMany
+    {
+        return $this->hasMany(Avaliacao::class, 'servico_id');
     }
 
     public function isRevisitaGarantia(): bool

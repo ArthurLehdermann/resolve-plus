@@ -9,6 +9,8 @@ use App\Payments\Gateway\FakePaymentGateway;
 use App\Payments\Gateway\PaymentGateway;
 use App\Payments\Listeners\CapturePaymentOnApproval;
 use App\PropertyHistory\Listeners\RecordInterventionOnApproval;
+use App\Ratings\Events\AvaliacaoRegistrada;
+use App\Ratings\Listeners\RecalcularPerfilOnAvaliacao;
 use App\Requests\Events\SolicitacaoCriada;
 use App\Requests\Listeners\NotifyEligibleProfessionals;
 use App\Services\Events\ServiceApproved;
@@ -74,5 +76,6 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ServiceApproved::class, IssueWarrantyOnApproval::class);
         Event::listen(ServiceApproved::class, RecordInterventionOnApproval::class);
         Event::listen(SolicitacaoCriada::class, NotifyEligibleProfessionals::class);
+        Event::listen(AvaliacaoRegistrada::class, RecalcularPerfilOnAvaliacao::class);
     }
 }

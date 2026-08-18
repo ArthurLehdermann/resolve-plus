@@ -4,9 +4,11 @@ namespace App\Auth\Models;
 
 use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
+use App\Users\PerfilProfissional;
 use Database\Factories\UsuarioFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -39,6 +41,14 @@ class Usuario extends Authenticatable
             'status' => StatusConta::class,
             'senha_hash' => 'hashed',
         ];
+    }
+
+    /**
+     * @return HasOne<PerfilProfissional, $this>
+     */
+    public function perfilProfissional(): HasOne
+    {
+        return $this->hasOne(PerfilProfissional::class, 'usuario_id');
     }
 
     public function getAuthPasswordName(): string
