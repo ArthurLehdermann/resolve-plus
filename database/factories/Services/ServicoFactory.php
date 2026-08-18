@@ -26,6 +26,8 @@ class ServicoFactory extends Factory
             ]),
             'inicio' => null,
             'fim' => null,
+            'notas' => null,
+            'fotos' => null,
             'status' => StatusServico::Agendado,
         ];
     }
@@ -35,6 +37,15 @@ class ServicoFactory extends Factory
         return $this->state(fn (array $attributes): array => [
             'status' => StatusServico::EmAndamento,
             'inicio' => now(),
+        ]);
+    }
+
+    public function aguardandoAprovacao(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'status' => StatusServico::AguardandoAprovacao,
+            'inicio' => now()->subHour(),
+            'fim' => now(),
         ]);
     }
 }

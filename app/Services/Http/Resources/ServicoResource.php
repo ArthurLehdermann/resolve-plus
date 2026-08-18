@@ -20,6 +20,8 @@ class ServicoResource extends JsonResource
             'status' => $this->status->value,
             'started_at' => $this->inicio?->toIso8601String(),
             'finished_at' => $this->fim?->toIso8601String(),
+            'notes' => $this->notas,
+            'photos' => $this->fotos ?? [],
         ];
     }
 }
