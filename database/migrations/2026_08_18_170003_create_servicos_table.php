@@ -26,7 +26,7 @@ return new class extends Migration
 
         Schema::create('servicos', function (Blueprint $table): void {
             $table->uuid('id')->primary();
-            $table->foreignUuid('proposta_id')->unique()->constrained('propostas')->restrictOnDelete();
+            $table->foreignUuid('proposta_id')->nullable()->unique()->constrained('propostas')->restrictOnDelete();
             $table->timestamp('inicio')->nullable();
             $table->timestamp('fim')->nullable();
             $table->text('notas')->nullable();
