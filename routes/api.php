@@ -1,6 +1,8 @@
 <?php
 
 use App\Auth\Http\Controllers\AuthController;
+use App\Categories\Http\Controllers\AdminCategoryController;
+use App\Categories\Http\Controllers\CategoryController;
 use App\PropertyHistory\PropertyHistoryController;
 use App\Proposals\Http\Controllers\ProposalController;
 use App\Services\Http\Controllers\MessageController;
@@ -64,4 +66,15 @@ Route::prefix('v1')->group(function (): void {
 
     Route::get('/properties/{id}/history', [PropertyHistoryController::class, 'show'])
         ->whereUuid('id');
+
+    Route::get('/categories', [CategoryController::class, 'index']);
+    Route::get('/categories/{categoria}', [CategoryController::class, 'show']);
+
+    Route::middleware('auth:sanctum')->prefix('admin')->group(function (): void {
+        Route::get('/categories', [AdminCategoryController::class, 'index']);
+        Route::post('/categories', [AdminCategoryController::class, 'store']);
+        Route::get('/categories/{categoria}', [AdminCategoryController::class, 'show']);
+        Route::put('/categories/{categoria}', [AdminCategoryController::class, 'update']);
+        Route::delete('/categories/{categoria}', [AdminCategoryController::class, 'destroy']);
+    });
 });
