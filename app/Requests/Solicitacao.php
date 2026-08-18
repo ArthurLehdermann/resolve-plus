@@ -20,6 +20,7 @@ class Solicitacao extends Model
 
     protected $fillable = [
         'cliente_id',
+        'property_id',
         'status',
     ];
 

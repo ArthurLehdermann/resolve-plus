@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Auth\Models\Usuario;
+use App\Payments\PaymentDispute;
 use App\Proposals\Proposta;
 use Database\Factories\Services\ServicoFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -23,6 +24,8 @@ class Servico extends Model
         'proposta_id',
         'inicio',
         'fim',
+        'notas',
+        'fotos',
         'status',
     ];
 
@@ -50,6 +53,14 @@ class Servico extends Model
         return $this->hasMany(Mensagem::class, 'servico_id');
     }
 
+    /**
+     * @return HasMany<PaymentDispute, $this>
+     */
+    public function disputes(): HasMany
+    {
+        return $this->hasMany(PaymentDispute::class, 'servico_id');
+    }
+
     public function profissionalId(): string
     {
         $this->loadMissing('proposta');
@@ -64,6 +75,13 @@ class Servico extends Model
         return (string) $this->proposta->solicitacao->cliente_id;
     }
 
+    public function propertyId(): string
+    {
+        $this->loadMissing('proposta.solicitacao');
+
+        return (string) $this->proposta->solicitacao->property_id;
+    }
+
     public function isParticipante(Usuario $usuario): bool
     {
         $id = (string) $usuario->id;
@@ -76,11 +94,17 @@ class Servico extends Model
         return (string) $usuario->id === $this->profissionalId();
     }
 
+    public function isClienteDono(Usuario $usuario): bool
+    {
+        return (string) $usuario->id === $this->clienteId();
+    }
+
     protected function casts(): array
     {
         return [
             'inicio' => 'immutable_datetime',
             'fim' => 'immutable_datetime',
+            'fotos' => 'array',
             'status' => StatusServico::class,
         ];
     }

@@ -6,6 +6,7 @@ use App\Auth\Models\Usuario;
 use App\Requests\Solicitacao;
 use App\Requests\StatusSolicitacao;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Str;
 
 /**
  * @extends Factory<Solicitacao>
@@ -21,6 +22,7 @@ class SolicitacaoFactory extends Factory
     {
         return [
             'cliente_id' => Usuario::factory(),
+            'property_id' => (string) Str::uuid(),
             'status' => StatusSolicitacao::Aberta,
         ];
     }

@@ -2,9 +2,14 @@
 
 namespace App\Providers;
 
+use App\Payments\Listeners\CapturePaymentOnApproval;
+use App\PropertyHistory\Listeners\RecordInterventionOnApproval;
+use App\Services\Events\ServiceApproved;
+use App\Warranty\Listeners\IssueWarrantyOnApproval;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -46,5 +51,9 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('chat', function (Request $request) {
             return Limit::perMinute(60)->by((string) ($request->user()?->id ?: $request->ip()));
         });
+
+        Event::listen(ServiceApproved::class, CapturePaymentOnApproval::class);
+        Event::listen(ServiceApproved::class, IssueWarrantyOnApproval::class);
+        Event::listen(ServiceApproved::class, RecordInterventionOnApproval::class);
     }
 }

@@ -49,6 +49,12 @@ Route::prefix('v1')->group(function (): void {
 
         Route::post('/services/{id}/start', [ServiceController::class, 'start'])
             ->whereUuid('id');
+        Route::post('/services/{id}/finish', [ServiceController::class, 'finish'])
+            ->whereUuid('id');
+        Route::post('/services/{id}/approve', [ServiceController::class, 'approve'])
+            ->whereUuid('id');
+        Route::post('/services/{id}/contest', [ServiceController::class, 'contest'])
+            ->whereUuid('id');
         Route::get('/services/{id}/messages', [MessageController::class, 'index'])
             ->whereUuid('id');
         Route::post('/services/{id}/messages', [MessageController::class, 'store'])
