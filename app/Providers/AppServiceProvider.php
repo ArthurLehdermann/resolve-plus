@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Categories\Models\Categoria;
+use App\Categories\Policies\CategoriaPolicy;
 use App\Payments\Listeners\CapturePaymentOnApproval;
 use App\PropertyHistory\Listeners\RecordInterventionOnApproval;
 use App\Services\Events\ServiceApproved;
@@ -10,6 +12,7 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
@@ -28,6 +31,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        Gate::policy(Categoria::class, CategoriaPolicy::class);
+
         ResetPassword::createUrlUsing(function (object $notifiable, string $token): string {
             $email = method_exists($notifiable, 'getEmailForPasswordReset')
                 ? $notifiable->getEmailForPasswordReset()

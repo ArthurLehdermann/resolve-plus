@@ -37,4 +37,12 @@ class UsuarioFactory extends Factory
             'status' => StatusConta::PendenteVerificacao,
         ]);
     }
+
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'tipo' => TipoUsuario::Admin,
+            'status' => StatusConta::Ativa,
+        ]);
+    }
 }

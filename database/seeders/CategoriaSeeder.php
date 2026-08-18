@@ -2,14 +2,14 @@
 
 namespace Database\Seeders;
 
+use App\Categories\Models\Categoria;
 use Illuminate\Database\Seeder;
 use RuntimeException;
 
 /**
- * Fixture das 5 categorias do MVP (INV-080).
+ * Seed das 5 categorias do MVP (INV-080).
  *
- * Persistência no banco fica para a issue de Categorias (model/tabela ainda não existem).
- * Até lá, `definitions()` é o contrato carregável a partir de `database/fixtures/categorias_mvp.json`.
+ * Definições canônicas em `database/fixtures/categorias_mvp.json` (D3).
  */
 class CategoriaSeeder extends Seeder
 {
@@ -41,12 +41,16 @@ class CategoriaSeeder extends Seeder
 
     public function run(): void
     {
-        $categorias = self::definitions();
-
-        $this->command?->info(sprintf(
-            '%d categorias MVP lidas de %s (persistência pendente da issue de Categorias).',
-            count($categorias),
-            self::FIXTURE,
-        ));
+        foreach (self::definitions() as $definition) {
+            Categoria::query()->updateOrCreate(
+                ['codigo' => $definition['codigo']],
+                [
+                    'nome' => $definition['nome'],
+                    'descricao' => $definition['descricao'],
+                    'ativo' => $definition['ativo'],
+                    'template_escopo' => $definition['template_escopo'],
+                ],
+            );
+        }
     }
 }
