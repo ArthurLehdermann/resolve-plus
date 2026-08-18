@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Auth\Models\Usuario;
+use App\Payments\PaymentAuthorization;
 use App\Payments\PaymentDispute;
 use App\Proposals\Proposta;
 use App\Ratings\Avaliacao;
@@ -78,6 +79,14 @@ class Servico extends Model
     public function disputes(): HasMany
     {
         return $this->hasMany(PaymentDispute::class, 'servico_id');
+    }
+
+    /**
+     * @return HasMany<PaymentAuthorization, $this>
+     */
+    public function authorizations(): HasMany
+    {
+        return $this->hasMany(PaymentAuthorization::class, 'servico_id');
     }
 
     /**

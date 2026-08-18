@@ -2,6 +2,7 @@
 
 namespace App\Payments;
 
+use App\Services\Servico;
 use Database\Factories\Payments\PaymentAuthorizationFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;

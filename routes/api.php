@@ -5,6 +5,7 @@ use App\Admin\Http\Controllers\AdminPanelController;
 use App\Auth\Http\Controllers\AuthController;
 use App\Categories\Http\Controllers\AdminCategoryController;
 use App\Categories\Http\Controllers\CategoryController;
+use App\Payments\Http\DisputeController;
 use App\Payments\Http\PaymentController;
 use App\Professionals\Http\Controllers\ProfissionalDocumentoController;
 use App\PropertyHistory\Http\Controllers\PropertyController;
@@ -93,12 +94,19 @@ Route::prefix('v1')->group(function (): void {
             ->whereUuid('id');
         Route::post('/services/{id}/contest', [ServiceController::class, 'contest'])
             ->whereUuid('id');
+        Route::post('/services/{id}/cancel', [ServiceController::class, 'cancel'])
+            ->whereUuid('id');
+        Route::post('/services/{id}/disputes', [ServiceController::class, 'openDispute'])
+            ->whereUuid('id');
         Route::get('/services/{id}/messages', [MessageController::class, 'index'])
             ->whereUuid('id');
         Route::post('/services/{id}/messages', [MessageController::class, 'store'])
             ->whereUuid('id')
             ->middleware('throttle:chat');
         Route::post('/services/{id}/rating', [RatingController::class, 'store'])
+            ->whereUuid('id');
+
+        Route::put('/disputes/{id}/resolve', [DisputeController::class, 'resolve'])
             ->whereUuid('id');
 
         Route::get('/payments', [PaymentController::class, 'index']);

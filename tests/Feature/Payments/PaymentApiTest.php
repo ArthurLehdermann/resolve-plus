@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Payments;
 
+use App\Auth\Enums\StatusConta;
+use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
 use App\Payments\CapturePayment;
 use App\Payments\CommissionRate;
@@ -10,10 +12,12 @@ use App\Payments\MetodoPagamento;
 use App\Payments\PaymentAuthorization;
 use App\Payments\PaymentDispute;
 use App\Payments\RecordPaymentEvent;
-use App\Payments\Servico;
 use App\Payments\StatusPaymentAuthorization;
-use App\Payments\StatusServico;
 use App\Payments\TipoPaymentEvent;
+use App\Proposals\Proposta;
+use App\Requests\Solicitacao;
+use App\Services\Servico;
+use App\Services\StatusServico;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Tests\TestCase;
@@ -26,10 +30,10 @@ class PaymentApiTest extends TestCase
     {
         $cliente = Usuario::factory()->create();
         $outro = Usuario::factory()->create();
-        $servico = Servico::factory()->create(['cliente_id' => $cliente->id]);
+        $servico = $this->servicoDoCliente($cliente);
         $authorization = PaymentAuthorization::factory()->create(['servico_id' => $servico->id]);
         PaymentAuthorization::factory()->create([
-            'servico_id' => Servico::factory()->create(['cliente_id' => $outro->id])->id,
+            'servico_id' => $this->servicoDoCliente($outro)->id,
         ]);
 
         $this->withToken($cliente->createToken('auth')->plainTextToken)
@@ -43,7 +47,7 @@ class PaymentApiTest extends TestCase
     public function test_get_payment_and_events_return_append_only_history(): void
     {
         $cliente = Usuario::factory()->create();
-        $servico = Servico::factory()->create(['cliente_id' => $cliente->id]);
+        $servico = $this->servicoDoCliente($cliente);
         $authorization = PaymentAuthorization::factory()->create(['servico_id' => $servico->id]);
         $token = $cliente->createToken('auth')->plainTextToken;
 
@@ -63,10 +67,7 @@ class PaymentApiTest extends TestCase
     public function test_approve_service_captures_card_via_gateway(): void
     {
         $cliente = Usuario::factory()->create();
-        $servico = Servico::factory()->create([
-            'cliente_id' => $cliente->id,
-            'status' => StatusServico::AguardandoAprovacao,
-        ]);
+        $servico = $this->servicoDoCliente($cliente, StatusServico::AguardandoAprovacao);
         $authorization = PaymentAuthorization::factory()->create(['servico_id' => $servico->id]);
 
         $this->withToken($cliente->createToken('auth')->plainTextToken)
@@ -88,10 +89,7 @@ class PaymentApiTest extends TestCase
     public function test_approve_is_idempotent_with_the_same_key(): void
     {
         $cliente = Usuario::factory()->create();
-        $servico = Servico::factory()->create([
-            'cliente_id' => $cliente->id,
-            'status' => StatusServico::AguardandoAprovacao,
-        ]);
+        $servico = $this->servicoDoCliente($cliente, StatusServico::AguardandoAprovacao);
         PaymentAuthorization::factory()->create(['servico_id' => $servico->id]);
 
         $key = (string) Str::uuid();
@@ -115,7 +113,7 @@ class PaymentApiTest extends TestCase
     {
         $cliente = Usuario::factory()->create();
         $outro = Usuario::factory()->create();
-        $servico = Servico::factory()->create(['cliente_id' => $cliente->id]);
+        $servico = $this->servicoDoCliente($cliente);
         PaymentAuthorization::factory()->create(['servico_id' => $servico->id]);
 
         $this->withToken($cliente->createToken('auth')->plainTextToken)
@@ -132,9 +130,9 @@ class PaymentApiTest extends TestCase
 
     public function test_admin_release_records_audit_and_repassado(): void
     {
-        $admin = Usuario::factory()->admin()->create();
+        $admin = Usuario::factory()->create(['tipo' => TipoUsuario::Admin]);
         $cliente = Usuario::factory()->create();
-        $servico = Servico::factory()->aprovado()->create(['cliente_id' => $cliente->id]);
+        $servico = $this->servicoDoCliente($cliente, StatusServico::Aprovado);
         $authorization = PaymentAuthorization::factory()->capturado()->create(['servico_id' => $servico->id]);
 
         $this->withToken($admin->createToken('auth')->plainTextToken)
@@ -156,12 +154,11 @@ class PaymentApiTest extends TestCase
 
     public function test_admin_release_of_pix_transfers_via_gateway(): void
     {
-        $admin = Usuario::factory()->admin()->create();
-        $servico = Servico::factory()->aprovado()->create([
-            'asaas_wallet_id' => 'wal_profissional',
-        ]);
+        $admin = Usuario::factory()->create(['tipo' => TipoUsuario::Admin]);
+        $servico = $this->servicoDoCliente(Usuario::factory()->create(), StatusServico::Aprovado);
         $authorization = PaymentAuthorization::factory()->pixCapturado()->create([
             'servico_id' => $servico->id,
+            'wallet_id' => 'wal_profissional',
         ]);
 
         $this->withToken($admin->createToken('auth')->plainTextToken)
@@ -180,7 +177,7 @@ class PaymentApiTest extends TestCase
     public function test_release_rejects_non_admin_and_missing_justificativa(): void
     {
         $cliente = Usuario::factory()->create();
-        $servico = Servico::factory()->aprovado()->create(['cliente_id' => $cliente->id]);
+        $servico = $this->servicoDoCliente($cliente, StatusServico::Aprovado);
         $authorization = PaymentAuthorization::factory()->capturado()->create(['servico_id' => $servico->id]);
 
         $this->withToken($cliente->createToken('auth')->plainTextToken)
@@ -190,7 +187,7 @@ class PaymentApiTest extends TestCase
             ])
             ->assertForbidden();
 
-        $admin = Usuario::factory()->admin()->create();
+        $admin = Usuario::factory()->create(['tipo' => TipoUsuario::Admin]);
 
         $this->withToken($admin->createToken('auth')->plainTextToken)
             ->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
@@ -230,7 +227,7 @@ class PaymentApiTest extends TestCase
 
     public function test_inv_045_dispute_blocks_release_but_not_other_events(): void
     {
-        $admin = Usuario::factory()->admin()->create();
+        $admin = Usuario::factory()->create(['tipo' => TipoUsuario::Admin]);
         $servico = Servico::factory()->create();
         $authorization = PaymentAuthorization::factory()->create(['servico_id' => $servico->id]);
 
@@ -261,5 +258,29 @@ class PaymentApiTest extends TestCase
     public function test_unauthenticated_payments_are_rejected(): void
     {
         $this->getJson('/api/v1/payments')->assertUnauthorized();
+    }
+
+    private function servicoDoCliente(Usuario $cliente, StatusServico $status = StatusServico::Agendado): Servico
+    {
+        $solicitacao = Solicitacao::factory()->contratada()->create(['cliente_id' => $cliente->id]);
+        $proposta = Proposta::factory()->aceita()->create([
+            'solicitacao_id' => $solicitacao->id,
+            'profissional_id' => Usuario::factory()->create([
+                'tipo' => TipoUsuario::Profissional,
+                'status' => StatusConta::Ativa,
+            ])->id,
+        ]);
+
+        $attributes = [
+            'proposta_id' => $proposta->id,
+            'status' => $status,
+        ];
+
+        if ($status === StatusServico::AguardandoAprovacao) {
+            $attributes['inicio'] = now()->subHour();
+            $attributes['fim'] = now();
+        }
+
+        return Servico::factory()->create($attributes);
     }
 }

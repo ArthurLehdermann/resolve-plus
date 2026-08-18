@@ -4,6 +4,7 @@ namespace App\Payments;
 
 use App\Payments\Gateway\GatewayException;
 use App\Payments\Gateway\PaymentGateway;
+use App\Services\StatusServico;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
