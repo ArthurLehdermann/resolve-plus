@@ -32,6 +32,13 @@ class SolicitacaoFactory extends Factory
         ]);
     }
 
+    public function contratada(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'status' => StatusSolicitacao::Contratada,
+        ]);
+    }
+
     public function cancelada(): static
     {
         return $this->state(fn (array $attributes): array => [
