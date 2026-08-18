@@ -39,16 +39,21 @@ Agendado --(profissional: comparece e inicia)--> Em Andamento
 Em Andamento --(profissional: registra conclusão)--> Aguardando Aprovação [FP003]
 Aguardando Aprovação --(cliente: confirma)--> Aprovado [P4/P5 do Event Storm: captura pagamento + emite garantia]
 Aguardando Aprovação --(sistema: janela de aceite automático expira sem contestação)--> Aprovado [AUTO_APPROVAL_HOURS = 72h, adr/ADR-004-prazo-aceite-automatico.md]
-Aguardando Aprovação --(cliente: contesta)--> Em Contestação [FA004]
-Em Contestação --(fluxo de mediação, NECESSITA VALIDAÇÃO, ver B003)--> Aprovado | Cancelado
-Agendado --(cliente: cancela)--> Cancelado [Cenário B, foundation/03-cancellation-rules.md, multa/reembolso parcial NECESSITA VALIDAÇÃO]
-Em Andamento --(cliente/profissional: solicita cancelamento)--> Em Contestação [Cenário C, foundation/03-cancellation-rules.md: nunca cancela direto depois de iniciado, sempre abre disputa]
+Aguardando Aprovação --(cliente: contesta)--> Em Contestação [FA004, PaymentDispute CONTESTACAO_CONCLUSAO]
+Em Contestação --(admin: resolve CONTESTACAO_CONCLUSAO, resultado=APROVADO)--> Aprovado [captura integral]
+Em Contestação --(admin: resolve CONTESTACAO_CONCLUSAO, resultado=CANCELADO)--> Cancelado [libera autorização]
+Em Contestação --(admin: resolve CANCELAMENTO_EXECUCAO, resultado=CANCELADO)--> Cancelado [libera autorização]
+Em Contestação --(admin: resolve CANCELAMENTO_EXECUCAO, resultado=APROVADO)--> Em Andamento [pedido de cancelamento negado]
+Em Contestação --(sistema: timeout DISPUTE_MEDIATION_DAYS, CONTESTACAO_CONCLUSAO)--> Aprovado [auto, foundation/03-cancellation-rules.md]
+Em Contestação --(sistema: timeout DISPUTE_MEDIATION_DAYS, CANCELAMENTO_EXECUCAO)--> Cancelado [auto]
+Agendado --(cliente: cancela)--> Cancelado [Cenário B, foundation/03-cancellation-rules.md, multa + captura parcial]
+Em Andamento --(cliente/profissional: solicita cancelamento)--> Em Contestação [Cenário C, PaymentDispute CANCELAMENTO_EXECUCAO]
 ```
 
-- `Aprovado` é o único estado que pode gerar `PaymentEvent` de captura (INV-041) e `Garantia` (INV-050).
-- `Cancelado` nunca gera garantia nem libera pagamento normal (INV-032).
-- Transição `Em Contestação → ?` está **bloqueada** até B003 ser resolvido, hoje não há resolução determinística no domínio (vale tanto para contestação de conclusão quanto para disputa aberta por cancelamento durante execução, Cenário C).
-- `Agendado → Cancelado` é decisão de produto já registrada (Cenário B), mas o **percentual de multa** e a **mecânica de reembolso parcial sobre uma `PaymentAuthorization` ainda não capturada** (INV-043 só cobre reembolso sobre valor capturado) continuam pendentes, ver `foundation/03-cancellation-rules.md`.
+- `Aprovado` gera `PaymentEvent` de captura **integral** (INV-041) e `Garantia` (INV-050). Não é o único gatilho de captura: `Cancelado` no Cenário B gera captura **parcial** da multa (INV-032, INV-041), nunca garantia.
+- `Cancelado` nunca gera garantia nem libera pagamento **integral** do serviço (INV-032); captura/repasse da multa no Cenário B é a exceção explícita de INV-041 (`03-cancellation-rules.md`).
+- `Agendado → Cancelado` aplica multa decrescente (10/25/50%) e captura parcial da `PaymentAuthorization` vigente; ver `foundation/03-cancellation-rules.md` e `04-modelo-dados.md`.
+- Resolução de `Em Contestação` é manual por Admin no MVP, prazo `DISPUTE_MEDIATION_DAYS` (7d), com timeout automático por tipo de disputa (`03-cancellation-rules.md`).
 
 ## 4. Pagamento (`PaymentAuthorization` × `PaymentEvent`, duas máquinas, não uma)
 
@@ -58,7 +63,9 @@ Em Andamento --(cliente/profissional: solicita cancelamento)--> Em Contestação
 
 ```
 Autorizado --(sistema: ServicoAprovado)--> Capturado [INV-041, P4]
-Autorizado --(sistema: ServicoCancelado antes de aprovação)--> Cancelado [nunca captura sobre serviço cancelado]
+Autorizado --(sistema: ServicoCancelado sem multa, Cenário B)--> Cancelado [libera 100%]
+Autorizado --(sistema: ServicoCancelado com multa, Cenário B)--> Capturado [evento CAPTURADO parcial = valor_multa, foundation/03-cancellation-rules.md]
+Autorizado --(sistema: ServicoCancelado, disputa CANCELAMENTO_EXECUCAO aceita)--> Cancelado [libera 100%, sem multa]
 Autorizado --(sistema: expira sem uso)--> Expirado [INV-042, nunca fica em limbo]
 Expirado --(sistema: Serviço ainda não Cancelado/Aprovado)--> nova PaymentAuthorization Autorizado [evento REAUTORIZADO, INV-046]
 ```
@@ -117,8 +124,8 @@ Rejeitado --(profissional: reenvia mesmo tipo)--> nova linha Pendente [históric
 
 ## Pendências deste documento
 
-- Transição de `Em Contestação` no Serviço não é determinística (depende de B003, ver `foundation/03-cancellation-rules.md`).
 - Resolução de `Garantia: Acionada` é mediação entre profissional e cliente (Modelo B, `adr/ADR-003-garantia.md`, decisão provisória de B001), plataforma não participa financeiramente.
+- Adapter concreto de captura parcial no gateway (Cenário B) depende de D1 (`05-arquitetura.md`).
 
 ## Changelog
 
@@ -133,3 +140,4 @@ Rejeitado --(profissional: reenvia mesmo tipo)--> nova linha Pendente [históric
 | 2026-08-17 | §3 Serviço: divide `Agendado|Em Andamento --cancela--> Cancelado` em dois, `Agendado` cancela direto (Cenário B), `Em Andamento` nunca cancela direto, abre `Em Contestação` (Cenário C), rascunho em `foundation/03-cancellation-rules.md` (B003, decisão parcial do PO). |
 | 2026-08-17 | §4a: Pix nasce `Capturado` no aceite (`adr/ADR-005-gateway-pagamento.md`, B006); o diagrama de `Autorizado → Capturado` permanece o fluxo de cartão. |
 | 2026-08-17 | §6 Conta: condição explícita de aprovação documental (RF002). §7 DocumentoProfissional: máquina `Pendente → Aprovado | Rejeitado`. |
+| 2026-08-17 | B003 resolvido provisoriamente: transições de `Em Contestação` por tipo de disputa + timeout; §4a captura parcial Cenário B. |

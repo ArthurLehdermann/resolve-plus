@@ -64,11 +64,11 @@ Serviço executado → cliente aprova ou AUTO_APPROVAL_HOURS
 Evento REPASSADO: transferência interna Asaas (walletId do profissional)
 ```
 
-O que **não** muda: cartão continua autorizar → capturar → repassar (`ADR-002-financeiro.md`). INV-041, lida com precisão, bloqueia o **repasse** (liberação ao profissional) antes da aprovação; o parêntese antigo "capturado + repassado" descrevia o cartão, não proíbe captura imediata de Pix. O dinheiro do Pix **não** entra em conta bancária da plataforma: fica custodiado pelo Asaas. Isso não reabre escrow bancário rejeitado pelo ADR-002; a plataforma não é instituição de pagamento.
+O que **não** muda: cartão continua autorizar → capturar → repassar (`ADR-002-financeiro.md`). INV-041, lida com precisão, bloqueia o **repasse do serviço executado** (liberação ao profissional) antes da aprovação; o parêntese antigo "capturado + repassado" descrevia o cartão no caminho feliz, não proíbe captura imediata de Pix nem o repasse da **multa** do Cenário B (`foundation/03-cancellation-rules.md`). O dinheiro do Pix **não** entra em conta bancária da plataforma: fica custodiado pelo Asaas. Isso não reabre escrow bancário rejeitado pelo ADR-002; a plataforma não é instituição de pagamento.
 
 Regra operacional de Pix no Asaas: **não** enviar `splits` na cobrança Pix. Split na cobrança liquidaria na hora e pagaria o profissional antes do serviço. O `PaymentSplit` no domínio continua sendo calculado no `CAPTURADO`; o movimento de dinheiro correspondente é a transferência no `REPASSADO`. Cartão usa split nativo na captura (settlement = captura).
 
-INV-046 **não dispara** para Pix: não há autorização a expirar. Cancelamento de serviço com Pix já capturado é `PaymentRefund` (INV-043), não cancelamento de autorização. A mecânica de multa/captura parcial do Cenário B (`foundation/03-cancellation-rules.md`, B003) continua aberta; em Pix ela é reembolso parcial sobre valor capturado, não captura parcial de autorização.
+INV-046 **não dispara** para Pix: não há autorização a expirar. Cancelamento de serviço com Pix já capturado é `PaymentRefund` (INV-043), não cancelamento de autorização. No Cenário B (`foundation/03-cancellation-rules.md`, B003) o Pix usa reembolso parcial (`valor_proposta - valor_multa`); o cartão usa captura parcial da autorização (fallback captura+reembolso se o Asaas não suportar parcial).
 
 ## Mapeamento às pendências do ADR-002
 
@@ -84,7 +84,7 @@ INV-046 **não dispara** para Pix: não há autorização a expirar. Cancelament
 - Profissional precisa de subconta Asaas (`walletId`) no onboarding (RF002/verificação), senão não há destino de `REPASSADO`.
 - Confirmar na abertura da conta Asaas se o MCC do marketplace é elegível à janela de 25 dias. Se não for, INV-046 opera no padrão de 3 dias; o modelo já aguenta.
 - `specifications/05-arquitetura.md` deixa de listar o gateway como "Necessita Validação".
-- B003 (captura parcial de autorização no Cenário B, cartão) agora tem provedor concreto: o endpoint de captura Asaas captura a pré-autorização vigente; captura parcial continua **não** assumida, permanece pendência de B003.
+- B003 (captura parcial de autorização no Cenário B, cartão) tem provedor concreto: o endpoint de captura Asaas captura a pré-autorização vigente. Captura parcial **não** é assumida: implementação usa fallback captura integral + `REEMBOLSADO` do excedente até o adapter confirmar parcial (`foundation/03-cancellation-rules.md`).
 
 ## O que fica fora
 
@@ -99,3 +99,4 @@ INV-046 **não dispara** para Pix: não há autorização a expirar. Cancelament
 | Data | Mudança |
 |---|---|
 | 2026-08-17 | Decisão provisória de produto: Asaas no MVP; Pix aceito com captura imediata + retenção no gateway até `REPASSADO`. Pesquisa Mercado Pago × Stripe × Asaas registrada. Resolve as três pendências residuais do `ADR-002-financeiro.md` (B006). |
+| 2026-08-17 | B003: Cenário B deixa de ser pendência deste ADR; Pix = reembolso parcial, cartão = captura parcial (fallback captura+reembolso). INV-041 atualizada na fonte de verdade. |

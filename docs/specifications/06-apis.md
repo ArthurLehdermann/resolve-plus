@@ -213,9 +213,36 @@ Erros: 422 (`scope` não bate com `template_escopo` da categoria; código `PRECO
 
 **POST /services/{id}/approve**, Cliente aprova. Dispara captura de pagamento + garantia + Intervention no prontuário (INV-041/050/060). Requer header `Idempotency-Key` (RNF010, operação crítica, nunca duplicar captura).
 
-**POST /services/{id}/contest**, Cliente contesta. Requer `Idempotency-Key` (RNF010).
+**POST /services/{id}/contest**, Cliente contesta conclusão (`Aguardando Aprovação` → `Em Contestação`, FA004). Cria `PaymentDispute` com `tipo = CONTESTACAO_CONCLUSAO`. Pausa timer de aceite automático (`AUTO_APPROVAL_HOURS`). Requer `Idempotency-Key` (RNF010).
 
-**POST /services/{id}/cancel**, Cancela serviço. Só válido em `Agendado` (→ `Cancelado`, Cenário B, `foundation/03-cancellation-rules.md`); em `Em Andamento` o mesmo endpoint abre disputa (→ `Em Contestação`, Cenário C) em vez de cancelar, nunca cancela direto depois que a execução começou. Multa aplicável (Cenário B) e critério de resolução da disputa (Cenário C) continuam **NECESSITA VALIDAÇÃO**, ver `foundation/03-cancellation-rules.md` (B003).
+Request
+```json
+{
+  "motivo": ""
+}
+```
+
+**POST /services/{id}/cancel**, Cancela serviço. Só válido em `Agendado` (→ `Cancelado`, Cenário B, `foundation/03-cancellation-rules.md`); em `Em Andamento` o mesmo endpoint abre disputa (→ `Em Contestação`, Cenário C, `PaymentDispute.tipo = CANCELAMENTO_EXECUCAO`) em vez de cancelar. Multa Cenário B: percentual decrescente por antecedência (10/25/50%, parâmetros `CANCELLATION_PENALTY_*`), captura parcial da autorização vigente. Requer `Idempotency-Key` (RNF010).
+
+Request (Cenário C, opcional)
+```json
+{
+  "motivo": ""
+}
+```
+
+Response (Cenário B, exemplo)
+```json
+{
+  "servico": { "status": "CANCELADO" },
+  "multa": {
+    "percentual": 25,
+    "valor_centavos": 8750
+  }
+}
+```
+
+Erros: 403 (não é o cliente, ou estado inválido), 409 (já cancelado/disputa aberta), 422
 
 ## Chat
 
@@ -269,9 +296,26 @@ Request
 
 ## Disputas
 
-**POST /services/{id}/disputes**, Abre disputa sobre o serviço (`PaymentDispute`, INV-045). Bloqueia repasse até resolução, não bloqueia novos `PaymentEvent`.
+**POST /services/{id}/disputes**, Abre disputa sobre o serviço (`PaymentDispute`, INV-045). No MVP, disputas nascem preferencialmente via `POST /services/{id}/cancel` (Cenário C) ou `POST /services/{id}/contest` (contestação de conclusão); este endpoint fica para casos administrativos ou extensões futuras. Bloqueia repasse até resolução, não bloqueia novos `PaymentEvent`.
 
-**PUT /disputes/{id}/resolve**, Admin resolve disputa (Serviço `Em Contestação` → `Aprovado`/`Cancelado`, inclui as disputas abertas por cancelamento durante execução, Cenário C de `foundation/03-cancellation-rules.md`). Fluxo de mediação depende de B003 (`foundation/04-decisions-pending.md`), endpoint existe, critério de resolução ainda não definido.
+**PUT /disputes/{id}/resolve**, Admin resolve disputa (`Usuario.tipo = ADMIN`). Serviço deve estar `Em Contestação`. Critérios em `foundation/03-cancellation-rules.md` (B003): prazo `DISPUTE_MEDIATION_DAYS` (7 dias), timeout automático se Admin não decidir.
+
+Request
+```json
+{
+  "resultado": "APROVADO",
+  "justificativa": ""
+}
+```
+
+`resultado`: `APROVADO` | `CANCELADO`. Efeito depende de `PaymentDispute.tipo`:
+
+| tipo | `APROVADO` | `CANCELADO` |
+|---|---|---|
+| `CONTESTACAO_CONCLUSAO` | Serviço → `Aprovado`, captura integral | Serviço → `Cancelado`, libera autorização |
+| `CANCELAMENTO_EXECUCAO` | Serviço → `Em Andamento` (cancelamento negado) | Serviço → `Cancelado`, libera autorização |
+
+Erros: 403 (não Admin), 404, 409 (disputa já `RESOLVIDA` ou serviço fora de `Em Contestação`), 422 (`justificativa` ausente ou `resultado` inválido)
 
 ## Histórico
 

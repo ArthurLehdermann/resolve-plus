@@ -29,10 +29,10 @@ Eventos de domínio (passado, o que já aconteceu) → Commands que os disparam 
 | Evento | Origem | Efeito |
 |---|---|---|
 | `SolicitacaoExpirada` | Sistema (FA001, nenhum profissional respondeu) | Solicitação permanece consultável, não recebe mais propostas |
-| `SolicitacaoCanceladaPeloCliente` | Cliente (FA002) | Só antes de proposta aceita; nenhuma penalidade definida (ver B003) |
+| `SolicitacaoCanceladaPeloCliente` | Cliente (FA002) | Só antes de proposta aceita; nenhuma penalidade (Cenário A, B003) |
 | `PropostaRecusadaAutomaticamente` | Sistema | Disparado por P1 quando outra proposta é aceita (INV-011) |
-| `ServicoContestado` | Cliente (FA004) | Bloqueia captura de pagamento; fluxo de mediação **Necessita Validação** (B003) |
-| `ServicoCancelado` | Cliente/Profissional/Admin | Não gera garantia nem libera pagamento normal (INV-032); pode gerar reembolso parcial, regra pendente (B003); **P8** recalcula taxa de cancelamento |
+| `ServicoContestado` | Cliente (FA004) | Bloqueia captura/repasse integral; mediação Admin + timeout (`foundation/03-cancellation-rules.md`, B003) |
+| `ServicoCancelado` | Cliente/Profissional/Admin | Não gera garantia nem libera pagamento integral (INV-032); Cenário B gera captura/retenção da multa (INV-041); **P8** recalcula taxa de cancelamento |
 | `GarantiaAcionada` | Cliente | Sempre com evidências (INV-052); fluxo de responsabilidade pendente (B001); **P8** incrementa `reclamacoes_12m` |
 | `DisputaResolvida` | Admin/Sistema | Fecha `PaymentDispute` ou contestação de serviço; **P8** recalcula cancelamento/reclamações conforme desfecho |
 | `ContaSuspensa` / `ContaBloqueada` | Admin | Cancela participação em processos em andamento sem apagar histórico consolidado (INV-003) |
@@ -44,7 +44,7 @@ Eventos de domínio (passado, o que já aconteceu) → Commands que os disparam 
 | P1 | `PropostaAceita` | Recusar as demais propostas da solicitação (INV-011) |
 | P2 | `PropostaAceita` | Criar `Serviço` (evento, não entidade `Contratação`, INV-020) |
 | P3 | `PropostaAceita` | Habilitar chat entre cliente e profissional |
-| P4 | `ServicoAprovado` | Capturar pagamento autorizado (INV-041) |
+| P4 | `ServicoAprovado` | Capturar pagamento autorizado integral (INV-041); Pix já capturado no aceite |
 | P5 | `ServicoAprovado` | Emitir garantia (INV-050) |
 | P6 | `PagamentoCapturado` | Agendar repasse ao profissional após janela de contestação (B002) |
 | P7 | `InterventionRegistrada` (implícita em `ServicoAprovado`) | Anexar ao prontuário do imóvel, com `origem: PLATAFORMA` (INV-060/061/062) |
@@ -61,7 +61,7 @@ Eventos de domínio (passado, o que já aconteceu) → Commands que os disparam 
 
 ## Pendências deste documento
 
-- Fluxo de disputa/mediação formal ainda não tem eventos próprios (depende de B003).
+- Fluxo de disputa/mediação: eventos `ServicoContestado` + `DisputaResolvida`; critério em `foundation/03-cancellation-rules.md` (B003).
 - Evento de garantia acionada não detalha quem decide o desfecho (depende de B001).
 
 ## Changelog
@@ -70,3 +70,4 @@ Eventos de domínio (passado, o que já aconteceu) → Commands que os disparam 
 |---|---|
 | 2026-08-16 | v0.1, criado a partir de `specifications/02-funcionalidades.md` e `00-domain-invariants.md`. |
 | 2026-08-17 | Issue #4: policy P8 e evento `DisputaResolvida` para recálculo de `PerfilProfissional` (`foundation/05-trust-level.md`). |
+| 2026-08-17 | B003: `ServicoCancelado` no Cenário B gera multa; `ServicoContestado` deixa de ser "Necessita Validação". |

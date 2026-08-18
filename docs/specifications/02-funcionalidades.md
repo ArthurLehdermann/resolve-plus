@@ -64,7 +64,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 - **FA001**, Nenhum profissional respondeu: sistema informa indisponibilidade e mantém solicitação aberta por período configurável.
 - **FA002**, Cliente cancela antes da contratação: solicitação encerrada.
 - **FA003**, Profissional cancela: solicitação retorna para busca de novos profissionais.
-- **FA004**, Cliente rejeita conclusão: pagamento permanece bloqueado, status muda para "Em Contestação". **Necessita Validação**: fluxo de mediação.
+- **FA004**, Cliente rejeita conclusão: pagamento permanece bloqueado, status muda para "Em Contestação" (`PaymentDispute.tipo = CONTESTACAO_CONCLUSAO`). Mediação: Admin no MVP, prazo `DISPUTE_MEDIATION_DAYS` = 7d, timeout → `Aprovado` (`foundation/03-cancellation-rules.md`, B003).
 
 ## 6. Requisitos Funcionais
 
@@ -106,7 +106,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 |---|---|
 | RN001 | Apenas profissionais verificados podem receber solicitações. |
 | RN002 | Cliente só pode contratar uma proposta por solicitação. |
-| RN003 | Cartão: pagamento é autorizado no aceite da proposta e só é capturado após conclusão e aprovação. Pix: captura imediata no aceite, nasce `CAPTURADO`, só o **repasse** espera aprovação (`adr/ADR-005-gateway-pagamento.md`, INV-041). Não é escrow bancário, é autorizar→capturar→repassar no cartão (ver `adr/ADR-002-financeiro.md`). Redigido em 2026-08-16 com vocabulário de escrow ("retido"), corrigido em 2026-08-17, ajustado para Pix em 2026-08-17. |
+| RN003 | Cartão: pagamento é autorizado no aceite da proposta e só é capturado **integralmente** após conclusão e aprovação. Pix: captura imediata no aceite, nasce `CAPTURADO`, só o **repasse** do serviço executado espera aprovação (`adr/ADR-005-gateway-pagamento.md`, INV-041). Exceção Cenário B: multa pode ser capturada/repassada sem `APROVADO` (`foundation/03-cancellation-rules.md`). Não é escrow bancário, é autorizar→capturar→repassar no cartão (ver `adr/ADR-002-financeiro.md`). Redigido em 2026-08-16 com vocabulário de escrow ("retido"), corrigido em 2026-08-17, ajustado para Pix e B003 em 2026-08-17. |
 | RN004 | Avaliação só é permitida com o Serviço em `APROVADO` (não existe estado "concluído" separado, ver `foundation/02-state-machine.md`). |
 | RN005 | Todo Serviço que atinge `APROVADO` gera garantia (INV-050). |
 | RN006 | Todo Serviço que atinge `APROVADO` entra no prontuário do imóvel via `Intervention` (INV-060). |

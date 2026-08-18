@@ -288,7 +288,7 @@ Campos do template **podem** declarar `ajuste_preco` opcional (fator em basis po
 
 **Campos**: id, servico_id, inicio, fim, status (`StatusGarantia`), responsavel_financeiro (fixo `PROFISSIONAL`, INV-053/B001)
 
-**Revisita dentro da garantia**: se o acionamento gera um novo `Serviço` do mesmo profissional para a mesma causa/escopo já coberto, esse `Serviço` não cria `PaymentAuthorization` nova, é uma revisita sem cobrança ao cliente (INV-033). Como isso se relaciona com B003 (cancelamento/revisita ainda bloqueado) não está detalhado, dependência registrada, não resolvida aqui.
+**Revisita dentro da garantia**: se o acionamento gera um novo `Serviço` do mesmo profissional para a mesma causa/escopo já coberto, esse `Serviço` não cria `PaymentAuthorization` nova, é uma revisita sem cobrança ao cliente (INV-033). Cancelamento dessa revisita segue B003 (`foundation/03-cancellation-rules.md`) sem nova autorização para estornar.
 
 **Regra de encerramento (INV-053, decisão provisória de B001, `adr/ADR-003-garantia.md`)**: quando `status` sai de `ATIVA` (vira `EXPIRADA` sem acionamento, ou `ENCERRADA` após `ACIONADA` resolvida), **não dispara nenhum evento financeiro**. A plataforma já repassou 100% do `valor_profissional` ao profissional 72h após aprovação (`adr/ADR-004-prazo-aceite-automatico.md`), não há reserva a liberar. Se `ACIONADA`, a resolução é entre profissional e cliente, a plataforma só media (não gera `PaymentRefund` da própria plataforma). Não modelar fundo garantidor/caução/reserva enquanto B001 não tiver parecer jurídico definitivo.
 
@@ -307,6 +307,20 @@ Campos do template **podem** declarar `ajuste_preco` opcional (fator em basis po
 **Regra**: toda autorização termina em `CAPTURADO`, `CANCELADO` ou `EXPIRADO`, nunca fica em `AUTORIZADO` indefinidamente (INV-042). `expira_em` é o campo que sustenta essa regra via job. Se expira e o Serviço ainda não está `CANCELADO`/`APROVADO`, o job cria automaticamente uma nova `PaymentAuthorization`, registrado como evento `REAUTORIZADO` em `PaymentEvent` (INV-046).
 
 **Regra (Pix, `adr/ADR-005-gateway-pagamento.md`)**: `metodo = PIX` nasce `CAPTURADO` (captura imediata no Asaas); `expira_em` é nulo; INV-046 não dispara. `metodo = CARTAO` nasce `AUTORIZADO`. Gateway do MVP: Asaas (B006).
+
+**Cancelamento Cenário B (B003, `foundation/03-cancellation-rules.md`):** enquanto Serviço `AGENDADO`, cancelamento pelo cliente pode gerar captura parcial (= multa) ou cancelamento integral (multa zero):
+
+1. Calcula `valor_multa` a partir dos parâmetros `CANCELLATION_PENALTY_*` em `Configuração`.
+2. **`valor_multa = 0`, cartão:** transição `AUTORIZADO → CANCELADO`, `PaymentEvent` tipo `CANCELADO` (libera 100% da autorização no gateway).
+3. **`valor_multa > 0`, cartão, gateway com captura parcial (Asaas ainda não assume parcial, `adr/ADR-005-gateway-pagamento.md`):**
+   - Gateway captura `valor_multa` e libera o saldo restante da mesma autorização.
+   - `PaymentEvent` tipo `CAPTURADO` com `payload.motivo = CANCELAMENTO_MULTA`, `payload.valor = valor_multa`.
+   - `PaymentAuthorization.status = CAPTURADO` (terminal, INV-042; valor retido = multa).
+   - `PaymentSplit` gerado sobre esse evento de captura (comissão sobre a multa).
+4. **`valor_multa > 0`, cartão, gateway sem captura parcial (fallback):** captura integral via gateway → `PaymentEvent CAPTURADO` → `PaymentEvent REEMBOLSADO` com `payload.valor = valor - valor_multa` (libera ao cliente o que não é multa). Mesmo `status` terminal `CAPTURADO`.
+5. **Pix (já `CAPTURADO` no aceite):** Cancelamento Cenário B usa `PaymentRefund` parcial (`valor - valor_multa`) em vez de captura parcial; multa retida na plataforma até o `REPASSADO` da parcela do profissional.
+
+`PaymentRefund` (INV-043) **não** se aplica ao caminho cartão com autorização ainda `AUTORIZADO`; o evento correto é `CAPTURADO` parcial ou `CANCELADO` integral.
 
 ### PaymentEvent
 
@@ -334,9 +348,16 @@ Campos do template **podem** declarar `ajuste_preco` opcional (fator em basis po
 
 ### PaymentDispute
 
-**Campos**: id, servico_id, status (`ABERTA | RESOLVIDA`), aberta_em, resolvida_em
+**Campos**: id, servico_id, tipo (`CONTESTACAO_CONCLUSAO | CANCELAMENTO_EXECUCAO`), status (`ABERTA | RESOLVIDA`), aberta_em, resolvida_em, resolvida_por_id (UUID, Admin), resultado (`APROVADO | CANCELADO`, preenchido na resolução), justificativa (obrigatória na resolução, INV-070)
 
-**Regra**: enquanto `ABERTA`, bloqueia geração de evento `REPASSADO`, mas não bloqueia novos `PaymentEvent` de outro tipo (INV-045). Resolução de mérito depende de B003 (mediação), ver `foundation/04-decisions-pending.md`.
+**Regra**: enquanto `ABERTA`, bloqueia geração de evento `REPASSADO`, mas não bloqueia novos `PaymentEvent` de outro tipo (INV-045). Pausa o timer de aceite automático (`AUTO_APPROVAL_HOURS`) enquanto `CONTESTACAO_CONCLUSAO` estiver aberta.
+
+**Resolução (B003, `foundation/03-cancellation-rules.md`):**
+- `CONTESTACAO_CONCLUSAO` + `APROVADO` → Serviço `APROVADO`, captura integral.
+- `CONTESTACAO_CONCLUSAO` + `CANCELADO` → Serviço `CANCELADO`, autorização `AUTORIZADO → CANCELADO`.
+- `CANCELAMENTO_EXECUCAO` + `CANCELADO` → Serviço `CANCELADO`, autorização liberada integralmente.
+- `CANCELAMENTO_EXECUCAO` + `APROVADO` → Serviço retorna a `EM_ANDAMENTO` (pedido de cancelamento negado).
+- Timeout após `DISPUTE_MEDIATION_DAYS` (7 dias, `Configuração`): resolução automática conforme tabela em `03-cancellation-rules.md`.
 
 ## Auditoria
 
@@ -345,7 +366,7 @@ Campos do template **podem** declarar `ajuste_preco` opcional (fator em basis po
 ## Tabelas Auxiliares
 
 ### Configuração
-Parâmetros globais: comissão (%), prazo de garantia padrão, `AUTO_APPROVAL_HOURS` (tempo limite para aceite automático, 72h, `adr/ADR-004-prazo-aceite-automatico.md`), raio máximo de atendimento, `PRECO_ARREDONDAMENTO_CENTAVOS` (default `1000` = R$ 10, usado na heurística de `10-motor-precificacao.md` §2.3).
+Parâmetros globais: comissão (%), prazo de garantia padrão, `AUTO_APPROVAL_HOURS` (tempo limite para aceite automático, 72h, `adr/ADR-004-prazo-aceite-automatico.md`), `DISPUTE_MEDIATION_DAYS` (prazo máximo de mediação de disputa, 7 dias, B003), `CANCELLATION_PENALTY_TIER1_HOURS` (48), `CANCELLATION_PENALTY_TIER1_PERCENT` (10), `CANCELLATION_PENALTY_TIER2_HOURS` (24), `CANCELLATION_PENALTY_TIER2_PERCENT` (25), `CANCELLATION_PENALTY_TIER3_PERCENT` (50), raio máximo de atendimento, `PRECO_ARREDONDAMENTO_CENTAVOS` (default `1000` = R$ 10, usado na heurística de `10-motor-precificacao.md` §2.3).
 
 ### Notificação
 **Campos**: usuario_id, titulo, mensagem, lida, data
@@ -449,7 +470,7 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 
 **StatusServico**: `AGENDADO`, `EM_ANDAMENTO`, `AGUARDANDO_APROVACAO`, `APROVADO`, `EM_CONTESTACAO`, `CANCELADO`
 
-> Substituídos `CONCLUIDO`/`FINALIZADO`, que não existiam na state machine. `APROVADO` dispara captura de **cartão** (Pix já foi capturado no aceite, `adr/ADR-005-gateway-pagamento.md`) e `Garantia`.
+> Substituídos `CONCLUIDO`/`FINALIZADO`, que não existiam na state machine. `APROVADO` dispara captura **integral** de **cartão** (Pix já foi capturado no aceite, `adr/ADR-005-gateway-pagamento.md`) e `Garantia`. `CANCELADO` no Cenário B dispara captura **parcial** da multa (INV-032/INV-041), sem garantia.
 
 **StatusPaymentAuthorization**: `AUTORIZADO`, `CAPTURADO`, `CANCELADO`, `EXPIRADO`
 
@@ -543,3 +564,4 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 | 2026-08-17 (6ª passada) | B005: `DocumentoProfissional` ganha campos de apólice RC (`SEGURO_RC`, vigência, número); enum `TipoDocumentoProfissional`; sinistro durante execução usa disputa existente, sem entidade própria no MVP. |
 | 2026-08-17 (issue #4) | Adiciona entidade `PerfilProfissional` (nível de confiança, métricas cacheadas, enum `NivelConfianca`) e referencia critérios/recálculo em `foundation/05-trust-level.md`. |
 | 2026-08-17 | RF002: critérios de verificação documental (`DocumentoProfissional`), matriz base + NR-10 para Elétrica, enums `TipoDocumentoProfissional`/`StatusDocumentoProfissional`, regra de `Conta.status` → `ATIVA` (INV-002). |
+| 2026-08-17 | B003: cancelamento Cenário B (captura parcial/multa), `PaymentDispute.tipo` + campos de resolução, parâmetros `CANCELLATION_PENALTY_*` e `DISPUTE_MEDIATION_DAYS` em `Configuração`. |
