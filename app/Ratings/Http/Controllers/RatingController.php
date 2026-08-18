@@ -17,7 +17,12 @@ class RatingController extends Controller
     public function store(StoreRatingRequest $request, string $id, RegisterRating $action): JsonResponse
     {
         $servico = Servico::query()->with('proposta.solicitacao')->findOrFail($id);
-        $avaliacao = $action($servico, $this->usuario($request), $request->nota(), $request->comentario());
+
+        try {
+            $avaliacao = $action($servico, $this->usuario($request), $request->nota(), $request->comentario());
+        } catch (RatingException $exception) {
+            return $exception->render();
+        }
 
         return ApiResponse::success(new AvaliacaoResource($avaliacao), 201);
     }
