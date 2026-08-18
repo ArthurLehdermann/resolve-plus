@@ -3,6 +3,9 @@
 use App\Auth\Http\Controllers\AuthController;
 use App\PropertyHistory\PropertyHistoryController;
 use App\Proposals\Http\Controllers\ProposalController;
+use App\Services\Http\Controllers\MessageController;
+use App\Services\Http\Controllers\ScheduleController;
+use App\Services\Http\Controllers\ServiceController;
 use App\Users\Http\Controllers\UserProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -38,6 +41,19 @@ Route::prefix('v1')->group(function (): void {
             ->whereUuid('id');
         Route::post('/proposals/{id}/withdraw', [ProposalController::class, 'withdraw'])
             ->whereUuid('id');
+
+        Route::get('/schedule', [ScheduleController::class, 'index']);
+        Route::post('/schedule', [ScheduleController::class, 'store']);
+        Route::put('/schedule/{id}', [ScheduleController::class, 'update'])
+            ->whereUuid('id');
+
+        Route::post('/services/{id}/start', [ServiceController::class, 'start'])
+            ->whereUuid('id');
+        Route::get('/services/{id}/messages', [MessageController::class, 'index'])
+            ->whereUuid('id');
+        Route::post('/services/{id}/messages', [MessageController::class, 'store'])
+            ->whereUuid('id')
+            ->middleware('throttle:chat');
     });
 
     Route::get('/properties/{id}/history', [PropertyHistoryController::class, 'show'])

@@ -35,4 +35,11 @@ class PropostaFactory extends Factory
             'status' => StatusProposta::Enviada,
         ];
     }
+
+    public function aceita(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'status' => StatusProposta::Aceita,
+        ]);
+    }
 }
