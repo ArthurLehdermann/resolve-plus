@@ -13,8 +13,6 @@ class CreateWarrantyRevisit
 {
     public function __invoke(Garantia $garantia): Servico
     {
-        $original = $garantia->servico;
-
         $existing = Servico::query()
             ->where('garantia_origem_id', $garantia->id)
             ->first();

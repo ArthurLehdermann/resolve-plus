@@ -9,6 +9,10 @@ class CapturePaymentOnApproval
 {
     public function handle(ServiceApproved $event): void
     {
+        if ($event->servico->isRevisitaGarantia()) {
+            return;
+        }
+
         CapturePaymentJob::dispatch($event->servico->id);
     }
 }

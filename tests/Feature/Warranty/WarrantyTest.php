@@ -5,6 +5,7 @@ namespace Tests\Feature\Warranty;
 use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
+use App\Payments\Jobs\CapturePaymentJob;
 use App\Proposals\Proposta;
 use App\Requests\Solicitacao;
 use App\Services\Actions\ApproveService;
@@ -193,6 +194,7 @@ class WarrantyTest extends TestCase
         app(ApproveService::class)->byCliente($revisita->fresh(), $cliente);
 
         Queue::assertNotPushed(IssueWarrantyJob::class);
+        Queue::assertNotPushed(CapturePaymentJob::class);
 
         (new IssueWarrantyJob($revisita->id))->handle(app(IssueWarranty::class));
 
