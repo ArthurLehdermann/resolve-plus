@@ -48,6 +48,14 @@ class Property extends Model
         return $this->hasOne(PropertyOwnership::class)->whereNull('ate');
     }
 
+    /**
+     * @return HasMany<PropertyOwnershipTransfer, $this>
+     */
+    public function transfers(): HasMany
+    {
+        return $this->hasMany(PropertyOwnershipTransfer::class);
+    }
+
     public function isCurrentOwner(Usuario $usuario): bool
     {
         return $this->currentOwnership?->cliente_id === $usuario->id;

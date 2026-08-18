@@ -4,6 +4,8 @@ use App\Auth\Http\Controllers\AuthController;
 use App\Categories\Http\Controllers\AdminCategoryController;
 use App\Categories\Http\Controllers\CategoryController;
 use App\Payments\Http\PaymentController;
+use App\PropertyHistory\Http\Controllers\PropertyController;
+use App\PropertyHistory\Http\Controllers\PropertyTransferController;
 use App\PropertyHistory\PropertyHistoryController;
 use App\Proposals\Http\Controllers\ProposalController;
 use App\Requests\Http\Controllers\RequestController;
@@ -37,6 +39,19 @@ Route::prefix('v1')->group(function (): void {
         Route::put('/users/me', [UserProfileController::class, 'update']);
         Route::post('/users/photo', [UserProfileController::class, 'uploadPhoto'])
             ->middleware('throttle:upload');
+
+        Route::get('/properties', [PropertyController::class, 'index']);
+        Route::post('/properties', [PropertyController::class, 'store']);
+        Route::put('/properties/{id}', [PropertyController::class, 'update'])
+            ->whereUuid('id');
+        Route::post('/properties/{id}/transfer', [PropertyTransferController::class, 'initiate'])
+            ->whereUuid('id');
+
+        Route::get('/property-transfers', [PropertyTransferController::class, 'index']);
+        Route::post('/property-transfers/{id}/accept', [PropertyTransferController::class, 'accept'])
+            ->whereUuid('id');
+        Route::post('/property-transfers/{id}/decline', [PropertyTransferController::class, 'decline'])
+            ->whereUuid('id');
 
         Route::get('/requests', [RequestController::class, 'index']);
         Route::post('/requests', [RequestController::class, 'store']);
