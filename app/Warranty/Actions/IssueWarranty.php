@@ -16,8 +16,12 @@ class IssueWarranty
             $servico = Servico::query()
                 ->whereKey($servico->id)
                 ->lockForUpdate()
-                ->with('proposta')
+                ->with(['proposta', 'garantiaOrigem'])
                 ->firstOrFail();
+
+            if ($servico->isRevisitaGarantia()) {
+                return Garantia::query()->findOrFail($servico->garantia_origem_id);
+            }
 
             $existing = Garantia::query()->where('servico_id', $servico->id)->first();
             if ($existing !== null) {

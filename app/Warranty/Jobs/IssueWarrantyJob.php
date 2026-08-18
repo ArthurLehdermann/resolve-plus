@@ -16,6 +16,11 @@ class IssueWarrantyJob implements ShouldQueue
     public function handle(IssueWarranty $issueWarranty): void
     {
         $servico = Servico::query()->findOrFail($this->servicoId);
+
+        if ($servico->isRevisitaGarantia()) {
+            return;
+        }
+
         $issueWarranty($servico);
     }
 }

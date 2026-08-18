@@ -9,6 +9,10 @@ class IssueWarrantyOnApproval
 {
     public function handle(ServiceApproved $event): void
     {
+        if ($event->servico->isRevisitaGarantia()) {
+            return;
+        }
+
         IssueWarrantyJob::dispatch($event->servico->id);
     }
 }

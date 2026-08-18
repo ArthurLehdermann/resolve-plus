@@ -5,15 +5,9 @@ namespace Tests\Feature\Warranty;
 use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
-use App\Payments\CreatePaymentAuthorization;
-use App\Payments\MetodoPagamento;
-use App\Payments\PaymentAuthorization;
-use App\Payments\PaymentEvent;
-use App\Payments\PaymentRefund;
-use App\Payments\StatusPaymentAuthorization;
-use App\Payments\TipoPaymentEvent;
 use App\Proposals\Proposta;
 use App\Requests\Solicitacao;
+use App\Services\Actions\ApproveService;
 use App\Services\Servico;
 use App\Services\StatusServico;
 use App\Warranty\Actions\CloseWarranty;
@@ -25,6 +19,9 @@ use App\Warranty\StatusGarantia;
 use App\Warranty\WarrantyClaim;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
 class WarrantyTest extends TestCase
@@ -150,23 +147,6 @@ class WarrantyTest extends TestCase
     public function test_inv_053_acionar_e_encerrar_garantia_nao_cria_eventos_financeiros(): void
     {
         [$cliente, , $servico] = $this->contextoAprovado();
-        $authorization = PaymentAuthorization::query()->create([
-            'servico_id' => $servico->id,
-            'valor' => 10_000,
-            'metodo' => MetodoPagamento::Cartao,
-            'status' => StatusPaymentAuthorization::Capturado,
-            'expira_em' => null,
-        ]);
-
-        PaymentEvent::query()->create([
-            'payment_authorization_id' => $authorization->id,
-            'tipo' => TipoPaymentEvent::Capturado,
-            'payload' => ['motivo' => 'SERVICO_APROVADO'],
-        ]);
-
-        $eventsBefore = PaymentEvent::query()->count();
-        $refundsBefore = PaymentRefund::query()->count();
-
         $garantia = Garantia::factory()->create([
             'servico_id' => $servico->id,
         ]);
@@ -180,38 +160,48 @@ class WarrantyTest extends TestCase
 
         app(CloseWarranty::class)($garantia->fresh());
 
-        $this->assertSame($eventsBefore, PaymentEvent::query()->count());
-        $this->assertSame($refundsBefore, PaymentRefund::query()->count());
+        $this->assertSame(StatusGarantia::Encerrada, $garantia->fresh()->status);
+        $this->assertSame(0, $this->contagemTabelaFinanceira('payment_events'));
+        $this->assertSame(0, $this->contagemTabelaFinanceira('payment_refunds'));
     }
 
-    public function test_inv_033_revisita_nao_gera_nova_payment_authorization(): void
+    public function test_inv_033_revisita_nao_gera_nova_cobranca_nem_nova_garantia(): void
     {
-        [, , $servico] = $this->contextoAprovado();
-        PaymentAuthorization::query()->create([
-            'servico_id' => $servico->id,
-            'valor' => 10_000,
-            'metodo' => MetodoPagamento::Cartao,
-            'status' => StatusPaymentAuthorization::Capturado,
-            'expira_em' => null,
-        ]);
-
+        [$cliente, , $servico] = $this->contextoAprovado();
         $garantia = Garantia::factory()->create([
             'servico_id' => $servico->id,
         ]);
 
-        $revisita = Servico::query()->create([
-            'proposta_id' => null,
-            'garantia_origem_id' => $garantia->id,
-            'status' => StatusServico::Agendado,
+        $this->asUser($cliente)
+            ->postJson("/api/v1/warranties/{$garantia->id}/claim", [
+                'descricao' => 'O vazamento voltou no mesmo ponto.',
+                'photos' => ['fotos/defeito-1.jpg'],
+            ])
+            ->assertOk();
+
+        $revisita = Servico::query()->where('garantia_origem_id', $garantia->id)->first();
+        $this->assertNotNull($revisita);
+        $this->assertTrue($revisita->isRevisitaGarantia());
+        $this->assertNull($revisita->proposta_id);
+        $this->assertSame(0, $this->contagemTabelaFinanceira('payment_authorizations', $revisita->id));
+
+        Queue::fake();
+        $revisita->update([
+            'status' => StatusServico::AguardandoAprovacao,
+            'fim' => now(),
         ]);
+        app(ApproveService::class)->byCliente($revisita->fresh(), $cliente);
 
-        $creator = app(CreatePaymentAuthorization::class);
-        $this->assertNull($creator->forServico($revisita, 10_000, MetodoPagamento::Cartao));
-        $this->assertSame(1, PaymentAuthorization::query()->count());
+        Queue::assertNotPushed(IssueWarrantyJob::class);
 
-        $segunda = $creator->forServico($revisita->fresh(), 10_000, MetodoPagamento::Cartao);
-        $this->assertNull($segunda);
-        $this->assertSame(1, PaymentAuthorization::query()->count());
+        (new IssueWarrantyJob($revisita->id))->handle(app(IssueWarranty::class));
+
+        $herdada = app(IssueWarranty::class)($revisita->fresh());
+        $this->assertSame($garantia->id, $herdada->id);
+        $this->assertSame(1, Garantia::query()->count());
+        $this->assertDatabaseHas('garantias', ['id' => $garantia->id, 'servico_id' => $servico->id]);
+        $this->assertDatabaseMissing('garantias', ['servico_id' => $revisita->id]);
+        $this->assertSame(0, $this->contagemTabelaFinanceira('payment_authorizations', $revisita->id));
     }
 
     public function test_rotas_de_garantia_exigem_autenticacao(): void
@@ -227,6 +217,21 @@ class WarrantyTest extends TestCase
             'descricao' => 'Problema no serviço.',
             'photos' => ['foto.jpg'],
         ])->assertUnauthorized();
+    }
+
+    private function contagemTabelaFinanceira(string $tabela, ?string $servicoId = null): int
+    {
+        if (! Schema::hasTable($tabela)) {
+            return 0;
+        }
+
+        $query = DB::table($tabela);
+
+        if ($servicoId !== null && Schema::hasColumn($tabela, 'servico_id')) {
+            $query->where('servico_id', $servicoId);
+        }
+
+        return $query->count();
     }
 
     /**
