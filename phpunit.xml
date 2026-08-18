@@ -32,5 +32,6 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <env name="OBJECT_STORAGE_DISK" value="s3" force="true"/>
     </php>
 </phpunit>
