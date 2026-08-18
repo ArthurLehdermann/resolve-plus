@@ -15,4 +15,18 @@ enum StatusSolicitacao: string
     {
         return $this === self::Aberta || $this === self::RecebendoPropostas;
     }
+
+    public function isEditable(): bool
+    {
+        return in_array($this, [
+            self::Criada,
+            self::Aberta,
+            self::RecebendoPropostas,
+        ], true);
+    }
+
+    public function isCancellable(): bool
+    {
+        return $this->isEditable();
+    }
 }

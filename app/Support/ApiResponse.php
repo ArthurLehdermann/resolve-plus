@@ -36,4 +36,18 @@ final class ApiResponse
 
         return response()->json($payload, $status);
     }
+
+    public static function paginated(mixed $data, int $page, int $perPage, int $total): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+            'pagination' => [
+                'page' => $page,
+                'per_page' => $perPage,
+                'total' => $total,
+                'last_page' => max(1, (int) ceil($total / max($perPage, 1))),
+            ],
+        ]);
+    }
 }
