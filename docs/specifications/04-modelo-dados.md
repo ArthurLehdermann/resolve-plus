@@ -11,7 +11,7 @@ O domínio é centrado em uma **Solicitação de Serviço**, que recebe **Propos
 ```
 Usuário
  ├── Cliente
- └── Profissional
+ └── Profissional ── PerfilProfissional (1:1)
         │
         ▼
 Categoria ── TabelaPreco
@@ -63,7 +63,32 @@ Não existe tabela `Contratacao`. O relacionamento Proposta → Serviço é dire
 
 **Exclusão (LGPD, ainda sem validação jurídica final, ver `foundation/04-decisions-pending.md`):** nunca hard-delete. `status = EXCLUIDA` (INV-003/state machine §6) + anonimização dos campos identificáveis (`nome`, `email`, `telefone`, `foto` substituídos por placeholder). Preserva integridade referencial com Auditoria, Pagamento e Avaliação, que são append-only e não podem perder FK.
 
-**Relacionamentos**: 1:N Solicitações, 1:N Propostas, 1:N Serviços, 1:N Avaliações, 1:N Endereço
+**Relacionamentos**: 1:1 PerfilProfissional (só quando `tipo = PROFISSIONAL`), 1:N Solicitações, 1:N Propostas, 1:N Serviços, 1:N Avaliações, 1:N Endereço
+
+### PerfilProfissional
+
+> Adicionado em 2026-08-17 (issue #4). Materializa o "Nível de Confiança" do glossário (`01-visao-geral.md`) e as RN007/RN026. Métricas são **projeções cacheadas**, recalculadas por eventos de domínio (ver `foundation/05-trust-level.md` e policy P8 em `01-event-storm.md`). Só existe para `Usuario.tipo = PROFISSIONAL`.
+
+| Campo | Tipo | Obrigatório | Índice |
+|---|---|---|---|
+| id | UUID | Sim | PK |
+| usuario_id | UUID | Sim | Unique |
+| nivel_confianca | ENUM(`NivelConfianca`) | Sim | Sim |
+| servicos_aprovados | INTEGER | Sim | |
+| nota_media_dez | INTEGER | Não | |
+| taxa_cancelamento_pct | INTEGER | Sim | |
+| reclamacoes_12m | INTEGER | Sim | |
+| nivel_atualizado_em | TIMESTAMP | Sim | |
+
+**Regras**:
+
+- Criado no evento `ProfissionalVerificado` com `nivel_confianca = VERIFICADO` e contadores zerados.
+- `nota_media_dez`: décimos da nota 1–5 (`45` = 4,5). `NULL` enquanto não houver avaliação `CLIENTE_AVALIA_PROFISSIONAL`.
+- `taxa_cancelamento_pct`: inteiro 0–100, ver fórmula em `foundation/05-trust-level.md`.
+- `reclamacoes_12m`: janela rolling de 365 dias; decrementada pelo job diário quando eventos saem da janela.
+- Limiares de promoção/rebaixa: tabela em `foundation/05-trust-level.md`.
+
+**Relacionamento**: Usuário (profissional) 1:1 PerfilProfissional
 
 ### Endereco
 
@@ -339,6 +364,7 @@ Para validação documental (RF002). Critérios definidos provisoriamente por B0
 
 | Origem | Destino | Cardinalidade |
 |---|---|---|
+| Usuário | PerfilProfissional | 1:1 (profissional) |
 | Usuário | Endereço | 1:N |
 | Usuário | Solicitação | 1:N |
 | Categoria | Solicitação | 1:N |
@@ -395,9 +421,15 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 
 **StatusPropertyOwnershipTransfer**: `PENDENTE`, `ACEITO`, `RECUSADO`, `EXPIRADO`
 
+**NivelConfianca**: `VERIFICADO`, `BRONZE`, `PRATA`, `OURO`, `ELITE`
+
+> Ordem de exibição/ordenação segue a sequência acima (crescente). Limiares de progressão em `foundation/05-trust-level.md`.
+
 ## Índices Recomendados
 
 **Usuário**: email (Unique), telefone, tipo
+
+**PerfilProfissional**: usuario_id (Unique), nivel_confianca, composto `(nivel_confianca DESC, nota_media_dez DESC)` para ordenação em RF010
 
 **Solicitação**: cliente_id, categoria_id, property_id, tabela_preco_id, status, criado_em
 
@@ -461,3 +493,4 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 | 2026-08-17 | `PaymentAuthorization.metodo` fecha `CARTAO | PIX` (`adr/ADR-005-gateway-pagamento.md`, B006): Pix nasce `CAPTURADO`, cartão nasce `AUTORIZADO`. |
 | 2026-08-17 (issue #2) | Adiciona `TabelaPreco` (categoria+cidade, editável por Admin) e snapshot `faixa_preco_min`/`faixa_preco_max`/`faixa_preco_fator_bp`/`tabela_preco_id` em `Solicitacao`; `Configuração.PRECO_ARREDONDAMENTO_CENTAVOS`. Heurística em `10-motor-precificacao.md`. |
 | 2026-08-17 (6ª passada) | B005: `DocumentoProfissional` ganha campos de apólice RC (`SEGURO_RC`, vigência, número); enum `TipoDocumentoProfissional`; sinistro durante execução usa disputa existente, sem entidade própria no MVP. |
+| 2026-08-17 (issue #4) | Adiciona entidade `PerfilProfissional` (nível de confiança, métricas cacheadas, enum `NivelConfianca`) e referencia critérios/recálculo em `foundation/05-trust-level.md`. |

@@ -50,7 +50,7 @@ Relacionado a `INV-031` e `INV-041` (`00-domain-invariants.md`): o pagamento só
 - Percentual de multa (Cenário B).
 - Mecânica de captura parcial (cartão ainda `AUTORIZADO`) / reembolso parcial (Pix já `CAPTURADO`) no Cenário B. Gateway é Asaas (`adr/ADR-005-gateway-pagamento.md`); captura parcial continua **não** assumida.
 - Resolução determinística de `Em Contestação → Aprovado | Cancelado` (Cenários C/D).
-- Impacto de cancelamento/contestação recorrente na reputação.
+- Impacto de cancelamento/contestação recorrente na reputação: limiares e recálculo em `foundation/05-trust-level.md` (RN008); resolução determinística de disputa continua pendente (itens acima).
 
 **Responsável:** Produto + Jurídico.
 

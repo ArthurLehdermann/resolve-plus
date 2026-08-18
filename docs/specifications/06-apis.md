@@ -64,7 +64,9 @@ Erros: 400, 409, 422
 
 ## Usuários
 
-**GET /users/me**, Retorna usuário autenticado.
+**GET /users/me**, Retorna usuário autenticado. Se `tipo = PROFISSIONAL`, inclui objeto `trust_profile` (`nivel_confianca`, `servicos_aprovados`, `nota_media`, `taxa_cancelamento_pct`, `reclamacoes_12m`).
+
+**GET /users/{id}**, Perfil público. Para profissionais, inclui `trust_profile` com badge de nível e nota média (RN026).
 
 **PUT /users/me**, Atualiza perfil.
 
@@ -175,7 +177,7 @@ Erros: 422 (`scope` não bate com `template_escopo` da categoria; código `PRECO
 
 ## Propostas
 
-**GET /requests/{id}/proposals**, Lista propostas.
+**GET /requests/{id}/proposals**, Lista propostas. Cada item inclui `professional.trust_level` e `professional.average_rating` (RN026).
 
 **POST /requests/{id}/proposals**, Profissional envia proposta. No MVP, `price` **não** é validado contra a faixa estimada da solicitação (`10-motor-precificacao.md` §4).
 ```json

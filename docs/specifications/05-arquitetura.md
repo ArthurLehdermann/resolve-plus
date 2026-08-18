@@ -94,9 +94,9 @@ Executar em filas: envio de e-mails, push notifications, SMS, geração de hist�
 | Solicitação criada | Notificar profissionais |
 | Proposta enviada | Notificar cliente |
 | Proposta aceita | Evento `ProposalAccepted` (INV-020) → cria Serviço diretamente, sem entidade `Contratação` |
-| Serviço aprovado | Captura de cartão (Pix já capturado no aceite, `adr/ADR-005-gateway-pagamento.md`) + gera garantia + gera `Intervention` no prontuário |
-| Avaliação registrada | Atualizar reputação |
-| Avaliação criada | Recalcular nota |
+| Serviço aprovado | Captura de cartão (Pix já capturado no aceite, `adr/ADR-005-gateway-pagamento.md`) + gera garantia + gera `Intervention` no prontuário + recalcula `PerfilProfissional` (P8) |
+| Avaliação registrada | Recalcular `PerfilProfissional` (nota média e elegibilidade de nível, P8) |
+| Serviço cancelado / disputa resolvida / garantia acionada | Recalcular taxa de cancelamento e/ou reclamações em `PerfilProfissional` (P8) |
 
 ## Integrações Externas
 

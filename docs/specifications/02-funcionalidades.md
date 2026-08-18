@@ -110,10 +110,11 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 | RN004 | Avaliação só é permitida com o Serviço em `APROVADO` (não existe estado "concluído" separado, ver `foundation/02-state-machine.md`). |
 | RN005 | Todo Serviço que atinge `APROVADO` gera garantia (INV-050). |
 | RN006 | Todo Serviço que atinge `APROVADO` entra no prontuário do imóvel via `Intervention` (INV-060). |
-| RN007 | Profissionais possuem reputação baseada em desempenho. |
-| RN008 | Cancelamentos impactam reputação. |
+| RN007 | Profissionais possuem nível de confiança (`PerfilProfissional.nivel_confianca`: Verificado → Bronze → Prata → Ouro → Elite) calculado a partir de serviços aprovados, nota média, taxa de cancelamento, tempo de conta e reclamações recentes. Limiares em `foundation/05-trust-level.md`. |
+| RN008 | Cancelamentos imputáveis ao profissional entram em `taxa_cancelamento_pct` e podem rebaixar o nível de confiança (limiares em `foundation/05-trust-level.md`). |
 | RN009 | Fotos podem ser exigidas na conclusão. |
 | RN010 | Serviço só pode ser encerrado após confirmação ou prazo de aceite automático de 72h sem contestação (`AUTO_APPROVAL_HOURS`, `adr/ADR-004-prazo-aceite-automatico.md`). |
+| RN026 | O nível de confiança aparece como badge no perfil público do profissional e como critério de desempate na ordenação de profissionais elegíveis (RF010), após proximidade geográfica. |
 
 ## 8. Perfis de Usuário
 
@@ -187,7 +188,6 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 - Política de cancelamento e multas.
 - Tempo de retenção do pagamento.
 - Fluxo de mediação de disputas.
-- Critérios para evolução dos níveis de reputação.
 - Regras para garantia (prazo por categoria, cobertura e exclusões).
 - Política de aceite automático caso o cliente não responda.
 - Limites de anexos, formatos e tamanho de arquivos.

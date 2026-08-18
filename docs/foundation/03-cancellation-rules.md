@@ -30,7 +30,7 @@
 - Percentual de multa do Cenário B.
 - Mecânica exata de captura parcial (cartão) / reembolso parcial (Pix já capturado) do Cenário B. Gateway é Asaas (`adr/ADR-005-gateway-pagamento.md`); captura parcial continua não assumida.
 - Resolução determinística de `Em Contestação → Aprovado | Cancelado` (Cenários C e D-dentro-da-janela), inclui quem decide, prazo de mediação, critério.
-- Impacto de cancelamento/contestação recorrente na reputação do profissional/cliente (RN008 já cita isso genericamente, sem regra concreta).
+- Impacto de cancelamento/contestação recorrente na reputação do profissional/cliente (RN008): taxa de cancelamento imputável e limiares de rebaixa definidos em `foundation/05-trust-level.md`; desfecho de disputa ainda depende de B003 para o fluxo completo, mas o gatilho de recálculo (`DisputaResolvida`, P8) já está modelado.
 
 ## Responsável
 
