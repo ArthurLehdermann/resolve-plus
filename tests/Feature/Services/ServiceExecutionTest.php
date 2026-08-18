@@ -333,6 +333,7 @@ class ServiceExecutionTest extends TestCase
 
     private function asUser(Usuario $usuario): static
     {
+        $this->flushHeaders();
         Auth::forgetGuards();
 
         return $this->actingAs($usuario, 'sanctum');

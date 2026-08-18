@@ -66,12 +66,14 @@ class Servico extends Model
 
     public function isParticipante(Usuario $usuario): bool
     {
-        return $usuario->id === $this->clienteId() || $usuario->id === $this->profissionalId();
+        $id = (string) $usuario->id;
+
+        return $id === $this->clienteId() || $id === $this->profissionalId();
     }
 
     public function isProfissionalResponsavel(Usuario $usuario): bool
     {
-        return $usuario->id === $this->profissionalId();
+        return (string) $usuario->id === $this->profissionalId();
     }
 
     protected function casts(): array
