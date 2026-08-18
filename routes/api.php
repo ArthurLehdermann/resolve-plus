@@ -3,6 +3,7 @@
 use App\Auth\Http\Controllers\AuthController;
 use App\Categories\Http\Controllers\AdminCategoryController;
 use App\Categories\Http\Controllers\CategoryController;
+use App\Payments\Http\PaymentController;
 use App\PropertyHistory\PropertyHistoryController;
 use App\Proposals\Http\Controllers\ProposalController;
 use App\Requests\Http\Controllers\RequestController;
@@ -75,6 +76,14 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/services/{id}/messages', [MessageController::class, 'store'])
             ->whereUuid('id')
             ->middleware('throttle:chat');
+
+        Route::get('/payments', [PaymentController::class, 'index']);
+        Route::get('/payments/{id}', [PaymentController::class, 'show'])
+            ->whereUuid('id');
+        Route::get('/payments/{id}/events', [PaymentController::class, 'events'])
+            ->whereUuid('id');
+        Route::post('/payments/{id}/release', [PaymentController::class, 'release'])
+            ->whereUuid('id');
     });
 
     Route::get('/properties/{id}/history', [PropertyHistoryController::class, 'show'])
