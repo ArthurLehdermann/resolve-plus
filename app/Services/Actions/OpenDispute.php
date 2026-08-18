@@ -36,7 +36,7 @@ class OpenDispute
                 ->first();
 
             if ($aberta !== null) {
-                return [$servico, $aberta];
+                return [$servico, null];
             }
 
             if ($servico->status !== StatusServico::EmContestacao) {

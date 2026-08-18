@@ -2,7 +2,9 @@
 
 namespace App\Services\Http\Requests;
 
+use App\Auth\Models\Usuario;
 use App\Payments\TipoPaymentDispute;
+use App\Services\Servico;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -10,7 +12,25 @@ class OpenDisputeRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return true;
+        $usuario = $this->user();
+
+        if (! $usuario instanceof Usuario) {
+            return false;
+        }
+
+        $id = $this->route('id');
+
+        if (! is_string($id)) {
+            return false;
+        }
+
+        $servico = Servico::query()->find($id);
+
+        if ($servico === null) {
+            return true;
+        }
+
+        return $servico->isParticipante($usuario);
     }
 
     /**
