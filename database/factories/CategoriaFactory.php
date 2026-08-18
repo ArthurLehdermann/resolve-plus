@@ -3,7 +3,9 @@
 namespace Database\Factories;
 
 use App\Categories\Models\Categoria;
+use Database\Seeders\CategoriaSeeder;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use InvalidArgumentException;
 
 /**
  * @extends Factory<Categoria>
@@ -37,6 +39,24 @@ class CategoriaFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'ativo' => false,
+        ]);
+    }
+
+    public function mvp(string $codigo): static
+    {
+        $definition = collect(CategoriaSeeder::definitions())
+            ->firstWhere('codigo', $codigo);
+
+        if (! is_array($definition)) {
+            throw new InvalidArgumentException('Categoria MVP desconhecida: '.$codigo);
+        }
+
+        return $this->state(fn (array $attributes): array => [
+            'codigo' => $definition['codigo'],
+            'nome' => $definition['nome'],
+            'descricao' => $definition['descricao'],
+            'ativo' => $definition['ativo'],
+            'template_escopo' => $definition['template_escopo'],
         ]);
     }
 }

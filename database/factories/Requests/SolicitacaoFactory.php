@@ -3,10 +3,11 @@
 namespace Database\Factories\Requests;
 
 use App\Auth\Models\Usuario;
+use App\Categories\Models\Categoria;
+use App\PropertyHistory\Property;
 use App\Requests\Solicitacao;
 use App\Requests\StatusSolicitacao;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 /**
  * @extends Factory<Solicitacao>
@@ -20,11 +21,27 @@ class SolicitacaoFactory extends Factory
      */
     public function definition(): array
     {
+        $cliente = Usuario::factory();
+
         return [
-            'cliente_id' => Usuario::factory(),
-            'property_id' => (string) Str::uuid(),
+            'cliente_id' => $cliente,
+            'categoria_id' => Categoria::factory(),
+            'property_id' => Property::factory(),
+            'descricao' => fake()->sentence(),
+            'escopo' => [
+                'tipo_servico' => 'OUTRO',
+            ],
             'status' => StatusSolicitacao::Aberta,
+            'data_desejada' => now()->addDays(3)->toDateString(),
         ];
+    }
+
+    public function forCliente(Usuario $usuario): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'cliente_id' => $usuario->id,
+            'property_id' => Property::factory()->ownedBy($usuario),
+        ]);
     }
 
     public function recebendoPropostas(): static

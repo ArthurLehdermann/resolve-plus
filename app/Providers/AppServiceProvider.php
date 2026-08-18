@@ -6,6 +6,8 @@ use App\Categories\Models\Categoria;
 use App\Categories\Policies\CategoriaPolicy;
 use App\Payments\Listeners\CapturePaymentOnApproval;
 use App\PropertyHistory\Listeners\RecordInterventionOnApproval;
+use App\Requests\Events\SolicitacaoCriada;
+use App\Requests\Listeners\NotifyEligibleProfessionals;
 use App\Services\Events\ServiceApproved;
 use App\Warranty\Listeners\IssueWarrantyOnApproval;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -60,5 +62,6 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ServiceApproved::class, CapturePaymentOnApproval::class);
         Event::listen(ServiceApproved::class, IssueWarrantyOnApproval::class);
         Event::listen(ServiceApproved::class, RecordInterventionOnApproval::class);
+        Event::listen(SolicitacaoCriada::class, NotifyEligibleProfessionals::class);
     }
 }

@@ -5,6 +5,7 @@ use App\Categories\Http\Controllers\AdminCategoryController;
 use App\Categories\Http\Controllers\CategoryController;
 use App\PropertyHistory\PropertyHistoryController;
 use App\Proposals\Http\Controllers\ProposalController;
+use App\Requests\Http\Controllers\RequestController;
 use App\Services\Http\Controllers\MessageController;
 use App\Services\Http\Controllers\ScheduleController;
 use App\Services\Http\Controllers\ServiceController;
@@ -34,6 +35,18 @@ Route::prefix('v1')->group(function (): void {
         Route::put('/users/me', [UserProfileController::class, 'update']);
         Route::post('/users/photo', [UserProfileController::class, 'uploadPhoto'])
             ->middleware('throttle:upload');
+
+        Route::get('/requests', [RequestController::class, 'index']);
+        Route::post('/requests', [RequestController::class, 'store']);
+        Route::get('/requests/{solicitacao}', [RequestController::class, 'show'])
+            ->whereUuid('solicitacao');
+        Route::put('/requests/{solicitacao}', [RequestController::class, 'update'])
+            ->whereUuid('solicitacao');
+        Route::delete('/requests/{solicitacao}', [RequestController::class, 'destroy'])
+            ->whereUuid('solicitacao');
+        Route::post('/requests/{solicitacao}/photos', [RequestController::class, 'uploadPhoto'])
+            ->middleware('throttle:upload')
+            ->whereUuid('solicitacao');
 
         Route::get('/requests/{id}/proposals', [ProposalController::class, 'index'])
             ->whereUuid('id');
