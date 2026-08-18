@@ -2,6 +2,7 @@
 
 use App\Auth\Http\Controllers\AuthController;
 use App\PropertyHistory\PropertyHistoryController;
+use App\Proposals\Http\Controllers\ProposalController;
 use App\Users\Http\Controllers\UserProfileController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,6 +29,15 @@ Route::prefix('v1')->group(function (): void {
         Route::put('/users/me', [UserProfileController::class, 'update']);
         Route::post('/users/photo', [UserProfileController::class, 'uploadPhoto'])
             ->middleware('throttle:upload');
+
+        Route::get('/requests/{id}/proposals', [ProposalController::class, 'index'])
+            ->whereUuid('id');
+        Route::post('/requests/{id}/proposals', [ProposalController::class, 'store'])
+            ->whereUuid('id');
+        Route::post('/proposals/{id}/accept', [ProposalController::class, 'accept'])
+            ->whereUuid('id');
+        Route::post('/proposals/{id}/withdraw', [ProposalController::class, 'withdraw'])
+            ->whereUuid('id');
     });
 
     Route::get('/properties/{id}/history', [PropertyHistoryController::class, 'show'])

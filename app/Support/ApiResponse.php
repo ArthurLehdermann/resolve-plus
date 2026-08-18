@@ -6,12 +6,21 @@ use Illuminate\Http\JsonResponse;
 
 final class ApiResponse
 {
-    public static function success(mixed $data = null, int $status = 200): JsonResponse
+    /**
+     * @param  array<string, mixed>|null  $pagination
+     */
+    public static function success(mixed $data = null, int $status = 200, ?array $pagination = null): JsonResponse
     {
-        return response()->json([
+        $payload = [
             'success' => true,
             'data' => $data,
-        ], $status);
+        ];
+
+        if ($pagination !== null) {
+            $payload['pagination'] = $pagination;
+        }
+
+        return response()->json($payload, $status);
     }
 
     public static function error(string $message, int $status = 400, array $errors = []): JsonResponse
