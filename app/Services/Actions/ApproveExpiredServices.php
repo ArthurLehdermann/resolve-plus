@@ -3,8 +3,12 @@
 namespace App\Services\Actions;
 
 use App\Admin\Configuracao;
+use App\Payments\StatusPaymentDispute;
+use App\Payments\TipoPaymentDispute;
+use App\Services\Exceptions\ServiceException;
 use App\Services\Servico;
 use App\Services\StatusServico;
+use Illuminate\Database\Eloquent\Builder;
 
 class ApproveExpiredServices
 {
@@ -20,10 +24,24 @@ class ApproveExpiredServices
             ->where('status', StatusServico::AguardandoAprovacao)
             ->whereNotNull('fim')
             ->where('fim', '<=', $limite)
+            ->whereDoesntHave('disputes', function (Builder $query): void {
+                $query->where('tipo', TipoPaymentDispute::ContestacaoConclusao)
+                    ->where('status', StatusPaymentDispute::Aberta);
+            })
             ->orderBy('fim')
             ->each(function (Servico $servico) use (&$aprovados): void {
-                $this->approveService->bySystem($servico);
-                $aprovados++;
+                $antes = $servico->status;
+
+                try {
+                    $atualizado = $this->approveService->bySystem($servico);
+                } catch (ServiceException) {
+                    return;
+                }
+
+                if ($antes === StatusServico::AguardandoAprovacao
+                    && $atualizado->status === StatusServico::Aprovado) {
+                    $aprovados++;
+                }
             });
 
         return $aprovados;

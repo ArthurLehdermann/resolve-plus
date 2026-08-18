@@ -13,7 +13,7 @@ class ApproveService
 {
     public function byCliente(Servico $servico, Usuario $usuario): Servico
     {
-        return DB::transaction(function () use ($servico, $usuario): Servico {
+        [$servico, $automatico, $disparar] = DB::transaction(function () use ($servico, $usuario): array {
             $servico = $this->locked($servico);
 
             if (! $servico->isClienteDono($usuario)) {
@@ -24,13 +24,25 @@ class ApproveService
 
             return $this->transition($servico, automatico: false);
         });
+
+        if ($disparar) {
+            ServiceApproved::dispatch($servico, $automatico);
+        }
+
+        return $servico;
     }
 
     public function bySystem(Servico $servico): Servico
     {
-        return DB::transaction(function () use ($servico): Servico {
+        [$servico, $automatico, $disparar] = DB::transaction(function () use ($servico): array {
             return $this->transition($this->locked($servico), automatico: true);
         });
+
+        if ($disparar) {
+            ServiceApproved::dispatch($servico, $automatico);
+        }
+
+        return $servico;
     }
 
     private function locked(Servico $servico): Servico
@@ -41,10 +53,13 @@ class ApproveService
             ->firstOrFail();
     }
 
-    private function transition(Servico $servico, bool $automatico): Servico
+    /**
+     * @return array{0: Servico, 1: bool, 2: bool}
+     */
+    private function transition(Servico $servico, bool $automatico): array
     {
         if ($servico->status === StatusServico::Aprovado) {
-            return $servico;
+            return [$servico, $automatico, false];
         }
 
         if ($servico->status !== StatusServico::AguardandoAprovacao) {
@@ -56,8 +71,6 @@ class ApproveService
         $servico->status = StatusServico::Aprovado;
         $servico->save();
 
-        ServiceApproved::dispatch($servico, $automatico);
-
-        return $servico->refresh();
+        return [$servico->refresh(), $automatico, true];
     }
 }

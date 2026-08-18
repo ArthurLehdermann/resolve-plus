@@ -16,7 +16,7 @@ class FinishService
      */
     public function __invoke(Servico $servico, Usuario $usuario, ?string $notes, array $photos): Servico
     {
-        return DB::transaction(function () use ($servico, $usuario, $notes, $photos): Servico {
+        $servico = DB::transaction(function () use ($servico, $usuario, $notes, $photos): Servico {
             $servico = Servico::query()
                 ->whereKey($servico->id)
                 ->lockForUpdate()
@@ -40,9 +40,11 @@ class FinishService
             $servico->fotos = $photos;
             $servico->save();
 
-            ServiceFinished::dispatch($servico);
-
             return $servico->refresh();
         });
+
+        ServiceFinished::dispatch($servico);
+
+        return $servico;
     }
 }

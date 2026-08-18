@@ -16,7 +16,7 @@ class ContestService
 {
     public function __invoke(Servico $servico, Usuario $usuario, string $motivo): Servico
     {
-        return DB::transaction(function () use ($servico, $usuario, $motivo): Servico {
+        [$servico, $dispute] = DB::transaction(function () use ($servico, $usuario, $motivo): array {
             $servico = Servico::query()
                 ->whereKey($servico->id)
                 ->lockForUpdate()
@@ -36,7 +36,7 @@ class ContestService
                 ->first();
 
             if ($servico->status === StatusServico::EmContestacao && $aberta !== null) {
-                return $servico;
+                return [$servico, null];
             }
 
             if ($servico->status !== StatusServico::AguardandoAprovacao) {
@@ -56,9 +56,13 @@ class ContestService
                 'aberta_em' => now(),
             ]);
 
-            ServiceContested::dispatch($servico, $dispute);
-
-            return $servico->refresh();
+            return [$servico->refresh(), $dispute];
         });
+
+        if ($dispute !== null) {
+            ServiceContested::dispatch($servico, $dispute);
+        }
+
+        return $servico;
     }
 }
