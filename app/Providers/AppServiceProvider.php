@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Auth\Enums\TipoUsuario;
 use App\Categories\Models\Categoria;
 use App\Categories\Policies\CategoriaPolicy;
 use App\Payments\Gateway\AsaasPaymentGateway;
@@ -54,6 +55,14 @@ class AppServiceProvider extends ServiceProvider
                 : $notifiable->email;
 
             return config('app.url').'/api/v1/auth/reset-password?token='.$token.'&email='.urlencode($email);
+        });
+
+        Gate::define('admin', static function (?object $user): bool {
+            if ($user === null) {
+                return false;
+            }
+
+            return $user->tipo === TipoUsuario::Admin;
         });
 
         RateLimiter::for('auth-register', function (Request $request) {
