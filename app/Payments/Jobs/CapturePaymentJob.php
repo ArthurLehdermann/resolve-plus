@@ -2,32 +2,42 @@
 
 namespace App\Payments\Jobs;
 
+use App\Payments\CapturePayment;
+use App\Payments\MetodoPagamento;
+use App\Payments\PaymentAuthorization;
+use App\Payments\PaymentDomainException;
+use App\Payments\StatusPaymentAuthorization;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Support\Facades\Log;
 
-/**
- * STUB W10 — captura de pagamento (P4 / INV-041).
- *
- * O evento `ServiceApproved` dispara este job para não perder o gatilho.
- * O handler concreto (autorização vigente → CAPTURADO, split, gateway Asaas)
- * depende do bounded context Payment (W10) ainda inexistente.
- *
- * Contestação (`PaymentDispute` ABERTA, INV-045) bloqueia captura/repasse
- * porque o serviço sai de `AGUARDANDO_APROVACAO` antes deste job ser
- * disparado; quando W10 existir, o handler deve recusar captura se houver
- * disputa aberta.
- */
 class CapturePaymentJob implements ShouldQueue
 {
     use Queueable;
 
     public function __construct(public readonly string $servicoId) {}
 
-    public function handle(): void
+    public function handle(CapturePayment $capture): void
     {
-        Log::info('P4 stub: captura de pagamento pendente de W10', [
-            'servico_id' => $this->servicoId,
-        ]);
+        $authorization = PaymentAuthorization::query()
+            ->where('servico_id', $this->servicoId)
+            ->where('status', StatusPaymentAuthorization::Autorizado)
+            ->where('metodo', MetodoPagamento::Cartao)
+            ->latest('criado_em')
+            ->first();
+
+        if ($authorization === null) {
+            return;
+        }
+
+        try {
+            $capture($authorization, ['motivo' => 'SERVICO_APROVADO']);
+        } catch (PaymentDomainException $exception) {
+            Log::warning('Captura recusada após aprovação do serviço.', [
+                'servico_id' => $this->servicoId,
+                'authorization_id' => $authorization->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
     }
 }

@@ -19,7 +19,7 @@ class CommissionRate
     {
         Configuracao::query()->updateOrCreate(
             ['chave' => 'COMISSAO_PERCENT'],
-            ['valor' => (string) $percent, 'atualizado_em' => now()],
+            ['valor' => (string) $percent],
         );
     }
 }

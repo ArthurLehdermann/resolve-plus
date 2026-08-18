@@ -34,12 +34,23 @@ class ServicoFactory extends Factory
         return $this->afterCreating(function (Servico $servico): void {
             $servico->loadMissing('proposta.solicitacao');
             $updates = [];
+
             if ($servico->cliente_id === null) {
                 $updates['cliente_id'] = $servico->proposta->solicitacao->cliente_id;
+            } elseif ($servico->cliente_id !== $servico->proposta->solicitacao->cliente_id) {
+                $servico->proposta->solicitacao->forceFill([
+                    'cliente_id' => $servico->cliente_id,
+                ])->save();
             }
+
             if ($servico->profissional_id === null) {
                 $updates['profissional_id'] = $servico->proposta->profissional_id;
+            } elseif ($servico->profissional_id !== $servico->proposta->profissional_id) {
+                $servico->proposta->forceFill([
+                    'profissional_id' => $servico->profissional_id,
+                ])->save();
             }
+
             if ($updates !== []) {
                 $servico->forceFill($updates)->save();
             }

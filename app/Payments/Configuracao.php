@@ -8,8 +8,6 @@ class Configuracao extends Model
 {
     public $incrementing = false;
 
-    public $timestamps = false;
-
     protected $table = 'configuracoes';
 
     protected $primaryKey = 'chave';
@@ -19,13 +17,5 @@ class Configuracao extends Model
     protected $fillable = [
         'chave',
         'valor',
-        'atualizado_em',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'atualizado_em' => 'immutable_datetime',
-        ];
-    }
 }

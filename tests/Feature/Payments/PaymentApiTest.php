@@ -73,8 +73,7 @@ class PaymentApiTest extends TestCase
             ->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
             ->postJson("/api/v1/services/{$servico->id}/approve")
             ->assertOk()
-            ->assertJsonPath('data.servico.status', 'APROVADO')
-            ->assertJsonPath('data.payment.status', 'CAPTURADO');
+            ->assertJsonPath('data.status', 'APROVADO');
 
         $authorization->refresh();
         $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->status);

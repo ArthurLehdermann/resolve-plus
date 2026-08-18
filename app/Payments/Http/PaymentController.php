@@ -5,13 +5,13 @@ namespace App\Payments\Http;
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
 use App\Http\Controllers\Controller;
-use App\Payments\Idempotency;
 use App\Payments\PaymentAuthorization;
 use App\Payments\PaymentDomainException;
 use App\Payments\ReleasePayment;
 use App\Payments\Servico;
 use App\Payments\TipoPaymentEvent;
 use App\Support\ApiResponse;
+use App\Support\IdempotentOperation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -103,7 +103,7 @@ class PaymentController extends Controller
         );
     }
 
-    public function release(ReleasePaymentRequest $request, string $id, Idempotency $idempotency, ReleasePayment $release): JsonResponse
+    public function release(ReleasePaymentRequest $request, string $id, IdempotentOperation $idempotency, ReleasePayment $release): JsonResponse
     {
         $usuario = $request->user();
 
@@ -115,7 +115,7 @@ class PaymentController extends Controller
             return ApiResponse::error('Apenas administradores podem liberar pagamentos.', 403);
         }
 
-        return $idempotency->remember($request, "payments.release.{$id}", function () use ($request, $id, $usuario, $release): JsonResponse {
+        return $idempotency->run($request, "payments.release:{$id}", function () use ($request, $id, $usuario, $release): JsonResponse {
             $authorization = PaymentAuthorization::query()->with('servico')->find($id);
 
             if ($authorization === null) {

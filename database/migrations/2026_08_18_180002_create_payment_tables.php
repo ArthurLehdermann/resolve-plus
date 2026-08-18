@@ -53,22 +53,24 @@ return new class extends Migration
             $table->timestamp('criado_em');
         });
 
-        Schema::create('payment_disputes', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->foreignUuid('servico_id')->constrained('servicos')->restrictOnDelete();
-            $table->string('tipo', 40);
-            $table->string('status', 20)->index();
-            $table->timestamp('aberta_em');
-            $table->timestamp('resolvida_em')->nullable();
-            $table->foreignUuid('resolvida_por_id')->nullable()->constrained('usuarios')->restrictOnDelete();
-            $table->string('resultado', 20)->nullable();
-            $table->text('justificativa')->nullable();
-        });
+        if (! Schema::hasTable('payment_disputes')) {
+            Schema::create('payment_disputes', function (Blueprint $table): void {
+                $table->uuid('id')->primary();
+                $table->foreignUuid('servico_id')->constrained('servicos')->restrictOnDelete();
+                $table->string('tipo', 40);
+                $table->string('status', 20)->index();
+                $table->text('motivo')->nullable();
+                $table->timestamp('aberta_em');
+                $table->timestamp('resolvida_em')->nullable();
+                $table->foreignUuid('resolvida_por_id')->nullable()->constrained('usuarios')->restrictOnDelete();
+                $table->string('resultado', 20)->nullable();
+                $table->text('justificativa')->nullable();
+            });
+        }
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('payment_disputes');
         Schema::dropIfExists('payment_refunds');
         Schema::dropIfExists('payment_splits');
         Schema::dropIfExists('payment_events');

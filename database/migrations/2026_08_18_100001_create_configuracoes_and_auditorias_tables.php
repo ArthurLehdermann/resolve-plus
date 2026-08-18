@@ -10,27 +10,31 @@ return new class extends Migration
     public function up(): void
     {
         if (! Schema::hasTable('configuracoes')) {
-            Schema::create('configuracoes', function (Blueprint $table) {
-                $table->string('chave')->primary();
-                $table->text('valor');
-                $table->timestamp('atualizado_em');
+            Schema::create('configuracoes', function (Blueprint $table): void {
+                $table->string('chave', 80)->primary();
+                $table->string('valor', 255);
+                $table->timestamps();
             });
         }
 
         if (DB::table('configuracoes')->where('chave', 'COMISSAO_PERCENT')->doesntExist()) {
+            $now = now();
             $payload = ['chave' => 'COMISSAO_PERCENT', 'valor' => '10'];
+
             if (Schema::hasColumn('configuracoes', 'atualizado_em')) {
-                $payload['atualizado_em'] = now();
+                $payload['atualizado_em'] = $now;
             }
+
             if (Schema::hasColumn('configuracoes', 'created_at')) {
-                $payload['created_at'] = now();
-                $payload['updated_at'] = now();
+                $payload['created_at'] = $now;
+                $payload['updated_at'] = $now;
             }
+
             DB::table('configuracoes')->insert($payload);
         }
 
         if (! Schema::hasTable('auditorias')) {
-            Schema::create('auditorias', function (Blueprint $table) {
+            Schema::create('auditorias', function (Blueprint $table): void {
                 $table->uuid('id')->primary();
                 $table->foreignUuid('usuario_id')->constrained('usuarios')->restrictOnDelete();
                 $table->string('acao', 80)->index();
@@ -41,26 +45,10 @@ return new class extends Migration
                 $table->text('justificativa')->nullable();
             });
         }
-
-        if (! Schema::hasTable('idempotency_keys')) {
-            Schema::create('idempotency_keys', function (Blueprint $table) {
-                $table->uuid('id')->primary();
-                $table->foreignUuid('usuario_id')->nullable()->constrained('usuarios')->restrictOnDelete();
-                $table->string('chave', 80);
-                $table->string('escopo', 180);
-                $table->unsignedSmallInteger('response_status');
-                $table->json('response_body');
-                $table->timestamp('criado_em');
-
-                $table->unique(['usuario_id', 'chave', 'escopo']);
-            });
-        }
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('idempotency_keys');
         Schema::dropIfExists('auditorias');
-        Schema::dropIfExists('configuracoes');
     }
 };
