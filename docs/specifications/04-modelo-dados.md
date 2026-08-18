@@ -351,14 +351,60 @@ Parâmetros globais: comissão (%), prazo de garantia padrão, `AUTO_APPROVAL_HO
 **Campos**: usuario_id, titulo, mensagem, lida, data
 
 ### DocumentoProfissional
-Para validação documental (RF002). Critérios definidos provisoriamente por B005 (`foundation/04-decisions-pending.md`); parecer jurídico definitivo ainda bloqueado.
 
-**Campos**: id, profissional_id, tipo (`TipoDocumentoProfissional`), arquivo, status (`PENDENTE | APROVADO | REJEITADO | VENCIDO`), apolice_numero (obrigatório quando `tipo = SEGURO_RC`), vigencia_inicio (obrigatório quando `tipo = SEGURO_RC`), vigencia_fim (obrigatório quando `tipo = SEGURO_RC`), criado_em, atualizado_em
+Validação documental do profissional (RF002). No MVP a revisão é **manual pelo Admin** (sem time de verificação automatizada). Cada upload gera um registro; reenvio após reprovação cria nova linha (histórico preservado).
 
-**Regras (decisão provisória B005):**
-- `SEGURO_RC` é **obrigatório** para ativação do profissional (RF002): apólice de responsabilidade civil vigente, com comprovante (`arquivo`) validado por Admin.
-- Job diário marca `status = VENCIDO` quando `vigencia_fim < hoje`; profissional com `SEGURO_RC` vencido não recebe novas solicitações até revalidar (RN001 continua exigindo verificação, detalhe de bloqueio operacional fica para implementação).
-- Outros tipos documentais (identidade, comprovante de endereço, certificações por categoria) permanecem **NECESSITA VALIDAÇÃO**; só `SEGURO_RC` tem critério fechado nesta decisão provisória.
+**Campos**
+
+| Campo | Tipo | Obrigatório | Descrição |
+|---|---|---|---|
+| id | UUID | Sim | PK |
+| profissional_id | UUID | Sim | FK `Usuario` (`tipo = PROFISSIONAL`) |
+| tipo | ENUM(`TipoDocumentoProfissional`) | Sim | Slot documental (ver matriz abaixo) |
+| arquivo | VARCHAR | Sim | URL no object storage (S3 compatível, `05-arquitetura.md`) |
+| status | ENUM(`StatusDocumentoProfissional`) | Sim | Ciclo de revisão (§7 de `02-state-machine.md`) |
+| motivo_rejeicao | VARCHAR(500) | Não | Obrigatório quando `status = REJEITADO` |
+| revisado_por_id | UUID | Não | Admin que aprovou/reprovou |
+| revisado_em | TIMESTAMP | Não | Momento da decisão |
+| apolice_numero | VARCHAR | Só se `tipo = SEGURO_RC` | Número da apólice (B005) |
+| vigencia_inicio | DATE | Só se `tipo = SEGURO_RC` | Início da vigência |
+| vigencia_fim | DATE | Só se `tipo = SEGURO_RC` | Fim da vigência |
+| criado_em | TIMESTAMP | Sim | |
+| atualizado_em | TIMESTAMP | Sim | |
+
+**Relacionamento**: Profissional (`Usuario`) 1:N `DocumentoProfissional`
+
+#### Documentos exigidos (MVP)
+
+Lista **base** (todas as categorias do MVP) + exigência **adicional** só para profissionais que declaram atender **Elétrica** (`codigo: eletrica`). As demais categorias iniciais (Hidráulica, Pintura, Pequenos Reparos, Montagem) não têm exigência regulatória diferenciada além da base.
+
+| `TipoDocumentoProfissional` | Obrigatório | Critério de aprovação (Admin, MVP) |
+|---|---|---|
+| `IDENTIDADE_FISCAL` | Todos | CPF (PF) ou CNPJ (PJ) legível, nome compatível com cadastro, documento dentro da validade |
+| `COMPROVANTE_ENDERECO` | Todos | Emitido nos últimos 90 dias; endereço compatível com `Endereco` de atuação cadastrado |
+| `SELFIE_IDENTIDADE` | Todos | Rosto visível segurando o mesmo documento de `IDENTIDADE_FISCAL` |
+| `SEGURO_RC` | Todos | Apólice de responsabilidade civil vigente, com comprovante validado por Admin (decisão provisória B005) |
+| `CERTIFICADO_NR10` | Só se declara categoria Elétrica | Certificado NR-10 válido (curso de segurança em instalações elétricas); nome compatível com cadastro |
+
+**Cálculo da exigência**: união da lista base com os tipos adicionais das categorias declaradas no perfil do profissional (`categorias_atendidas`, ver RF002 em `02-funcionalidades.md`). Ex.: profissional que atende Pintura + Elétrica precisa dos 5 tipos acima.
+
+**Regra de slot**: para cada `tipo` exigido, conta como satisfeito o registro **mais recente** com `status = APROVADO`. Reenvios após `REJEITADO` geram nova linha; a reprovada permanece no histórico.
+
+**Vigência do `SEGURO_RC` (B005):** job diário marca `status = VENCIDO` quando `vigencia_fim < hoje`; profissional com `SEGURO_RC` vencido não recebe novas solicitações até revalidar.
+
+#### Transição `Conta.status` → `ATIVA` (INV-002)
+
+Profissional nasce com `Usuario.status = PENDENTE_VERIFICACAO` no cadastro (RF002). A conta só transiciona para `ATIVA` quando **todas** as condições abaixo forem verdadeiras:
+
+1. O profissional declarou ao menos uma categoria em `categorias_atendidas`.
+2. Para **cada** `TipoDocumentoProfissional` exigido (base + adicionais das categorias declaradas), existe registro com `status = APROVADO` (slot satisfeito, regra acima).
+3. Não há registro exigido pendente de revisão (`status = PENDENTE`) para slot ainda não aprovado.
+
+A transição é disparada pelo **Admin** ao aprovar o último documento pendente (checagem de completude) ou por job após essa aprovação. Emite evento `ProfissionalVerificado` (`01-event-storm.md`). Enquanto `PENDENTE_VERIFICACAO`, o profissional **não** recebe solicitações nem envia propostas (INV-002, RN001).
+
+**Reprovação**: Admin define `REJEITADO` + `motivo_rejeicao`; `Conta.status` permanece `PENDENTE_VERIFICACAO` até reenvio e aprovação. Suspender ou bloquear conta já `ATIVA` segue §6 de `02-state-machine.md` (INV-003).
+
+> Subconta Asaas (`walletId`) para repasse (`REPASSADO`, `adr/ADR-005-gateway-pagamento.md`) é onboarding financeiro **paralelo**, não gate de `Conta.status = ATIVA` para receber solicitações.
 
 ## Relacionamentos
 
@@ -417,13 +463,15 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 
 **OrigemIntervention**: `PLATAFORMA`, `MANUAL`, `IMPORTADO`
 
-**TipoDocumentoProfissional**: `SEGURO_RC`, `IDENTIDADE`, `COMPROVANTE_ENDERECO`, `CERTIFICACAO_CATEGORIA` (últimos três sem critério fechado, reservados para RF002 futuro)
-
 **StatusPropertyOwnershipTransfer**: `PENDENTE`, `ACEITO`, `RECUSADO`, `EXPIRADO`
 
 **NivelConfianca**: `VERIFICADO`, `BRONZE`, `PRATA`, `OURO`, `ELITE`
 
 > Ordem de exibição/ordenação segue a sequência acima (crescente). Limiares de progressão em `foundation/05-trust-level.md`.
+
+**TipoDocumentoProfissional**: `IDENTIDADE_FISCAL`, `COMPROVANTE_ENDERECO`, `SELFIE_IDENTIDADE`, `SEGURO_RC`, `CERTIFICADO_NR10`
+
+**StatusDocumentoProfissional**: `PENDENTE`, `APROVADO`, `REJEITADO`, `VENCIDO` (§7 de `02-state-machine.md`; `VENCIDO` aplica-se a `SEGURO_RC`, B005)
 
 ## Índices Recomendados
 
@@ -494,3 +542,4 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 | 2026-08-17 (issue #2) | Adiciona `TabelaPreco` (categoria+cidade, editável por Admin) e snapshot `faixa_preco_min`/`faixa_preco_max`/`faixa_preco_fator_bp`/`tabela_preco_id` em `Solicitacao`; `Configuração.PRECO_ARREDONDAMENTO_CENTAVOS`. Heurística em `10-motor-precificacao.md`. |
 | 2026-08-17 (6ª passada) | B005: `DocumentoProfissional` ganha campos de apólice RC (`SEGURO_RC`, vigência, número); enum `TipoDocumentoProfissional`; sinistro durante execução usa disputa existente, sem entidade própria no MVP. |
 | 2026-08-17 (issue #4) | Adiciona entidade `PerfilProfissional` (nível de confiança, métricas cacheadas, enum `NivelConfianca`) e referencia critérios/recálculo em `foundation/05-trust-level.md`. |
+| 2026-08-17 | RF002: critérios de verificação documental (`DocumentoProfissional`), matriz base + NR-10 para Elétrica, enums `TipoDocumentoProfissional`/`StatusDocumentoProfissional`, regra de `Conta.status` → `ATIVA` (INV-002). |

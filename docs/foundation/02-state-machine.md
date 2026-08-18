@@ -92,7 +92,7 @@ Acionada --(mediação entre profissional e cliente, plataforma não é parte fi
 ## 6. Conta
 
 ```
-Pendente de Verificação --(sistema/admin: aprova documentos)--> Ativa
+Pendente de Verificação --(admin: todos os documentos exigidos aprovados, RF002)--> Ativa [ProfissionalVerificado, INV-002]
 Ativa --(admin: suspende)--> Suspensa [INV-003: cancela participação em processos abertos, preserva histórico]
 Suspensa --(admin: reverte)--> Ativa
 Ativa|Suspensa --(admin: bloqueia)--> Bloqueada
@@ -100,6 +100,20 @@ Ativa --(usuário: solicita exclusão)--> Excluída
 ```
 
 - `Profissional` só participa de `SolicitacaoCriada → PropostaEnviada` enquanto `Ativa` (INV-002).
+- Condições para `Pendente de Verificação → Ativa`: ver `04-modelo-dados.md` §DocumentoProfissional (todos os slots exigidos com `status = APROVADO`, sem pendências bloqueantes).
+
+## 7. DocumentoProfissional
+
+```
+(upload) --> Pendente
+Pendente --(admin: documento conforme critério RF002)--> Aprovado
+Pendente --(admin: documento inválido)--> Rejeitado [motivo_rejeicao obrigatório]
+Rejeitado --(profissional: reenvia mesmo tipo)--> nova linha Pendente [histórico preservado]
+```
+
+- Revisão **manual pelo Admin** no MVP (sem verificação automatizada).
+- Para cada `tipo` exigido, o slot satisfeito é o registro **mais recente** com `Aprovado`.
+- Quando o último slot pendente vira `Aprovado` e todos os exigidos estão cobertos, dispara transição `Conta: Pendente de Verificação → Ativa` (§6).
 
 ## Pendências deste documento
 
@@ -118,3 +132,4 @@ Ativa --(usuário: solicita exclusão)--> Excluída
 | 2026-08-17 | §3 Serviço: prazo de aceite automático fixado em 72h (`AUTO_APPROVAL_HOURS`, `adr/ADR-004-prazo-aceite-automatico.md`), deixa de ser "prazo ainda não definido" (B002 resolvido). |
 | 2026-08-17 | §3 Serviço: divide `Agendado|Em Andamento --cancela--> Cancelado` em dois, `Agendado` cancela direto (Cenário B), `Em Andamento` nunca cancela direto, abre `Em Contestação` (Cenário C), rascunho em `foundation/03-cancellation-rules.md` (B003, decisão parcial do PO). |
 | 2026-08-17 | §4a: Pix nasce `Capturado` no aceite (`adr/ADR-005-gateway-pagamento.md`, B006); o diagrama de `Autorizado → Capturado` permanece o fluxo de cartão. |
+| 2026-08-17 | §6 Conta: condição explícita de aprovação documental (RF002). §7 DocumentoProfissional: máquina `Pendente → Aprovado | Rejeitado`. |

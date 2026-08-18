@@ -126,7 +126,6 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 **Críticas**
 - Quem será o responsável legal pela garantia: plataforma ou profissional? (B001, decisão provisória: profissional, sem retenção; parecer jurídico definitivo ainda bloqueado)
 - Como ocorrerá a mediação de conflitos? (B003, em elaboração, ver `foundation/03-cancellation-rules.md`)
-- Quais documentos além de `SEGURO_RC` serão obrigatórios para validar um profissional? (RF002, `SEGURO_RC` fechado provisoriamente em B005; identidade/certificações ainda abertos)
 - Quais categorias estarão disponíveis no lançamento?
 - Valor mínimo de cobertura da apólice RC e parecer jurídico definitivo de responsabilidade civil (B005, decisão provisória registrada: profissional responde, plataforma media, seguro RC no cadastro)
 
@@ -174,7 +173,7 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 
 **Pontos Prontos**: visão de produto definida, fluxos principais mapeados, escopo do MVP delimitado, arquitetura definida, APIs especificadas, requisitos não funcionais levantados, roadmap e backlog estruturados.
 
-**Bloqueadores**: parecer jurídico definitivo de garantia (B001, decisão provisória já permite desenvolver), mediação/cancelamento (B003, rascunho em elaboração), parecer jurídico definitivo de responsabilidade civil (B005, decisão provisória já permite desenvolver RF002/Termos), critérios de validação de profissionais (RF002), protótipos de interface em alta fidelidade. Gateway de pagamento deixou de ser bloqueador em 2026-08-17 (`adr/ADR-005-gateway-pagamento.md`, B006).
+**Bloqueadores**: parecer jurídico definitivo de garantia (B001, decisão provisória já permite desenvolver), mediação/cancelamento (B003, rascunho em elaboração), parecer jurídico definitivo de responsabilidade civil (B005, decisão provisória já permite desenvolver RF002/Termos), protótipos de interface em alta fidelidade. Gateway de pagamento deixou de ser bloqueador em 2026-08-17 (`adr/ADR-005-gateway-pagamento.md`, B006). Critérios de validação documental de profissionais (RF002) resolvidos em 2026-08-17 (`04-modelo-dados.md` §DocumentoProfissional).
 
 ## Análise Crítica da Conversa
 

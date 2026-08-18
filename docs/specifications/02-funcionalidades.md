@@ -71,7 +71,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 | ID | Descrição | Prioridade | Origem | Dependências |
 |---|---|---|---|---|
 | RF001 | Permitir cadastro de cliente | Alta | Conversa | Nenhuma |
-| RF002 | Permitir cadastro de profissional (inclui upload e validação de documentos; `SEGURO_RC` obrigatório, decisão provisória B005) | Alta | Conversa | RF001 |
+| RF002 | Permitir cadastro de profissional com verificação documental (upload, revisão manual pelo Admin, `SEGURO_RC` obrigatório (B005), transição para `ATIVA` quando slots exigidos aprovados; ver `04-modelo-dados.md` §DocumentoProfissional e INV-002) | Alta | Conversa | RF001 |
 | RF003 | Autenticação | Alta | Inferência | RF001 |
 | RF004 | Recuperação de senha | Média | Inferência | RF003 |
 | RF005 | Editar perfil | Alta | Inferência | RF001 |
@@ -115,6 +115,19 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 | RN009 | Fotos podem ser exigidas na conclusão. |
 | RN010 | Serviço só pode ser encerrado após confirmação ou prazo de aceite automático de 72h sem contestação (`AUTO_APPROVAL_HOURS`, `adr/ADR-004-prazo-aceite-automatico.md`). |
 | RN026 | O nível de confiança aparece como badge no perfil público do profissional e como critério de desempate na ordenação de profissionais elegíveis (RF010), após proximidade geográfica. |
+| RN011 | Profissional com `Conta.status = PENDENTE_VERIFICACAO` não recebe solicitações nem envia propostas; só transiciona para `ATIVA` quando todos os documentos exigidos (base + adicionais por categoria declarada) estiverem `APROVADO` por Admin (RF002, INV-002). |
+
+## 7.1 RF002, Verificação documental do profissional
+
+Fluxo MVP (revisão manual, sem verificação automatizada):
+
+1. Profissional se cadastra (`POST /auth/register`, `tipo = PROFISSIONAL`) e nasce com `status = PENDENTE_VERIFICACAO`.
+2. Declara `categorias_atendidas` (ao menos uma das 5 do MVP) no perfil.
+3. Envia uploads por slot exigido (lista base + `CERTIFICADO_NR10` se declara Elétrica), cada um gera `DocumentoProfissional` com `status = PENDENTE`.
+4. Admin revisa no painel (RF028): aprova (`APROVADO`) ou reprova (`REJEITADO` + motivo).
+5. Quando todos os slots exigidos estão `APROVADO`, sistema transiciona `Conta.status` para `ATIVA` e emite `ProfissionalVerificado` (habilita RF008–RF012, INV-002).
+
+Documentos exigidos, critérios de aprovação e enums: `04-modelo-dados.md` §DocumentoProfissional. Máquina de estados dos documentos: `foundation/02-state-machine.md` §7.
 
 ## 8. Perfis de Usuário
 
@@ -144,6 +157,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 - Gerenciar usuários
 - Gerenciar categorias
 - Gerenciar tabelas de preço
+- Revisar documentos de profissionais (RF002)
 - Moderar avaliações
 - Resolver disputas
 - Visualizar métricas
@@ -163,6 +177,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 | Confirmar conclusão | ✔ | ✖ | ✔ |
 | Avaliar | ✔ | ✖ | ✔ |
 | Gerenciar usuários | ✖ | ✖ | ✔ |
+| Revisar documentos profissional | ✖ | ✖ | ✔ |
 
 ## 10. Estados do Sistema
 
