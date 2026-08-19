@@ -1,9 +1,11 @@
 <?php
 
+use App\Admin\Http\Controllers\AdminDocumentoProfissionalController;
 use App\Auth\Http\Controllers\AuthController;
 use App\Categories\Http\Controllers\AdminCategoryController;
 use App\Categories\Http\Controllers\CategoryController;
 use App\Payments\Http\PaymentController;
+use App\Professionals\Http\Controllers\ProfissionalDocumentoController;
 use App\PropertyHistory\Http\Controllers\PropertyController;
 use App\PropertyHistory\Http\Controllers\PropertyTransferController;
 use App\PropertyHistory\PropertyHistoryController;
@@ -39,6 +41,8 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/users/me', [UserProfileController::class, 'show']);
         Route::put('/users/me', [UserProfileController::class, 'update']);
         Route::post('/users/photo', [UserProfileController::class, 'uploadPhoto'])
+            ->middleware('throttle:upload');
+        Route::post('/professionals/documents', [ProfissionalDocumentoController::class, 'store'])
             ->middleware('throttle:upload');
 
         Route::get('/properties', [PropertyController::class, 'index']);
@@ -123,5 +127,7 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/categories/{categoria}', [AdminCategoryController::class, 'show']);
         Route::put('/categories/{categoria}', [AdminCategoryController::class, 'update']);
         Route::delete('/categories/{categoria}', [AdminCategoryController::class, 'destroy']);
+        Route::patch('/professionals/documents/{documento}/review', [AdminDocumentoProfissionalController::class, 'review'])
+            ->whereUuid('documento');
     });
 });

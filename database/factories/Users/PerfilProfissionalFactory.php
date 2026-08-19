@@ -26,6 +26,7 @@ class PerfilProfissionalFactory extends Factory
                 'tipo' => TipoUsuario::Profissional,
                 'status' => StatusConta::Ativa,
             ]),
+            'categorias_atendidas' => null,
             'nivel_confianca' => NivelConfianca::Verificado,
             'servicos_aprovados' => 0,
             'nota_media_dez' => null,

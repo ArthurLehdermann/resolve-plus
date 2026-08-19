@@ -22,6 +22,7 @@ class PerfilProfissional extends Model
 
     protected $fillable = [
         'usuario_id',
+        'categorias_atendidas',
         'nivel_confianca',
         'servicos_aprovados',
         'nota_media_dez',
@@ -50,6 +51,7 @@ class PerfilProfissional extends Model
     protected function casts(): array
     {
         return [
+            'categorias_atendidas' => 'array',
             'nivel_confianca' => NivelConfianca::class,
             'servicos_aprovados' => 'integer',
             'nota_media_dez' => 'integer',

@@ -4,10 +4,12 @@ namespace App\Auth\Models;
 
 use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
+use App\Professionals\DocumentoProfissional;
 use App\Users\PerfilProfissional;
 use Database\Factories\UsuarioFactory;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -49,6 +51,14 @@ class Usuario extends Authenticatable
     public function perfilProfissional(): HasOne
     {
         return $this->hasOne(PerfilProfissional::class, 'usuario_id');
+    }
+
+    /**
+     * @return HasMany<DocumentoProfissional, $this>
+     */
+    public function documentosProfissional(): HasMany
+    {
+        return $this->hasMany(DocumentoProfissional::class, 'profissional_id');
     }
 
     public function getAuthPasswordName(): string

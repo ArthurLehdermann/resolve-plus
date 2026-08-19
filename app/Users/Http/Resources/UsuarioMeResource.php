@@ -15,6 +15,10 @@ class UsuarioMeResource extends UsuarioResource
     {
         return [
             ...parent::toArray($request),
+            'categorias_atendidas' => $this->when(
+                $this->tipo === TipoUsuario::Profissional,
+                fn (): array => $this->resource->perfilProfissional?->categorias_atendidas ?? []
+            ),
             'trust_profile' => $this->when(
                 $this->tipo === TipoUsuario::Profissional,
                 fn (): array => $this->trustProfile()
@@ -31,7 +35,7 @@ class UsuarioMeResource extends UsuarioResource
     {
         $perfil = $this->perfilProfissional;
 
-        if ($perfil === null) {
+        if ($perfil === null || $perfil->nivel_confianca === null) {
             return [
                 'nivel_confianca' => null,
                 'servicos_aprovados' => 0,
