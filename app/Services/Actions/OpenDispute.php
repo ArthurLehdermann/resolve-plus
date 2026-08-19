@@ -16,6 +16,8 @@ class OpenDispute
 {
     public function __invoke(Servico $servico, Usuario $usuario, TipoPaymentDispute $tipo, ?string $motivo = null): PaymentDispute
     {
+        $this->assertParticipante($servico, $usuario);
+
         /** @var array{0: Servico, 1: PaymentDispute|null} $outcome */
         $outcome = DB::transaction(function () use ($servico, $usuario, $tipo, $motivo): array {
             $servico = Servico::query()
@@ -23,11 +25,7 @@ class OpenDispute
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if (! $servico->isParticipante($usuario)) {
-                throw ServiceException::forbidden(
-                    'Apenas cliente ou profissional do serviço podem abrir disputa.',
-                );
-            }
+            $this->assertParticipante($servico, $usuario);
 
             $aberta = PaymentDispute::query()
                 ->where('servico_id', $servico->id)
@@ -70,5 +68,14 @@ class OpenDispute
         ServiceContested::dispatch($servico, $dispute);
 
         return $dispute;
+    }
+
+    private function assertParticipante(Servico $servico, Usuario $usuario): void
+    {
+        if (! $servico->isParticipante($usuario)) {
+            throw ServiceException::forbidden(
+                'Apenas cliente ou profissional do serviço podem abrir disputa.',
+            );
+        }
     }
 }
