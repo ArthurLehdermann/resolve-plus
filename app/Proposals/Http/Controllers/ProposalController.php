@@ -2,6 +2,8 @@
 
 namespace App\Proposals\Http\Controllers;
 
+use App\Auth\Enums\StatusConta;
+use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
 use App\Http\Controllers\Controller;
 use App\Proposals\Actions\AcceptProposal;
@@ -52,10 +54,13 @@ class ProposalController extends Controller
 
     public function store(StoreProposalRequest $request, string $id, StoreProposal $action): JsonResponse
     {
+        $usuario = $this->usuario($request);
+        $this->assertProfissionalAtivo($usuario);
+
         $solicitacao = Solicitacao::query()->findOrFail($id);
         $proposta = $action(
             $solicitacao,
-            $this->usuario($request),
+            $usuario,
             $request->validated(),
         );
 
@@ -91,6 +96,15 @@ class ProposalController extends Controller
         }
 
         return $usuario;
+    }
+
+    private function assertProfissionalAtivo(Usuario $usuario): void
+    {
+        if ($usuario->tipo !== TipoUsuario::Profissional || $usuario->status !== StatusConta::Ativa) {
+            throw ProposalException::forbidden(
+                'Apenas profissionais com conta ativa podem enviar propostas.',
+            );
+        }
     }
 
     private function assertIdempotencyKey(Request $request): void

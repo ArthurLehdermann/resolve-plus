@@ -26,18 +26,13 @@ final class ContactLeakEnforcer
         ?string $servicoId = null,
     ): array {
         $result = $this->sanitizer->sanitize($text);
-        $attemptsInWindow = $this->attemptsInWindow($usuario->id);
 
-        // Mesmo quando o filtro não atua neste texto, precisamos manter a régua em rolling 90 dias,
-        // para permitir suspensão reversível (INV-003).
         if ($result['changed'] !== true) {
-            $this->syncPenaltyStatus($usuario, $attemptsInWindow);
-
             return [
                 'sanitized' => $text,
                 'changed' => false,
                 'warning' => null,
-                'attempts_in_window' => $attemptsInWindow,
+                'attempts_in_window' => $this->attemptsInWindow($usuario->id),
             ];
         }
 
@@ -64,7 +59,7 @@ final class ContactLeakEnforcer
                 ]);
             }
 
-            $this->syncPenaltyStatus($usuario, $count);
+            $this->suspendIfThresholdReached($usuario, $count);
 
             return $count;
         });
@@ -87,32 +82,20 @@ final class ContactLeakEnforcer
             ->count();
     }
 
-    private function syncPenaltyStatus(Usuario $usuario, int $attemptsInWindow): void
+    private function suspendIfThresholdReached(Usuario $usuario, int $attemptsInWindow): void
     {
-        if ($attemptsInWindow >= 5 && $usuario->status !== StatusConta::Suspensa) {
-            $usuario->forceFill(['status' => StatusConta::Suspensa])->save();
-
-            Auditoria::query()->create([
-                'usuario_id' => $usuario->id,
-                'acao' => 'CONTACT_LEAK_AUTO_SUSPEND',
-                'entidade' => 'Usuario',
-                'id_entidade' => $usuario->id,
-                'justificativa' => 'Suspensão automática por 5+ tentativas de vazamento de contato em 90 dias.',
-            ]);
-
+        if ($attemptsInWindow < 5 || $usuario->status !== StatusConta::Ativa) {
             return;
         }
 
-        if ($attemptsInWindow < 5 && $usuario->status === StatusConta::Suspensa) {
-            $usuario->forceFill(['status' => StatusConta::Ativa])->save();
+        $usuario->forceFill(['status' => StatusConta::Suspensa])->save();
 
-            Auditoria::query()->create([
-                'usuario_id' => $usuario->id,
-                'acao' => 'CONTACT_LEAK_AUTO_REACTIVATE_INV003',
-                'entidade' => 'Usuario',
-                'id_entidade' => $usuario->id,
-                'justificativa' => 'Reativação automática após janela rolling de 90 dias com menos de 5 tentativas de vazamento de contato (INV-003).',
-            ]);
-        }
+        Auditoria::query()->create([
+            'usuario_id' => $usuario->id,
+            'acao' => 'CONTACT_LEAK_AUTO_SUSPEND',
+            'entidade' => 'Usuario',
+            'id_entidade' => $usuario->id,
+            'justificativa' => 'Suspensão automática por 5+ tentativas de vazamento de contato em 90 dias.',
+        ]);
     }
 }

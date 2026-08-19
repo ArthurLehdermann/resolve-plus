@@ -2,6 +2,7 @@
 
 namespace App\Services\Actions;
 
+use App\Auth\Enums\StatusConta;
 use App\Auth\Models\Usuario;
 use App\Services\Exceptions\ServiceException;
 use App\Services\Mensagem;
@@ -21,6 +22,12 @@ class StoreMessage
         if (! $servico->isParticipante($usuario)) {
             throw ServiceException::forbidden(
                 'Apenas o cliente ou o profissional deste serviço podem enviar mensagens.',
+            );
+        }
+
+        if ($usuario->status !== StatusConta::Ativa) {
+            throw ServiceException::forbidden(
+                'Apenas contas ativas podem enviar mensagens.',
             );
         }
 

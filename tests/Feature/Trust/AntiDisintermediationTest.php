@@ -12,6 +12,8 @@ use App\Requests\Solicitacao;
 use App\Services\Mensagem;
 use App\Services\Servico;
 use App\Services\StatusServico;
+use App\Trust\ContactLeakEnforcer;
+use App\Trust\Enums\OrigemVazamentoContato;
 use App\Trust\Models\ContactLeakAttempt;
 use App\Trust\Models\ContactPenaltyNote;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -82,6 +84,97 @@ class AntiDisintermediationTest extends TestCase
                 ->where('id_entidade', $profissional->id)
                 ->exists()
         );
+
+        $this->withToken($token)->postJson('/api/v1/services/'.$servico->id.'/messages', [
+            'text' => 'Mensagem após suspensão',
+        ])->assertForbidden();
+
+        $this->assertSame(StatusConta::Suspensa, $profissional->fresh()->status);
+        $this->assertFalse(
+            Auditoria::query()->where('acao', 'CONTACT_LEAK_AUTO_REACTIVATE_INV003')->exists()
+        );
+    }
+
+    public function test_enforcer_does_not_reactivate_unrelated_suspension_when_filter_does_not_act(): void
+    {
+        $usuario = Usuario::factory()->profissionalAtivo()->create([
+            'status' => StatusConta::Suspensa,
+        ]);
+
+        $result = app(ContactLeakEnforcer::class)->apply(
+            usuario: $usuario,
+            origem: OrigemVazamentoContato::Mensagem,
+            text: 'Horário confirmado, sem contato.',
+        );
+
+        $this->assertFalse($result['changed']);
+        $this->assertSame(StatusConta::Suspensa, $usuario->fresh()->status);
+        $this->assertFalse(
+            Auditoria::query()->where('acao', 'CONTACT_LEAK_AUTO_REACTIVATE_INV003')->exists()
+        );
+    }
+
+    public function test_stranger_cannot_create_proposal_or_post_chat_message(): void
+    {
+        $cliente = Usuario::factory()->create();
+        $profissional = Usuario::factory()->profissionalAtivo()->create();
+        $solicitacao = Solicitacao::factory()->contratada()->create([
+            'cliente_id' => $cliente->id,
+        ]);
+        $proposta = Proposta::factory()->aceita()->create([
+            'solicitacao_id' => $solicitacao->id,
+            'profissional_id' => $profissional->id,
+        ]);
+        $servico = Servico::factory()->emAndamento()->create([
+            'proposta_id' => $proposta->id,
+        ]);
+
+        $intrusoCliente = Usuario::factory()->create();
+        $intrusoProfissional = Usuario::factory()->profissionalAtivo()->create();
+
+        $this->withToken($intrusoCliente->createToken('auth')->plainTextToken)
+            ->postJson('/api/v1/requests/'.$solicitacao->id.'/proposals', [
+                'price' => 10000,
+                'deadline_days' => 3,
+                'warranty_days' => 60,
+            ])
+            ->assertForbidden();
+
+        $this->withToken($intrusoProfissional->createToken('auth')->plainTextToken)
+            ->postJson('/api/v1/services/'.$servico->id.'/messages', [
+                'text' => 'Oi, posso entrar no chat?',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(0, Mensagem::query()->count());
+        $this->assertSame(1, Proposta::query()->count());
+    }
+
+    public function test_suspended_participant_cannot_post_chat_and_stays_suspended(): void
+    {
+        $profissional = Usuario::factory()->profissionalAtivo()->create();
+        $cliente = Usuario::factory()->create();
+        $solicitacao = Solicitacao::factory()->contratada()->create([
+            'cliente_id' => $cliente->id,
+        ]);
+        $proposta = Proposta::factory()->aceita()->create([
+            'solicitacao_id' => $solicitacao->id,
+            'profissional_id' => $profissional->id,
+        ]);
+        $servico = Servico::factory()->emAndamento()->create([
+            'proposta_id' => $proposta->id,
+        ]);
+
+        $profissional->forceFill(['status' => StatusConta::Suspensa])->save();
+
+        $this->withToken($profissional->createToken('auth')->plainTextToken)
+            ->postJson('/api/v1/services/'.$servico->id.'/messages', [
+                'text' => 'Texto limpo sem contato.',
+            ])
+            ->assertForbidden();
+
+        $this->assertSame(0, Mensagem::query()->count());
+        $this->assertSame(StatusConta::Suspensa, $profissional->fresh()->status);
     }
 
     public function test_admin_dashboard_exposes_contact_leak_metrics(): void
