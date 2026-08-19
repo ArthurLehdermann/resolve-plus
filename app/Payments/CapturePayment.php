@@ -44,7 +44,7 @@ class CapturePayment
             $aliquota = $this->commissionRate->current();
             $split = $this->splitCalculator->calculate($locked->valor, $aliquota);
             $gatewaySplits = [];
-            $walletId = $locked->servico?->asaas_wallet_id;
+            $walletId = $locked->wallet_id;
 
             if ($walletId) {
                 $gatewaySplits[] = [

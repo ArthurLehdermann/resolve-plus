@@ -4,6 +4,7 @@ namespace App\Payments;
 
 use App\Auth\Models\Usuario;
 use App\Payments\Gateway\PaymentGateway;
+use App\Services\StatusServico;
 use Illuminate\Support\Facades\DB;
 
 class ReleasePayment
@@ -47,8 +48,7 @@ class ReleasePayment
                 throw new PaymentDomainException('Disputa aberta bloqueia o repasse (INV-045).');
             }
 
-            $servico = $locked->servico;
-            $walletId = $servico?->asaas_wallet_id;
+            $walletId = $locked->wallet_id;
             $split = $locked->captureEvent()?->split;
 
             if ($walletId !== null && $split !== null) {
@@ -58,7 +58,7 @@ class ReleasePayment
             ($this->recordEvent)($locked, TipoPaymentEvent::Repassado, [
                 'justificativa' => $justificativa,
                 'responsavel_id' => $admin->id,
-                'excecao_administrativa' => $servico?->status !== StatusServico::Aprovado,
+                'excecao_administrativa' => $locked->servico?->status !== StatusServico::Aprovado,
             ]);
 
             Auditoria::query()->create([

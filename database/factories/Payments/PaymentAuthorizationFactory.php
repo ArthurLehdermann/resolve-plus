@@ -6,10 +6,10 @@ use App\Payments\MetodoPagamento;
 use App\Payments\PaymentAuthorization;
 use App\Payments\PaymentEvent;
 use App\Payments\PaymentSplit;
-use App\Payments\Servico;
 use App\Payments\SplitCalculator;
 use App\Payments\StatusPaymentAuthorization;
 use App\Payments\TipoPaymentEvent;
+use App\Services\Servico;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
 

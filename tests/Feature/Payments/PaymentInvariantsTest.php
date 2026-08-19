@@ -7,13 +7,14 @@ use App\Payments\Jobs\ReauthorizeExpiringPaymentsJob;
 use App\Payments\PaymentAuthorization;
 use App\Payments\ReauthorizeExpiringPayments;
 use App\Payments\RecordPaymentEvent;
-use App\Payments\Servico;
 use App\Payments\StatusPaymentAuthorization;
-use App\Payments\StatusServico;
 use App\Payments\TipoPaymentEvent;
+use App\Services\Servico;
+use App\Services\StatusServico;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schema;
 use LogicException;
 use Tests\TestCase;
 
@@ -23,7 +24,7 @@ class PaymentInvariantsTest extends TestCase
 
     public function test_inv_042_and_inv_046_job_expires_and_reauthorizes_before_expiry(): void
     {
-        $servico = Servico::factory()->agendado()->create();
+        $servico = Servico::factory()->create();
         $authorization = PaymentAuthorization::factory()->expirando()->create([
             'servico_id' => $servico->id,
         ]);
@@ -61,7 +62,7 @@ class PaymentInvariantsTest extends TestCase
 
     public function test_inv_046_does_not_reauthorize_pix(): void
     {
-        $pixServico = Servico::factory()->agendado()->create();
+        $pixServico = Servico::factory()->create();
         $pix = PaymentAuthorization::factory()->pixCapturado()->create([
             'servico_id' => $pixServico->id,
         ]);
@@ -101,6 +102,10 @@ class PaymentInvariantsTest extends TestCase
 
     public function test_partial_unique_index_allows_only_one_autorizado_per_servico(): void
     {
+        if (Schema::getConnection()->getDriverName() !== 'pgsql') {
+            $this->markTestSkipped('Índice parcial AUTORIZADO por serviço exige PostgreSQL (INV-046).');
+        }
+
         $servico = Servico::factory()->create();
         PaymentAuthorization::factory()->create(['servico_id' => $servico->id]);
 

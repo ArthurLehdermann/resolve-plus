@@ -3,9 +3,11 @@
 namespace Database\Factories\Payments;
 
 use App\Payments\PaymentDispute;
-use App\Payments\Servico;
 use App\Payments\StatusPaymentDispute;
 use App\Payments\TipoPaymentDispute;
+use App\Proposals\Proposta;
+use App\Requests\Solicitacao;
+use App\Services\Servico;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -21,9 +23,14 @@ class PaymentDisputeFactory extends Factory
     public function definition(): array
     {
         return [
-            'servico_id' => Servico::factory(),
+            'servico_id' => Servico::factory()->state([
+                'proposta_id' => Proposta::factory()->aceita()->state([
+                    'solicitacao_id' => Solicitacao::factory()->contratada(),
+                ]),
+            ]),
             'tipo' => TipoPaymentDispute::ContestacaoConclusao,
             'status' => StatusPaymentDispute::Aberta,
+            'aberta_em' => now(),
         ];
     }
 }

@@ -8,8 +8,8 @@ use App\Http\Controllers\Controller;
 use App\Payments\PaymentAuthorization;
 use App\Payments\PaymentDomainException;
 use App\Payments\ReleasePayment;
-use App\Payments\Servico;
 use App\Payments\TipoPaymentEvent;
+use App\Services\Servico;
 use App\Support\ApiResponse;
 use App\Support\IdempotentOperation;
 use Illuminate\Http\JsonResponse;
@@ -29,9 +29,9 @@ class PaymentController extends Controller
 
         if ($usuario->tipo !== TipoUsuario::Admin) {
             $servicoIds = Servico::query()
-                ->where(function ($builder) use ($usuario): void {
-                    $builder->where('cliente_id', $usuario->id)
-                        ->orWhere('profissional_id', $usuario->id);
+                ->whereHas('proposta', function ($builder) use ($usuario): void {
+                    $builder->where('profissional_id', $usuario->id)
+                        ->orWhereHas('solicitacao', fn ($q) => $q->where('cliente_id', $usuario->id));
                 })
                 ->pluck('id');
 
@@ -59,7 +59,7 @@ class PaymentController extends Controller
             return ApiResponse::error('Não autenticado.', 401);
         }
 
-        $authorization = PaymentAuthorization::query()->with('servico')->find($id);
+        $authorization = PaymentAuthorization::query()->with('servico.proposta.solicitacao')->find($id);
 
         if ($authorization === null || ! $this->canView($usuario, $authorization)) {
             return ApiResponse::error('Pagamento não encontrado.', 404);
@@ -85,7 +85,7 @@ class PaymentController extends Controller
             return ApiResponse::error('Não autenticado.', 401);
         }
 
-        $authorization = PaymentAuthorization::query()->with('servico')->find($id);
+        $authorization = PaymentAuthorization::query()->with('servico.proposta.solicitacao')->find($id);
 
         if ($authorization === null || ! $this->canView($usuario, $authorization)) {
             return ApiResponse::error('Pagamento não encontrado.', 404);
@@ -156,7 +156,7 @@ class PaymentController extends Controller
             return false;
         }
 
-        return $servico->cliente_id === $usuario->id || $servico->profissional_id === $usuario->id;
+        return $servico->isClienteDono($usuario) || $servico->isProfissionalResponsavel($usuario);
     }
 
     /**

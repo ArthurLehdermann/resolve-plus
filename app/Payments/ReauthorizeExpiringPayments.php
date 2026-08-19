@@ -4,6 +4,7 @@ namespace App\Payments;
 
 use App\Payments\Gateway\GatewayException;
 use App\Payments\Gateway\PaymentGateway;
+use App\Services\StatusServico;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -45,6 +46,10 @@ class ReauthorizeExpiringPayments
         }
 
         $servico = $authorization->servico;
+
+        if ($servico === null) {
+            return;
+        }
 
         if ($servico->status === StatusServico::Aprovado) {
             ($this->capturePayment)($authorization, ['motivo' => 'REAUTH_JOB_SERVICO_APROVADO']);
