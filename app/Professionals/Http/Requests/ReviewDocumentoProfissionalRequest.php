@@ -13,6 +13,9 @@ class ReviewDocumentoProfissionalRequest extends FormRequest
         return $this->user() !== null;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function rules(): array
     {
         return [
@@ -24,7 +27,12 @@ class ReviewDocumentoProfissionalRequest extends FormRequest
                     StatusDocumentoProfissional::Rejeitado->value,
                 ]),
             ],
-            'motivo_rejeicao' => ['nullable', 'string', 'max:2000', 'required_if:status,'.StatusDocumentoProfissional::Rejeitado->value],
+            'motivo_rejeicao' => [
+                'nullable',
+                'string',
+                'max:2000',
+                'required_if:status,'.StatusDocumentoProfissional::Rejeitado->value,
+            ],
         ];
     }
 }

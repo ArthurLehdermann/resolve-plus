@@ -10,8 +10,6 @@ return new class extends Migration
     {
         Schema::table('perfis_profissionais', function (Blueprint $table): void {
             $table->json('categorias_atendidas')->nullable();
-            $table->string('nivel_confianca', 20)->nullable()->change();
-            $table->timestamp('nivel_atualizado_em')->nullable()->change();
         });
     }
 
@@ -19,8 +17,6 @@ return new class extends Migration
     {
         Schema::table('perfis_profissionais', function (Blueprint $table): void {
             $table->dropColumn('categorias_atendidas');
-            $table->string('nivel_confianca', 20)->nullable(false)->change();
-            $table->timestamp('nivel_atualizado_em')->nullable(false)->change();
         });
     }
 };

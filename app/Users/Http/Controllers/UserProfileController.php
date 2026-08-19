@@ -9,6 +9,7 @@ use App\Users\Http\Requests\UpdateProfileRequest;
 use App\Users\Http\Requests\UploadPhotoRequest;
 use App\Users\Http\Resources\UsuarioMeResource;
 use App\Users\Jobs\ProcessUserAvatarJob;
+use App\Users\NivelConfianca;
 use App\Users\PerfilProfissional;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -39,10 +40,21 @@ class UserProfileController extends Controller
         $usuario->save();
 
         if ($usuario->tipo === TipoUsuario::Profissional && $request->has('categorias_atendidas')) {
-            PerfilProfissional::query()->updateOrCreate(
+            $perfil = PerfilProfissional::query()->firstOrNew(
                 ['usuario_id' => $usuario->id],
-                ['categorias_atendidas' => $request->input('categorias_atendidas')]
             );
+            $perfil->categorias_atendidas = $request->input('categorias_atendidas');
+
+            if (! $perfil->exists) {
+                $perfil->nivel_confianca = NivelConfianca::Verificado;
+                $perfil->servicos_aprovados = 0;
+                $perfil->nota_media_dez = null;
+                $perfil->taxa_cancelamento_pct = 0;
+                $perfil->reclamacoes_12m = 0;
+                $perfil->nivel_atualizado_em = now();
+            }
+
+            $perfil->save();
         }
 
         return ApiResponse::success(new UsuarioMeResource($usuario->refresh()));

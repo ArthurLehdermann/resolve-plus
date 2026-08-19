@@ -44,7 +44,7 @@ class AdminDocumentoProfissionalController extends Controller
             $documento = $this->verificationService->reject(
                 $documento,
                 $usuario,
-                $request->string('motivo_rejeicao')->toString()
+                $request->string('motivo_rejeicao')->toString(),
             );
         }
 
