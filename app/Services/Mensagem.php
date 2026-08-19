@@ -20,10 +20,13 @@ class Mensagem extends Model
 
     protected $table = 'mensagens';
 
+    public ?string $contactLeakWarning = null;
+
     protected $fillable = [
         'servico_id',
         'remetente_id',
         'texto',
+        'texto_original',
         'anexo',
         'enviado_em',
     ];

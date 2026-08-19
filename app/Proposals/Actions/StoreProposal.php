@@ -11,10 +11,14 @@ use App\Proposals\Proposta;
 use App\Proposals\StatusProposta;
 use App\Requests\Solicitacao;
 use App\Requests\StatusSolicitacao;
+use App\Trust\ContactLeakEnforcer;
+use App\Trust\Enums\OrigemVazamentoContato;
 use Illuminate\Support\Facades\DB;
 
 class StoreProposal
 {
+    public function __construct(private readonly ContactLeakEnforcer $enforcer) {}
+
     /**
      * @param  array{price: int, deadline_days: int, warranty_days: int, notes?: string|null}  $payload
      */
@@ -40,19 +44,35 @@ class StoreProposal
                 );
             }
 
+            $notes = $payload['notes'] ?? null;
+
             $proposta = Proposta::query()->create([
                 'solicitacao_id' => $solicitacao->id,
                 'profissional_id' => $profissional->id,
                 'valor' => $payload['price'],
                 'prazo_dias' => $payload['deadline_days'],
                 'garantia_dias' => $payload['warranty_days'],
-                // TODO(W15 / antidesintermediação): mascarar Proposta.observacoes
-                // conforme docs/specifications/09-mecanismo-antidesintermediacao.md §1
-                // (telefone, e-mail, handles). Filtro ainda não implementado —
-                // não bloqueia esta issue; reabrir após W15.
-                'observacoes' => $payload['notes'] ?? null,
+                'observacoes' => $notes,
                 'status' => StatusProposta::Enviada,
             ]);
+
+            if (is_string($notes) && $notes !== '') {
+                $enforcement = $this->enforcer->apply(
+                    usuario: $profissional,
+                    origem: OrigemVazamentoContato::Proposta,
+                    text: $notes,
+                    propostaId: $proposta->id,
+                );
+
+                if ($enforcement['changed']) {
+                    $proposta->forceFill([
+                        'observacoes' => $enforcement['sanitized'],
+                        'observacoes_original' => $notes,
+                    ])->save();
+                }
+
+                $proposta->contactLeakWarning = $enforcement['warning'];
+            }
 
             if ($solicitacao->status === StatusSolicitacao::Aberta) {
                 $solicitacao->status = StatusSolicitacao::RecebendoPropostas;

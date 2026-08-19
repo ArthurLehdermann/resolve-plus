@@ -2,6 +2,7 @@
 
 namespace App\Services\Http\Controllers;
 
+use App\Auth\Enums\StatusConta;
 use App\Auth\Models\Usuario;
 use App\Http\Controllers\Controller;
 use App\Services\Actions\StoreMessage;
@@ -49,7 +50,21 @@ class MessageController extends Controller
     public function store(StoreMessageRequest $request, string $id, StoreMessage $action): JsonResponse
     {
         $servico = Servico::query()->with('proposta.solicitacao')->findOrFail($id);
-        $mensagem = $action($servico, $this->usuario($request), $request->validated());
+        $usuario = $this->usuario($request);
+
+        if (! $servico->isParticipante($usuario)) {
+            throw ServiceException::forbidden(
+                'Apenas o cliente ou o profissional deste serviço podem enviar mensagens.',
+            );
+        }
+
+        if ($usuario->status !== StatusConta::Ativa) {
+            throw ServiceException::forbidden(
+                'Apenas contas ativas podem enviar mensagens.',
+            );
+        }
+
+        $mensagem = $action($servico, $usuario, $request->validated());
 
         return ApiResponse::success(new MensagemResource($mensagem), 201);
     }
