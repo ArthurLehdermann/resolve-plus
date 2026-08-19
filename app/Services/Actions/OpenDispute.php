@@ -16,7 +16,8 @@ class OpenDispute
 {
     public function __invoke(Servico $servico, Usuario $usuario, TipoPaymentDispute $tipo, ?string $motivo = null): PaymentDispute
     {
-        [$servico, $dispute] = DB::transaction(function () use ($servico, $usuario, $tipo, $motivo): array {
+        /** @var array{0: Servico, 1: PaymentDispute|null} $outcome */
+        $outcome = DB::transaction(function () use ($servico, $usuario, $tipo, $motivo): array {
             $servico = Servico::query()
                 ->whereKey($servico->id)
                 ->lockForUpdate()
@@ -53,6 +54,18 @@ class OpenDispute
 
             return [$servico->refresh(), $dispute];
         });
+
+        [$servico, $dispute] = $outcome;
+
+        if ($dispute === null) {
+            $existing = PaymentDispute::query()
+                ->where('servico_id', $servico->id)
+                ->where('tipo', $tipo)
+                ->where('status', StatusPaymentDispute::Aberta)
+                ->firstOrFail();
+
+            return $existing;
+        }
 
         ServiceContested::dispatch($servico, $dispute);
 

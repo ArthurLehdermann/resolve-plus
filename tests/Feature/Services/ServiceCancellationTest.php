@@ -250,7 +250,7 @@ class ServiceCancellationTest extends TestCase
             ->assertJsonPath('data.tipo', 'CONTESTACAO_CONCLUSAO');
     }
 
-    public function test_post_services_disputes_rejeita_nao_participante(): void
+    public function test_post_services_disputes_rejeita_usuario_que_nao_e_participante(): void
     {
         [$cliente, , $servico] = $this->contexto(StatusServico::AguardandoAprovacao);
         $estranho = Usuario::factory()->create();
@@ -263,9 +263,25 @@ class ServiceCancellationTest extends TestCase
         $this->asUser($estranho)
             ->postJson("/api/v1/services/{$servico->id}/disputes", [
                 'tipo' => 'CONTESTACAO_CONCLUSAO',
-                'motivo' => 'Terceiro não autorizado',
+                'motivo' => 'Terceiro sem relação com o serviço.',
             ])
             ->assertForbidden();
+
+        $this->assertSame(1, PaymentDispute::query()->count());
+    }
+
+    public function test_cancel_em_andamento_rejeita_nao_participante(): void
+    {
+        [, , $servico] = $this->contexto(StatusServico::EmAndamento);
+        $estranho = Usuario::factory()->create();
+
+        $this->asUser($estranho)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson("/api/v1/services/{$servico->id}/cancel", ['motivo' => 'Não sou parte'])
+            ->assertForbidden();
+
+        $this->assertSame(StatusServico::EmAndamento, $servico->fresh()->status);
+        $this->assertSame(0, PaymentDispute::query()->count());
     }
 
     public function test_cancel_agendado_rejeita_nao_cliente(): void

@@ -47,6 +47,10 @@ class ReauthorizeExpiringPayments
 
         $servico = $authorization->servico;
 
+        if ($servico === null) {
+            return;
+        }
+
         if ($servico->status === StatusServico::Aprovado) {
             ($this->capturePayment)($authorization, ['motivo' => 'REAUTH_JOB_SERVICO_APROVADO']);
 

@@ -111,9 +111,7 @@ class CancelService
      */
     private function disputaExecucaoExistente(Servico $servico, Usuario $usuario): array
     {
-        $isParticipante = $servico->isClienteDono($usuario) || $servico->isProfissionalResponsavel($usuario);
-
-        if (! $isParticipante) {
+        if (! $servico->isParticipante($usuario)) {
             throw ServiceException::forbidden('Apenas cliente ou profissional do serviço podem solicitar cancelamento.');
         }
 
@@ -139,9 +137,7 @@ class CancelService
      */
     private function openDisputaExecucao(Servico $servico, Usuario $usuario, ?string $motivo): array
     {
-        $isParticipante = $servico->isClienteDono($usuario) || $servico->isProfissionalResponsavel($usuario);
-
-        if (! $isParticipante) {
+        if (! $servico->isParticipante($usuario)) {
             throw ServiceException::forbidden('Apenas cliente ou profissional do serviço podem solicitar cancelamento.');
         }
 

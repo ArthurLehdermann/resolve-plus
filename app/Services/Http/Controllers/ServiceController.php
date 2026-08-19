@@ -104,7 +104,15 @@ class ServiceController extends Controller
         OpenDispute $action,
     ): JsonResponse {
         $servico = Servico::query()->with('proposta.solicitacao')->findOrFail($id);
-        $dispute = $action($servico, $this->usuario($request), $request->tipo(), $request->motivo());
+        $usuario = $this->usuario($request);
+
+        if (! $servico->isParticipante($usuario)) {
+            throw ServiceException::forbidden(
+                'Apenas cliente ou profissional do serviço podem abrir disputa.',
+            );
+        }
+
+        $dispute = $action($servico, $usuario, $request->tipo(), $request->motivo());
 
         return ApiResponse::success([
             'id' => $dispute->id,
