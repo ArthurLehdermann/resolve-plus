@@ -5,6 +5,8 @@ namespace Tests\Feature\Admin;
 use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
+use App\Payments\PaymentAuthorization;
+use App\Services\Servico;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -66,7 +68,7 @@ class AdminPanelTest extends TestCase
         $this->assertSame((int) ceil($total / $perPage), $response->json('data.pagination.last_page'));
     }
 
-    public function test_get_admin_services_payments_returns_empty_with_pagination_structure(): void
+    public function test_get_admin_services_returns_paginated_servicos(): void
     {
         $admin = Usuario::factory()->create([
             'tipo' => TipoUsuario::Admin->value,
@@ -74,13 +76,18 @@ class AdminPanelTest extends TestCase
         ]);
         $adminToken = $admin->createToken('auth')->plainTextToken;
 
-        $this->withToken($adminToken)
-            ->getJson('/api/v1/admin/services?page=2&per_page=10')
-            ->assertOk()
+        $servicos = Servico::factory()->count(3)->create();
+
+        $response = $this->withToken($adminToken)
+            ->getJson('/api/v1/admin/services?page=1&per_page=2');
+
+        $response->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonStructure([
                 'data' => [
-                    'data' => [],
+                    'data' => [
+                        ['id', 'proposal_id', 'status'],
+                    ],
                     'pagination' => [
                         'page',
                         'per_page',
@@ -90,13 +97,35 @@ class AdminPanelTest extends TestCase
                 ],
             ]);
 
-        $this->withToken($adminToken)
-            ->getJson('/api/v1/admin/payments?page=2&per_page=10')
-            ->assertOk()
+        $ids = collect($response->json('data.data'))->pluck('id')->all();
+        $this->assertCount(2, $ids);
+        $this->assertSame(3, $response->json('data.pagination.total'));
+        $this->assertSame(1, $response->json('data.pagination.page'));
+        $this->assertSame(2, $response->json('data.pagination.per_page'));
+        $this->assertSame(2, $response->json('data.pagination.last_page'));
+        $this->assertEmpty(array_diff($ids, $servicos->pluck('id')->all()));
+    }
+
+    public function test_get_admin_payments_returns_paginated_authorizations(): void
+    {
+        $admin = Usuario::factory()->create([
+            'tipo' => TipoUsuario::Admin->value,
+            'status' => StatusConta::Ativa,
+        ]);
+        $adminToken = $admin->createToken('auth')->plainTextToken;
+
+        $authorizations = PaymentAuthorization::factory()->count(2)->create();
+
+        $response = $this->withToken($adminToken)
+            ->getJson('/api/v1/admin/payments?page=1&per_page=20');
+
+        $response->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonStructure([
                 'data' => [
-                    'data' => [],
+                    'data' => [
+                        ['id', 'servico_id', 'valor', 'metodo', 'status'],
+                    ],
                     'pagination' => [
                         'page',
                         'per_page',
@@ -105,6 +134,11 @@ class AdminPanelTest extends TestCase
                     ],
                 ],
             ]);
+
+        $ids = collect($response->json('data.data'))->pluck('id')->all();
+        $this->assertCount(2, $ids);
+        $this->assertSame(2, $response->json('data.pagination.total'));
+        $this->assertEqualsCanonicalizing($authorizations->pluck('id')->all(), $ids);
     }
 
     public function test_get_admin_dashboard_returns_general_indicators_and_leakage_metrics(): void
