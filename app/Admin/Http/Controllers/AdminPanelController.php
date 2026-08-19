@@ -8,6 +8,8 @@ use App\Payments\PaymentAuthorization;
 use App\Services\Http\Resources\ServicoResource;
 use App\Services\Servico;
 use App\Support\ApiResponse;
+use App\Trust\AdminContactLeakMetrics;
+use App\Trust\Models\ContactPenaltyNote;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -76,10 +78,12 @@ class AdminPanelController
 
     public function dashboard(): JsonResponse
     {
+        $metrics = app(AdminContactLeakMetrics::class)->build();
+
         $leakageMetrics = [
-            'tentativas_pre_aceite' => 0,
-            'tentativas_pos_aceite' => 0,
-            'taxa_conclusao_pos_tentativa' => 0,
+            'tentativas_pre_aceite' => $metrics['attempt_rate_pre_acceptance'],
+            'tentativas_pos_aceite' => $metrics['attempt_rate_post_acceptance'],
+            'taxa_conclusao_pos_tentativa' => $metrics['post_attempt_completion_rate'],
         ];
 
         return ApiResponse::success([
@@ -87,6 +91,13 @@ class AdminPanelController
                 'total_usuarios' => Usuario::query()->count(),
             ],
             'leakage_metrics' => $leakageMetrics,
+            // Mantém compatibilidade com AntiDisintermediationTest e com o documento
+            // de mecanismo de vazamento (03/04 e seção 4 do admin dashboard).
+            'contact_leak' => $metrics,
+            'internal_notes' => ContactPenaltyNote::query()
+                ->latest()
+                ->limit(20)
+                ->get(['usuario_id', 'attempts_in_window', 'nota', 'created_at']),
         ]);
     }
 
