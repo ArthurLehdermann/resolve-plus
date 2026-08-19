@@ -1,6 +1,7 @@
 <?php
 
 use App\Admin\Http\Controllers\AdminDocumentoProfissionalController;
+use App\Admin\Http\Controllers\AdminPanelController;
 use App\Auth\Http\Controllers\AuthController;
 use App\Categories\Http\Controllers\AdminCategoryController;
 use App\Categories\Http\Controllers\CategoryController;
@@ -15,7 +16,6 @@ use App\Requests\Http\Controllers\RequestController;
 use App\Services\Http\Controllers\MessageController;
 use App\Services\Http\Controllers\ScheduleController;
 use App\Services\Http\Controllers\ServiceController;
-use App\Trust\Http\Controllers\AdminDashboardController;
 use App\Users\Http\Controllers\UserProfileController;
 use App\Warranty\Http\Controllers\WarrantyController;
 use Illuminate\Support\Facades\Route;
@@ -122,8 +122,7 @@ Route::prefix('v1')->group(function (): void {
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{categoria}', [CategoryController::class, 'show']);
 
-    Route::middleware('auth:sanctum')->prefix('admin')->group(function (): void {
-        Route::get('/dashboard', [AdminDashboardController::class, 'show']);
+    Route::middleware(['auth:sanctum', 'can:admin'])->prefix('admin')->group(function (): void {
         Route::get('/categories', [AdminCategoryController::class, 'index']);
         Route::post('/categories', [AdminCategoryController::class, 'store']);
         Route::get('/categories/{categoria}', [AdminCategoryController::class, 'show']);
@@ -131,5 +130,9 @@ Route::prefix('v1')->group(function (): void {
         Route::delete('/categories/{categoria}', [AdminCategoryController::class, 'destroy']);
         Route::patch('/professionals/documents/{documento}/review', [AdminDocumentoProfissionalController::class, 'review'])
             ->whereUuid('documento');
+        Route::get('/users', [AdminPanelController::class, 'users']);
+        Route::get('/services', [AdminPanelController::class, 'services']);
+        Route::get('/payments', [AdminPanelController::class, 'payments']);
+        Route::get('/dashboard', [AdminPanelController::class, 'dashboard']);
     });
 });
