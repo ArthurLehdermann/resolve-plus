@@ -94,6 +94,9 @@ class ResolveDispute
         match ($dispute->tipo) {
             TipoPaymentDispute::ContestacaoConclusao => $this->resolveContestacaoConclusao($servico, $resultado),
             TipoPaymentDispute::CancelamentoExecucao => $this->resolveCancelamentoExecucao($servico, $resultado),
+            TipoPaymentDispute::Chargeback => throw new PaymentDomainException(
+                'Disputa de chargeback ainda não tem resolução automatizada por este endpoint; trate manualmente.',
+            ),
         };
     }
 

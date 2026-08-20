@@ -3,7 +3,10 @@
 namespace Tests\Feature\Payments;
 
 use App\Payments\PaymentAuthorization;
+use App\Payments\PaymentDispute;
 use App\Payments\StatusPaymentAuthorization;
+use App\Payments\StatusPaymentDispute;
+use App\Payments\TipoPaymentDispute;
 use App\Payments\TipoPaymentEvent;
 use App\Payments\Webhooks\PaymentWebhookEvent;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -100,6 +103,69 @@ class AsaasWebhookTest extends TestCase
         $authorization->refresh();
         $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->status);
         $this->assertSame($eventosAntes, $authorization->events()->count());
+    }
+
+    public function test_webhook_abre_disputa_de_chargeback_para_cartao(): void
+    {
+        $authorization = PaymentAuthorization::factory()->create([
+            'gateway_payment_id' => 'pay_cartao_1',
+            'status' => StatusPaymentAuthorization::Capturado,
+        ]);
+
+        $this->withHeaders(['asaas-access-token' => 'test-webhook-token'])
+            ->postJson('/api/v1/webhooks/asaas', $this->payload('PAYMENT_CHARGEBACK_REQUESTED', 'pay_cartao_1', 'CHARGEBACK_REQUESTED', 'evt_cb_1'))
+            ->assertOk();
+
+        $dispute = PaymentDispute::query()->where('servico_id', $authorization->servico_id)->first();
+
+        $this->assertNotNull($dispute);
+        $this->assertSame(TipoPaymentDispute::Chargeback, $dispute->tipo);
+        $this->assertSame(StatusPaymentDispute::Aberta, $dispute->status);
+
+        // Chargeback não corrige o status da captura - ela de fato aconteceu.
+        $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->fresh()->status);
+    }
+
+    public function test_webhook_chargeback_e_idempotente_por_servico(): void
+    {
+        $authorization = PaymentAuthorization::factory()->create([
+            'gateway_payment_id' => 'pay_cartao_2',
+            'status' => StatusPaymentAuthorization::Capturado,
+        ]);
+
+        $this->withHeaders(['asaas-access-token' => 'test-webhook-token'])
+            ->postJson('/api/v1/webhooks/asaas', $this->payload('PAYMENT_CHARGEBACK_REQUESTED', 'pay_cartao_2', 'CHARGEBACK_REQUESTED', 'evt_cb_2a'))
+            ->assertOk();
+
+        // Segundo evento de chargeback (ex.: PAYMENT_CHARGEBACK_DISPUTE) para
+        // o mesmo pagamento não pode abrir uma segunda disputa ABERTA.
+        $this->withHeaders(['asaas-access-token' => 'test-webhook-token'])
+            ->postJson('/api/v1/webhooks/asaas', $this->payload('PAYMENT_CHARGEBACK_DISPUTE', 'pay_cartao_2', 'CHARGEBACK_DISPUTE', 'evt_cb_2b'))
+            ->assertOk();
+
+        $this->assertSame(
+            1,
+            PaymentDispute::query()
+                ->where('servico_id', $authorization->servico_id)
+                ->where('status', StatusPaymentDispute::Aberta)
+                ->count(),
+        );
+        $this->assertSame(2, PaymentWebhookEvent::query()->count());
+    }
+
+    public function test_webhook_ignora_evento_de_cartao_que_nao_e_chargeback(): void
+    {
+        $authorization = PaymentAuthorization::factory()->create([
+            'gateway_payment_id' => 'pay_cartao_3',
+            'status' => StatusPaymentAuthorization::Autorizado,
+        ]);
+
+        $this->withHeaders(['asaas-access-token' => 'test-webhook-token'])
+            ->postJson('/api/v1/webhooks/asaas', $this->payload('PAYMENT_CONFIRMED', 'pay_cartao_3', 'CONFIRMED', 'evt_cartao_confirmado'))
+            ->assertOk();
+
+        $this->assertSame(0, PaymentDispute::query()->count());
+        $this->assertSame(StatusPaymentAuthorization::Autorizado, $authorization->fresh()->status);
     }
 
     /**

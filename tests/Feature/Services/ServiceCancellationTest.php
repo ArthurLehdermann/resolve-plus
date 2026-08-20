@@ -324,6 +324,28 @@ class ServiceCancellationTest extends TestCase
             ->assertJsonPath('data.tipo', 'CONTESTACAO_CONCLUSAO');
     }
 
+    public function test_post_services_disputes_rejeita_tipo_chargeback(): void
+    {
+        [$cliente, , $servico] = $this->contexto(StatusServico::AguardandoAprovacao);
+
+        $this->asUser($cliente)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson("/api/v1/services/{$servico->id}/contest", ['motivo' => 'x'])
+            ->assertOk();
+
+        // CHARGEBACK só pode ser aberto pelo webhook do Asaas
+        // (HandleAsaasWebhook) - o usuário não pode se autodeclarar em
+        // chargeback pra travar captura/repasse (INV-045).
+        $this->asUser($cliente)
+            ->postJson("/api/v1/services/{$servico->id}/disputes", [
+                'tipo' => 'CHARGEBACK',
+                'motivo' => 'Tentativa de autodeclarar chargeback',
+            ])
+            ->assertUnprocessable();
+
+        $this->assertSame(0, PaymentDispute::query()->where('tipo', 'CHARGEBACK')->count());
+    }
+
     public function test_post_services_disputes_rejeita_usuario_que_nao_e_participante(): void
     {
         [$cliente, , $servico] = $this->contexto(StatusServico::AguardandoAprovacao);
@@ -394,6 +416,30 @@ class ServiceCancellationTest extends TestCase
                 'justificativa' => 'ab',
             ])
             ->assertUnprocessable();
+    }
+
+    public function test_resolve_dispute_rejeita_chargeback(): void
+    {
+        [, , $servico] = $this->contexto(StatusServico::EmContestacao);
+        $admin = Usuario::factory()->create(['tipo' => TipoUsuario::Admin]);
+
+        $dispute = PaymentDispute::factory()->create([
+            'servico_id' => $servico->id,
+            'tipo' => TipoPaymentDispute::Chargeback,
+            'status' => StatusPaymentDispute::Aberta,
+        ]);
+
+        // ResolveDispute ainda não sabe automatizar o desfecho de um
+        // chargeback (webhook do Asaas, não fluxo de usuário) - deve falhar
+        // com mensagem clara em vez de UnhandledMatchError.
+        $this->asUser($admin)
+            ->putJson("/api/v1/disputes/{$dispute->id}/resolve", [
+                'resultado' => 'APROVADO',
+                'justificativa' => 'Tentando resolver chargeback manualmente.',
+            ])
+            ->assertStatus(409);
+
+        $this->assertSame(StatusPaymentDispute::Aberta, $dispute->fresh()->status);
     }
 
     /**

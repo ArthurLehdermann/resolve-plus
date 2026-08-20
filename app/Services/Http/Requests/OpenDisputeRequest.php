@@ -39,7 +39,14 @@ class OpenDisputeRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'tipo' => ['required', 'string', Rule::in(array_column(TipoPaymentDispute::cases(), 'value'))],
+            // Whitelist explícita, não TipoPaymentDispute::cases(): CHARGEBACK
+            // é aberto só pelo webhook do Asaas (HandleAsaasWebhook), nunca
+            // pelo usuário - senão qualquer parte trava captura/repasse
+            // (INV-045) autodeclarando um chargeback que não aconteceu.
+            'tipo' => ['required', 'string', Rule::in([
+                TipoPaymentDispute::ContestacaoConclusao->value,
+                TipoPaymentDispute::CancelamentoExecucao->value,
+            ])],
             'motivo' => ['nullable', 'string', 'max:2000'],
         ];
     }
