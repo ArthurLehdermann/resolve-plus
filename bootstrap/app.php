@@ -16,8 +16,8 @@ return Application::configure(basePath: dirname(__DIR__))
         AutoApproveServicesCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
-        //
+        $middleware->redirectGuestsTo(fn () => null);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
-        //
+        $exceptions->shouldRenderJsonWhen(fn (): bool => true);
     })->create();
