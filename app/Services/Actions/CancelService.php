@@ -16,6 +16,7 @@ use App\Services\Servico;
 use App\Services\StatusServico;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class CancelService
 {
@@ -91,6 +92,11 @@ class CancelService
                     (int) $servico->proposta->valor,
                     $multaCalc['percentual'],
                 );
+            } else {
+                Log::error('INCIDENTE: serviço agendado cancelado sem nenhuma autorização de pagamento associada (INV-C1). Multa calculada e não cobrada.', [
+                    'servico_id' => $servico->id,
+                    'multa_calculada' => $multaCalc,
+                ]);
             }
 
             $servico->status = StatusServico::Cancelado;

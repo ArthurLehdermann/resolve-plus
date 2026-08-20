@@ -40,6 +40,24 @@ class CapturePaymentJob implements ShouldQueue
             return;
         }
 
+        $ultima = PaymentAuthorization::query()
+            ->where('servico_id', $servico->id)
+            ->latest('criado_em')
+            ->first();
+
+        if ($ultima === null) {
+            Log::error('INCIDENTE: serviço aprovado sem nenhuma autorização de pagamento (INV-C1).', [
+                'servico_id' => $servico->id,
+            ]);
+
+            return;
+        }
+
+        if ($ultima->metodo === MetodoPagamento::Pix) {
+            // Pix é confirmado na hora (CreatePaymentAuthorization); não há captura posterior.
+            return;
+        }
+
         $authorization = PaymentAuthorization::query()
             ->where('servico_id', $servico->id)
             ->where('status', StatusPaymentAuthorization::Autorizado)
@@ -48,6 +66,12 @@ class CapturePaymentJob implements ShouldQueue
             ->first();
 
         if ($authorization === null) {
+            Log::error('INCIDENTE: serviço com cartão aprovado sem autorização em estado AUTORIZADO disponível para captura.', [
+                'servico_id' => $servico->id,
+                'ultima_autorizacao_id' => $ultima->id,
+                'ultima_autorizacao_status' => $ultima->status->value,
+            ]);
+
             return;
         }
 
