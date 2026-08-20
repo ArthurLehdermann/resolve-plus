@@ -85,40 +85,45 @@ services:
         exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
       "
     environment:
-      APP_ENV: ${APP_ENV:-staging}
-      APP_DEBUG: ${APP_DEBUG:-false}
-      APP_NAME: "Resolve+"
-      APP_URL: ${APP_URL:-https://resolveplus.staging.bigworks.com.br}
-      APP_KEY: ${APP_KEY:?obrigatório}
-      APP_LOCALE: pt_BR
-      APP_FALLBACK_LOCALE: pt_BR
-      APP_TIMEZONE: America/Sao_Paulo
+      - APP_ENV=${APP_ENV:-staging}
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - APP_NAME=Resolve+
+      - APP_URL=${APP_URL:-https://resolveplus.staging.bigworks.com.br}
+      - APP_KEY=${APP_KEY:?obrigatório}
+      - APP_LOCALE=pt_BR
+      - APP_FALLBACK_LOCALE=pt_BR
+      - APP_TIMEZONE=America/Sao_Paulo
 
-      DB_CONNECTION: pgsql
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_DATABASE: ${DB_DATABASE:-resolve_plus}
-      DB_USERNAME: ${DB_USERNAME:-resolve_plus}
-      DB_PASSWORD: ${DB_PASSWORD:?obrigatório}
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=${DB_DATABASE:-resolve_plus}
+      - DB_USERNAME=${DB_USERNAME:-resolve_plus}
+      - DB_PASSWORD=${DB_PASSWORD:?obrigatório}
 
-      CACHE_STORE: redis
-      SESSION_DRIVER: redis
-      SESSION_LIFETIME: 120
-      SESSION_SECURE_COOKIE: "true"
-      SESSION_SAME_SITE: lax
-      QUEUE_CONNECTION: redis
+      - CACHE_STORE=redis
+      - SESSION_DRIVER=redis
+      - SESSION_LIFETIME=120
+      - SESSION_SECURE_COOKIE=true
+      - SESSION_SAME_SITE=lax
+      - QUEUE_CONNECTION=redis
 
-      REDIS_CLIENT: phpredis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
+      - REDIS_CLIENT=phpredis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
 
-      LOG_CHANNEL: stderr
+      - LOG_CHANNEL=stderr
 
-      PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-fake}
-      ASAAS_API_KEY: ${ASAAS_API_KEY:-}
-      ASAAS_BASE_URL: ${ASAAS_BASE_URL:-https://api-sandbox.asaas.com}
-      ASAAS_FALLBACK_REMOTE_IP: ${ASAAS_FALLBACK_REMOTE_IP:-127.0.0.1}
-      ASAAS_WEBHOOK_TOKEN: ${ASAAS_WEBHOOK_TOKEN:-}
+      - PAYMENT_GATEWAY=${PAYMENT_GATEWAY:-fake}
+      - ASAAS_BASE_URL=${ASAAS_BASE_URL:-https://api-sandbox.asaas.com}
+      - ASAAS_FALLBACK_REMOTE_IP=${ASAAS_FALLBACK_REMOTE_IP:-127.0.0.1}
+      - PAYMENT_PIX_EXPIRATION_HOURS=${PAYMENT_PIX_EXPIRATION_HOURS:-24}
+      # Sem default: se ausente no --env-file, o Compose omite a variável em
+      # vez de criá-la vazia. Vazia-mas-definida no ambiente do container
+      # trava o Dotenv do Laravel (imutável) e nem o phpunit.xml consegue
+      # sobrescrever pra rodar os testes do webhook.
+      - ASAAS_API_KEY
+      - ASAAS_WEBHOOK_TOKEN
     volumes:
       - ./:/var/www/html
     networks:
@@ -158,24 +163,25 @@ services:
         condition: service_healthy
     command: php artisan queue:work --tries=3 --timeout=90
     environment:
-      APP_ENV: ${APP_ENV:-staging}
-      APP_KEY: ${APP_KEY:?obrigatório}
-      DB_CONNECTION: pgsql
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_DATABASE: ${DB_DATABASE:-resolve_plus}
-      DB_USERNAME: ${DB_USERNAME:-resolve_plus}
-      DB_PASSWORD: ${DB_PASSWORD:?obrigatório}
-      CACHE_STORE: redis
-      QUEUE_CONNECTION: redis
-      REDIS_CLIENT: phpredis
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      LOG_CHANNEL: stderr
-      PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-fake}
-      ASAAS_API_KEY: ${ASAAS_API_KEY:-}
-      ASAAS_BASE_URL: ${ASAAS_BASE_URL:-https://api-sandbox.asaas.com}
-      ASAAS_FALLBACK_REMOTE_IP: ${ASAAS_FALLBACK_REMOTE_IP:-127.0.0.1}
+      - APP_ENV=${APP_ENV:-staging}
+      - APP_KEY=${APP_KEY:?obrigatório}
+      - DB_CONNECTION=pgsql
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_DATABASE=${DB_DATABASE:-resolve_plus}
+      - DB_USERNAME=${DB_USERNAME:-resolve_plus}
+      - DB_PASSWORD=${DB_PASSWORD:?obrigatório}
+      - CACHE_STORE=redis
+      - QUEUE_CONNECTION=redis
+      - REDIS_CLIENT=phpredis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - LOG_CHANNEL=stderr
+      - PAYMENT_GATEWAY=${PAYMENT_GATEWAY:-fake}
+      - ASAAS_BASE_URL=${ASAAS_BASE_URL:-https://api-sandbox.asaas.com}
+      - ASAAS_FALLBACK_REMOTE_IP=${ASAAS_FALLBACK_REMOTE_IP:-127.0.0.1}
+      - PAYMENT_PIX_EXPIRATION_HOURS=${PAYMENT_PIX_EXPIRATION_HOURS:-24}
+      - ASAAS_API_KEY
     volumes:
       - ./:/var/www/html
     networks:

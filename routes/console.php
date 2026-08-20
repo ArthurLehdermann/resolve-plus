@@ -1,5 +1,6 @@
 <?php
 
+use App\Payments\Jobs\ExpirePendingPixPaymentsJob;
 use App\Payments\Jobs\ReauthorizeExpiringPaymentsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -17,3 +18,4 @@ Artisan::command('payments:reauthorize', function () {
 
 Schedule::command('services:auto-approve')->hourly();
 Schedule::job(new ReauthorizeExpiringPaymentsJob)->hourly();
+Schedule::job(new ExpirePendingPixPaymentsJob)->hourly();

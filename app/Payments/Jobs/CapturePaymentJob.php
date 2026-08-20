@@ -54,6 +54,16 @@ class CapturePaymentJob implements ShouldQueue
         }
 
         if ($ultima->metodo === MetodoPagamento::Pix) {
+            if ($ultima->status === StatusPaymentAuthorization::Pendente) {
+                // Não deveria ser alcançável: StartService recusa iniciar o
+                // serviço com Pix PENDENTE (INV-C1), então nada aqui chega a
+                // AUTORIZADO sem pagamento. Se chegou, o gate foi contornado.
+                Log::error('INCIDENTE: serviço aprovado com Pix ainda PENDENTE - gate de StartService não impediu.', [
+                    'servico_id' => $servico->id,
+                    'authorization_id' => $ultima->id,
+                ]);
+            }
+
             // Pix não tem captura por esse job: ou já foi confirmado pelo
             // webhook do Asaas (CAPTURADO) e não há nada a fazer, ou ainda
             // está PENDENTE e só o webhook pode confirmar - aprovar o
