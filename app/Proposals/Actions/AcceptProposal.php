@@ -3,6 +3,8 @@
 namespace App\Proposals\Actions;
 
 use App\Auth\Models\Usuario;
+use App\Payments\CreatePaymentAuthorization;
+use App\Payments\MetodoPagamento;
 use App\Proposals\Events\ProposalAccepted;
 use App\Proposals\Exceptions\ProposalException;
 use App\Proposals\Proposta;
@@ -17,17 +19,29 @@ use Illuminate\Support\Facades\DB;
 
 class AcceptProposal
 {
+    public function __construct(
+        private readonly CreatePaymentAuthorization $createAuthorization,
+    ) {}
+
     /**
      * Aceita a proposta, recusa as demais (INV-011) e cria o Serviço (INV-020/021).
      * Transação + lock da solicitação + índice parcial UNIQUE(solicitacao_id)
      * WHERE status='ACEITA' garantem INV-010 sob concorrência.
      *
+     * A autorização de pagamento (INV-C1) é criada na mesma transação do
+     * aceite: se o gateway recusar, o aceite inteiro é desfeito (não existe
+     * serviço sem autorização correspondente).
+     *
      * @return array{proposta: Proposta, servico: Servico}
      */
-    public function __invoke(Proposta $proposta, Usuario $cliente): array
-    {
+    public function __invoke(
+        Proposta $proposta,
+        Usuario $cliente,
+        MetodoPagamento $metodoPagamento,
+        ?string $creditCardToken = null,
+    ): array {
         try {
-            return DB::transaction(function () use ($proposta, $cliente): array {
+            return DB::transaction(function () use ($proposta, $cliente, $metodoPagamento, $creditCardToken): array {
                 $solicitacao = Solicitacao::query()
                     ->whereKey($proposta->solicitacao_id)
                     ->lockForUpdate()
@@ -91,6 +105,9 @@ class AcceptProposal
                     'inicio' => null,
                     'fim' => null,
                 ]);
+                $servico->setRelation('proposta', $proposta);
+
+                ($this->createAuthorization)($servico, $metodoPagamento, (string) $cliente->id, $creditCardToken);
 
                 $solicitacao->status = StatusSolicitacao::Contratada;
                 $solicitacao->save();

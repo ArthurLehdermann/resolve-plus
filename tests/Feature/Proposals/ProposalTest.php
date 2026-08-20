@@ -5,6 +5,14 @@ namespace Tests\Feature\Proposals;
 use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
+use App\Payments\Gateway\FakePaymentGateway;
+use App\Payments\Gateway\GatewayCharge;
+use App\Payments\Gateway\GatewayException;
+use App\Payments\Gateway\PaymentGateway;
+use App\Payments\MetodoPagamento;
+use App\Payments\PaymentAuthorization;
+use App\Payments\StatusPaymentAuthorization;
+use App\Payments\TipoPaymentEvent;
 use App\Proposals\Events\ProposalAccepted;
 use App\Proposals\Events\ProposalCreated;
 use App\Proposals\Proposta;
@@ -129,7 +137,7 @@ class ProposalTest extends TestCase
 
         $this->withToken($this->token($cliente))
             ->withHeader('Idempotency-Key', (string) Str::uuid())
-            ->postJson("/api/v1/proposals/{$vencedora->id}/accept")
+            ->postJson("/api/v1/proposals/{$vencedora->id}/accept", $this->acceptPayload())
             ->assertCreated()
             ->assertJsonPath('data.status', 'ACEITA')
             ->assertJsonPath('data.service.status', 'AGENDADO')
@@ -162,12 +170,12 @@ class ProposalTest extends TestCase
 
         $this->withToken($token)
             ->withHeader('Idempotency-Key', (string) Str::uuid())
-            ->postJson("/api/v1/proposals/{$primeira->id}/accept")
+            ->postJson("/api/v1/proposals/{$primeira->id}/accept", $this->acceptPayload())
             ->assertCreated();
 
         $this->withToken($token)
             ->withHeader('Idempotency-Key', (string) Str::uuid())
-            ->postJson("/api/v1/proposals/{$segunda->id}/accept")
+            ->postJson("/api/v1/proposals/{$segunda->id}/accept", $this->acceptPayload())
             ->assertStatus(409)
             ->assertJsonPath('success', false);
 
@@ -215,7 +223,7 @@ class ProposalTest extends TestCase
 
         $this->withToken($this->token($cliente))
             ->withHeader('Idempotency-Key', (string) Str::uuid())
-            ->postJson("/api/v1/proposals/{$concorrente->id}/accept")
+            ->postJson("/api/v1/proposals/{$concorrente->id}/accept", $this->acceptPayload())
             ->assertStatus(409);
 
         $this->assertSame(1, Proposta::query()->where('status', StatusProposta::Aceita)->count());
@@ -235,7 +243,7 @@ class ProposalTest extends TestCase
 
             $this->withToken($this->token($cliente))
                 ->withHeader('Idempotency-Key', (string) Str::uuid())
-                ->postJson("/api/v1/proposals/{$proposta->id}/accept")
+                ->postJson("/api/v1/proposals/{$proposta->id}/accept", $this->acceptPayload())
                 ->assertStatus(409)
                 ->assertJsonPath('success', false);
 
@@ -255,7 +263,7 @@ class ProposalTest extends TestCase
 
         $this->withToken($this->token($intruso))
             ->withHeader('Idempotency-Key', (string) Str::uuid())
-            ->postJson("/api/v1/proposals/{$proposta->id}/accept")
+            ->postJson("/api/v1/proposals/{$proposta->id}/accept", $this->acceptPayload())
             ->assertForbidden()
             ->assertJsonPath('success', false);
 
@@ -311,7 +319,7 @@ class ProposalTest extends TestCase
         $proposta = Proposta::factory()->create(['solicitacao_id' => $solicitacao->id]);
 
         $this->withToken($this->token($cliente))
-            ->postJson("/api/v1/proposals/{$proposta->id}/accept")
+            ->postJson("/api/v1/proposals/{$proposta->id}/accept", $this->acceptPayload())
             ->assertStatus(422);
     }
 
@@ -354,6 +362,141 @@ class ProposalTest extends TestCase
         }
 
         $this->assertSame(0, Proposta::query()->count());
+    }
+
+    public function test_accept_cria_autorizacao_pix_capturada_na_hora(): void
+    {
+        $cliente = Usuario::factory()->create();
+        $solicitacao = Solicitacao::factory()->recebendoPropostas()->create([
+            'cliente_id' => $cliente->id,
+        ]);
+        $proposta = Proposta::factory()->create([
+            'solicitacao_id' => $solicitacao->id,
+            'valor' => 45000,
+        ]);
+
+        $this->withToken($this->token($cliente))
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson("/api/v1/proposals/{$proposta->id}/accept", $this->acceptPayload())
+            ->assertCreated();
+
+        $servico = Servico::query()->where('proposta_id', $proposta->id)->firstOrFail();
+        $authorization = PaymentAuthorization::query()->where('servico_id', $servico->id)->firstOrFail();
+
+        $this->assertSame(MetodoPagamento::Pix, $authorization->metodo);
+        $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->status);
+        $this->assertSame(45000, $authorization->valor);
+        $this->assertSame((string) $cliente->id, $authorization->gateway_customer_id);
+        $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Capturado));
+
+        $gateway = app(FakePaymentGateway::class);
+        $this->assertNotEmpty($gateway->charges);
+        $this->assertSame('PIX', $gateway->charges[array_key_last($gateway->charges)]['type']);
+    }
+
+    public function test_accept_com_cartao_cria_autorizacao_pendente_de_captura(): void
+    {
+        $cliente = Usuario::factory()->create();
+        $solicitacao = Solicitacao::factory()->recebendoPropostas()->create([
+            'cliente_id' => $cliente->id,
+        ]);
+        $proposta = Proposta::factory()->create([
+            'solicitacao_id' => $solicitacao->id,
+            'valor' => 30000,
+        ]);
+
+        $this->withToken($this->token($cliente))
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson("/api/v1/proposals/{$proposta->id}/accept", $this->acceptPayload([
+                'metodo_pagamento' => MetodoPagamento::Cartao->value,
+                'credit_card_token' => 'tok_teste_123',
+            ]))
+            ->assertCreated();
+
+        $servico = Servico::query()->where('proposta_id', $proposta->id)->firstOrFail();
+        $authorization = PaymentAuthorization::query()->where('servico_id', $servico->id)->firstOrFail();
+
+        $this->assertSame(MetodoPagamento::Cartao, $authorization->metodo);
+        $this->assertSame(StatusPaymentAuthorization::Autorizado, $authorization->status);
+        $this->assertNotNull($authorization->expira_em);
+        $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Autorizado));
+    }
+
+    public function test_accept_com_cartao_exige_credit_card_token(): void
+    {
+        $cliente = Usuario::factory()->create();
+        $solicitacao = Solicitacao::factory()->recebendoPropostas()->create([
+            'cliente_id' => $cliente->id,
+        ]);
+        $proposta = Proposta::factory()->create(['solicitacao_id' => $solicitacao->id]);
+
+        $this->withToken($this->token($cliente))
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson("/api/v1/proposals/{$proposta->id}/accept", [
+                'metodo_pagamento' => MetodoPagamento::Cartao->value,
+            ])
+            ->assertStatus(422);
+
+        $this->assertSame(StatusProposta::Enviada, $proposta->fresh()->status);
+        $this->assertSame(0, Servico::query()->count());
+    }
+
+    public function test_accept_desfaz_tudo_quando_gateway_recusa(): void
+    {
+        $this->app->instance(PaymentGateway::class, new class implements PaymentGateway
+        {
+            public function authorizeCard(string $customerId, int $amountCents, string $creditCardToken): GatewayCharge
+            {
+                throw new GatewayException('recusado pelo emissor');
+            }
+
+            public function capture(string $gatewayPaymentId, int $amountCents, array $splits = []): GatewayCharge
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function chargePix(string $customerId, int $amountCents): GatewayCharge
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function cancel(string $gatewayPaymentId): void {}
+
+            public function transfer(string $walletId, int $amountCents): string
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+        });
+
+        $cliente = Usuario::factory()->create();
+        $solicitacao = Solicitacao::factory()->recebendoPropostas()->create([
+            'cliente_id' => $cliente->id,
+        ]);
+        $proposta = Proposta::factory()->create(['solicitacao_id' => $solicitacao->id]);
+
+        $this->withToken($this->token($cliente))
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson("/api/v1/proposals/{$proposta->id}/accept", $this->acceptPayload([
+                'metodo_pagamento' => MetodoPagamento::Cartao->value,
+                'credit_card_token' => 'tok_teste_123',
+            ]))
+            ->assertStatus(502)
+            ->assertJsonPath('success', false);
+
+        $this->assertSame(StatusProposta::Enviada, $proposta->fresh()->status);
+        $this->assertSame(StatusSolicitacao::RecebendoPropostas, $solicitacao->fresh()->status);
+        $this->assertSame(0, Servico::query()->count());
+        $this->assertSame(0, PaymentAuthorization::query()->count());
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function acceptPayload(array $overrides = []): array
+    {
+        return array_merge([
+            'metodo_pagamento' => MetodoPagamento::Pix->value,
+        ], $overrides);
     }
 
     /**

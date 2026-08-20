@@ -6,10 +6,13 @@ use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
 use App\Http\Controllers\Controller;
+use App\Payments\Gateway\GatewayException;
+use App\Payments\PaymentDomainException;
 use App\Proposals\Actions\AcceptProposal;
 use App\Proposals\Actions\StoreProposal;
 use App\Proposals\Actions\WithdrawProposal;
 use App\Proposals\Exceptions\ProposalException;
+use App\Proposals\Http\Requests\AcceptProposalRequest;
 use App\Proposals\Http\Requests\StoreProposalRequest;
 use App\Proposals\Http\Resources\ProposalResource;
 use App\Proposals\Proposta;
@@ -67,12 +70,24 @@ class ProposalController extends Controller
         return ApiResponse::success(new ProposalResource($proposta), 201);
     }
 
-    public function accept(Request $request, string $id, AcceptProposal $action): JsonResponse
+    public function accept(AcceptProposalRequest $request, string $id, AcceptProposal $action): JsonResponse
     {
         $this->assertIdempotencyKey($request);
 
         $proposta = Proposta::query()->with(['solicitacao', 'profissional', 'servico'])->findOrFail($id);
-        $result = $action($proposta, $this->usuario($request));
+
+        try {
+            $result = $action(
+                $proposta,
+                $this->usuario($request),
+                $request->metodoPagamento(),
+                $request->creditCardToken(),
+            );
+        } catch (PaymentDomainException $exception) {
+            return ApiResponse::error($exception->getMessage(), $exception->status);
+        } catch (GatewayException $exception) {
+            return ApiResponse::error('Gateway de pagamento recusou a cobrança: '.$exception->getMessage(), 502);
+        }
 
         $result['proposta']->setRelation('servico', $result['servico']);
 
