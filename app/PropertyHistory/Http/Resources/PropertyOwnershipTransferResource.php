@@ -21,7 +21,7 @@ class PropertyOwnershipTransferResource extends JsonResource
             'para_cliente_id' => $this->para_cliente_id,
             'para_email' => $this->para_email,
             'status' => $this->status->value,
-            'criado_em' => $this->created_at?->utc()->toIso8601String(),
+            'criado_em' => $this->criado_em->utc()->toIso8601String(),
             'expira_em' => $this->expira_em?->utc()->toIso8601String(),
         ];
     }

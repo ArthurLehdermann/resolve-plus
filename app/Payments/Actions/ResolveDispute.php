@@ -5,7 +5,6 @@ namespace App\Payments\Actions;
 use App\Auth\Models\Usuario;
 use App\Payments\Auditoria;
 use App\Payments\CancelAuthorizedPayment;
-use App\Payments\CapturePayment;
 use App\Payments\PaymentAuthorization;
 use App\Payments\PaymentDispute;
 use App\Payments\PaymentDomainException;
@@ -22,7 +21,6 @@ use Illuminate\Support\Facades\DB;
 class ResolveDispute
 {
     public function __construct(
-        private readonly CapturePayment $capturePayment,
         private readonly CancelAuthorizedPayment $cancelAuthorized,
     ) {}
 

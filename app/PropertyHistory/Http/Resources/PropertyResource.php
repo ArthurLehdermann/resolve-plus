@@ -27,7 +27,7 @@ class PropertyResource extends JsonResource
             'longitude' => $this->longitude,
             'apelido' => $this->apelido,
             'chave_endereco' => $this->chave_endereco,
-            'criado_em' => $this->created_at?->utc()->toIso8601String(),
+            'criado_em' => $this->criado_em->utc()->toIso8601String(),
         ];
     }
 }
