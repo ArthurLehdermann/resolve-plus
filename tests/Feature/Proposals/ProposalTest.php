@@ -5,7 +5,6 @@ namespace Tests\Feature\Proposals;
 use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
-use App\Payments\Gateway\FakePaymentGateway;
 use App\Payments\Gateway\GatewayCharge;
 use App\Payments\Gateway\GatewayException;
 use App\Payments\Gateway\PaymentGateway;
@@ -372,7 +371,7 @@ class ProposalTest extends TestCase
         $this->assertSame(0, Proposta::query()->count());
     }
 
-    public function test_accept_cria_autorizacao_pix_capturada_na_hora(): void
+    public function test_accept_com_pix_e_recusado_por_falta_de_confirmacao_assincrona(): void
     {
         $cliente = Usuario::factory()->create();
         $solicitacao = Solicitacao::factory()->recebendoPropostas()->create([
@@ -385,21 +384,15 @@ class ProposalTest extends TestCase
 
         $this->withToken($this->token($cliente))
             ->withHeader('Idempotency-Key', (string) Str::uuid())
-            ->postJson("/api/v1/proposals/{$proposta->id}/accept", $this->acceptPayload())
-            ->assertCreated();
+            ->postJson("/api/v1/proposals/{$proposta->id}/accept", $this->acceptPayload([
+                'metodo_pagamento' => MetodoPagamento::Pix->value,
+            ]))
+            ->assertStatus(422)
+            ->assertJsonPath('success', false);
 
-        $servico = Servico::query()->where('proposta_id', $proposta->id)->firstOrFail();
-        $authorization = PaymentAuthorization::query()->where('servico_id', $servico->id)->firstOrFail();
-
-        $this->assertSame(MetodoPagamento::Pix, $authorization->metodo);
-        $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->status);
-        $this->assertSame(45000, $authorization->valor);
-        $this->assertSame((string) $cliente->id, $authorization->gateway_customer_id);
-        $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Capturado));
-
-        $gateway = app(FakePaymentGateway::class);
-        $this->assertNotEmpty($gateway->charges);
-        $this->assertSame('PIX', $gateway->charges[array_key_last($gateway->charges)]['type']);
+        $this->assertSame(StatusProposta::Enviada, $proposta->fresh()->status);
+        $this->assertSame(0, Servico::query()->count());
+        $this->assertSame(0, PaymentAuthorization::query()->count());
     }
 
     public function test_accept_com_cartao_cria_autorizacao_pendente_de_captura(): void
@@ -503,7 +496,8 @@ class ProposalTest extends TestCase
     private function acceptPayload(array $overrides = []): array
     {
         return array_merge([
-            'metodo_pagamento' => MetodoPagamento::Pix->value,
+            'metodo_pagamento' => MetodoPagamento::Cartao->value,
+            'credit_card_token' => 'tok_teste_123',
         ], $overrides);
     }
 

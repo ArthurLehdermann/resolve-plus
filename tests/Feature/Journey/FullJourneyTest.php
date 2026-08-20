@@ -3,7 +3,6 @@
 namespace Tests\Feature\Journey;
 
 use App\Auth\Enums\StatusConta;
-use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
 use App\Categories\Models\Categoria;
 use App\Payments\PaymentAuthorization;
@@ -108,12 +107,15 @@ class FullJourneyTest extends TestCase
             ->assertCreated()
             ->json('data');
 
-        // 5. Cliente aceita com Pix - cria a autorização de pagamento (INV-C1)
-        // e já confirma a cobrança na hora.
+        // 5. Cliente aceita com cartão - cria a autorização de pagamento
+        // (INV-C1), que fica AUTORIZADO até a aprovação capturar de fato.
+        // Pix está desabilitado: sem webhook do Asaas pra confirmar o
+        // pagamento, a autorização nasceria CAPTURADO sem ninguém ter pago.
         $aceite = $this->asToken($clienteToken)
             ->withHeader('Idempotency-Key', (string) Str::uuid())
             ->postJson("/api/v1/proposals/{$proposta['id']}/accept", [
-                'metodo_pagamento' => 'PIX',
+                'metodo_pagamento' => 'CARTAO',
+                'credit_card_token' => 'tok_teste_jornada',
             ])
             ->assertCreated()
             ->json('data');
@@ -122,9 +124,9 @@ class FullJourneyTest extends TestCase
         $this->assertSame('AGENDADO', $aceite['service']['status']);
 
         $authorization = PaymentAuthorization::query()->where('servico_id', $servicoId)->firstOrFail();
-        $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->status);
+        $this->assertSame(StatusPaymentAuthorization::Autorizado, $authorization->status);
         $this->assertSame(60000, $authorization->valor);
-        $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Capturado));
+        $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Autorizado));
 
         // 6. Agenda.
         $this->asToken($clienteToken)
@@ -148,8 +150,8 @@ class FullJourneyTest extends TestCase
             ->assertOk()
             ->assertJsonPath('data.status', 'AGUARDANDO_APROVACAO');
 
-        // 8. Cliente aprova - dispara captura (Pix já capturado, é no-op),
-        // emissão de garantia e registro no prontuário do imóvel.
+        // 8. Cliente aprova - dispara a captura do cartão (CapturePaymentJob,
+        // síncrono em teste), emissão de garantia e registro no prontuário.
         $this->asToken($clienteToken)
             ->withHeader('Idempotency-Key', (string) Str::uuid())
             ->postJson("/api/v1/services/{$servicoId}/approve")

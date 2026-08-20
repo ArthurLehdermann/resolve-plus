@@ -12,10 +12,16 @@ use Throwable;
  * Cria a autorização de pagamento no aceite da proposta (INV-C1).
  *
  * Cartão: autoriza agora, captura só quando o serviço é aprovado
- * (CapturePaymentOnApproval / CapturePaymentJob). Pix: o gateway confirma
- * a cobrança na hora, então a autorização já nasce CAPTURADO - não existe
- * um "capturar depois" pra Pix (mesmo padrão de ApplyCancellationPenalty
- * e da PaymentAuthorizationFactory::pixCapturado()).
+ * (CapturePaymentOnApproval / CapturePaymentJob).
+ *
+ * Pix está desabilitado (ver chargePix): o POST /v3/payments do Asaas com
+ * billingType PIX cria uma cobrança PENDENTE, não confirma na hora - a
+ * confirmação chega depois por webhook, que este repositório não
+ * implementa. Sem isso, gravar a autorização como CAPTURADO na criação é
+ * fabricar um pagamento que pode nunca ter acontecido (a plataforma
+ * repassaria dinheiro próprio ao profissional). Reativar Pix exige status
+ * PENDENTE em StatusPaymentAuthorization + endpoint de webhook assinado e
+ * idempotente.
  *
  * `customerId` aqui é o id do Usuario (placeholder): este repositório
  * ainda não tem um fluxo de provisionamento de customer no Asaas. Serve
@@ -63,17 +69,10 @@ class CreatePaymentAuthorization
 
     private function chargePix(Servico $servico, string $customerId): PaymentAuthorization
     {
-        $valor = $this->valorProposta($servico);
-        $charge = $this->gateway->chargePix($customerId, $valor);
-
-        return $this->persist(
-            fn () => $this->createAndRecord($servico, $valor, MetodoPagamento::Pix, $customerId, [
-                'status' => StatusPaymentAuthorization::Capturado,
-                'gateway_payment_id' => $charge->id,
-                'credit_card_token' => null,
-                'expira_em' => null,
-            ], TipoPaymentEvent::Capturado),
-            $charge->id,
+        throw new PaymentDomainException(
+            'Pagamento via Pix está temporariamente indisponível: a confirmação depende de '
+            .'webhook do Asaas, que ainda não existe neste ambiente. Use cartão.',
+            422,
         );
     }
 
