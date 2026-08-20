@@ -2,24 +2,73 @@
 
 namespace Tests\Feature\PropertyHistory;
 
+use App\Auth\Models\Usuario;
 use App\PropertyHistory\Area;
 use App\PropertyHistory\Asset;
 use App\PropertyHistory\ConfiabilidadeIntervention;
 use App\PropertyHistory\Intervention;
 use App\PropertyHistory\OrigemIntervention;
+use App\PropertyHistory\Property;
 use App\PropertyHistory\RecordIntervention;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
+use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
 class PropertyHistoryTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_history_returns_nested_tree_ordered_by_date(): void
+    private function actingAsUsuario(Usuario $usuario): self
+    {
+        $this->app['auth']->forgetGuards();
+        Sanctum::actingAs($usuario);
+
+        return $this;
+    }
+
+    private function guest(): self
+    {
+        $this->app['auth']->forgetGuards();
+
+        return $this;
+    }
+
+    public function test_history_requires_authentication(): void
     {
         $propertyId = (string) Str::uuid();
+
+        $this->guest()
+            ->getJson("/api/v1/properties/{$propertyId}/history")
+            ->assertUnauthorized();
+    }
+
+    public function test_history_forbids_non_owner(): void
+    {
+        $owner = Usuario::factory()->create();
+        $outsider = Usuario::factory()->create();
+        $property = Property::factory()->ownedBy($owner)->create();
+
+        $this->actingAsUsuario($outsider)
+            ->getJson("/api/v1/properties/{$property->id}/history")
+            ->assertForbidden();
+    }
+
+    public function test_history_returns_404_when_property_does_not_exist(): void
+    {
+        $usuario = Usuario::factory()->create();
+
+        $this->actingAsUsuario($usuario)
+            ->getJson('/api/v1/properties/'.Str::uuid().'/history')
+            ->assertNotFound();
+    }
+
+    public function test_history_returns_nested_tree_ordered_by_date(): void
+    {
+        $usuario = Usuario::factory()->create();
+        $property = Property::factory()->ownedBy($usuario)->create();
+        $propertyId = $property->id;
         $record = app(RecordIntervention::class);
 
         $older = $record(
@@ -55,7 +104,8 @@ class PropertyHistoryTest extends TestCase
             assetTipo: 'ELETRICA',
         );
 
-        $response = $this->getJson("/api/v1/properties/{$propertyId}/history");
+        $response = $this->actingAsUsuario($usuario)
+            ->getJson("/api/v1/properties/{$propertyId}/history");
 
         $response->assertOk()
             ->assertJsonPath('success', true)
@@ -94,9 +144,12 @@ class PropertyHistoryTest extends TestCase
 
     public function test_history_is_empty_when_property_has_no_interventions(): void
     {
-        $propertyId = (string) Str::uuid();
+        $usuario = Usuario::factory()->create();
+        $property = Property::factory()->ownedBy($usuario)->create();
+        $propertyId = $property->id;
 
-        $this->getJson("/api/v1/properties/{$propertyId}/history")
+        $this->actingAsUsuario($usuario)
+            ->getJson("/api/v1/properties/{$propertyId}/history")
             ->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.property_id', $propertyId)
@@ -105,7 +158,9 @@ class PropertyHistoryTest extends TestCase
 
     public function test_unspecified_fallback_is_used_when_granularity_is_missing(): void
     {
-        $propertyId = (string) Str::uuid();
+        $usuario = Usuario::factory()->create();
+        $property = Property::factory()->ownedBy($usuario)->create();
+        $propertyId = $property->id;
 
         $intervention = app(RecordIntervention::class)(
             propertyId: $propertyId,
@@ -122,7 +177,8 @@ class PropertyHistoryTest extends TestCase
         $this->assertSame(Area::FALLBACK_NAME, $asset->area->nome);
         $this->assertSame($propertyId, $asset->area->property_id);
 
-        $this->getJson("/api/v1/properties/{$propertyId}/history")
+        $this->actingAsUsuario($usuario)
+            ->getJson("/api/v1/properties/{$propertyId}/history")
             ->assertOk()
             ->assertJsonPath('data.areas.0.nome', Area::FALLBACK_NAME)
             ->assertJsonPath('data.areas.0.assets.0.nome', Asset::FALLBACK_NAME);

@@ -3,12 +3,30 @@
 namespace App\PropertyHistory;
 
 use App\Http\Controllers\Controller;
+use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class PropertyHistoryController extends Controller
 {
-    public function show(string $id): JsonResponse
+    public function show(Request $request, string $id): JsonResponse
     {
+        $usuario = $request->user();
+
+        if ($usuario === null) {
+            return ApiResponse::error('Não autenticado.', 401);
+        }
+
+        $property = Property::query()->with('currentOwnership')->find($id);
+
+        if ($property === null) {
+            return ApiResponse::error('Imóvel não encontrado.', 404);
+        }
+
+        if (! $property->isCurrentOwner($usuario)) {
+            return ApiResponse::error('Somente o dono vigente pode ver o histórico do imóvel.', 403);
+        }
+
         $areas = Area::query()
             ->where('property_id', $id)
             ->with([

@@ -122,10 +122,10 @@ Route::prefix('v1')->group(function (): void {
             ->whereUuid('id');
         Route::post('/warranties/{id}/claim', [WarrantyController::class, 'claim'])
             ->whereUuid('id');
-    });
 
-    Route::get('/properties/{id}/history', [PropertyHistoryController::class, 'show'])
-        ->whereUuid('id');
+        Route::get('/properties/{id}/history', [PropertyHistoryController::class, 'show'])
+            ->whereUuid('id');
+    });
 
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{categoria}', [CategoryController::class, 'show']);
