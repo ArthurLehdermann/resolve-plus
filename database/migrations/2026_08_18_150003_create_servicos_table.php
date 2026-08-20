@@ -13,6 +13,8 @@ return new class extends Migration
             $table->foreignUuid('proposta_id')->unique()->constrained('propostas')->restrictOnDelete();
             $table->timestamp('inicio')->nullable();
             $table->timestamp('fim')->nullable();
+            $table->text('notas')->nullable();
+            $table->json('fotos')->nullable();
             $table->string('status', 30)->index();
             $table->timestamps();
         });

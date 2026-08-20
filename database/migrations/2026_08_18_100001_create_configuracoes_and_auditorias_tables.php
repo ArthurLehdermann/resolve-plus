@@ -9,46 +9,48 @@ return new class extends Migration
 {
     public function up(): void
     {
-        if (! Schema::hasTable('configuracoes')) {
-            Schema::create('configuracoes', function (Blueprint $table): void {
-                $table->string('chave', 80)->primary();
-                $table->string('valor', 255);
-                $table->timestamps();
-            });
+        Schema::create('configuracoes', function (Blueprint $table): void {
+            $table->string('chave', 80)->primary();
+            $table->string('valor', 255);
+            $table->timestamps();
+        });
+
+        $now = now();
+        $defaults = [
+            'COMISSAO_PERCENT' => '10',
+            'AUTO_APPROVAL_HOURS' => '72',
+            'CANCELLATION_PENALTY_TIER1_HOURS' => '48',
+            'CANCELLATION_PENALTY_TIER1_PERCENT' => '10',
+            'CANCELLATION_PENALTY_TIER2_HOURS' => '24',
+            'CANCELLATION_PENALTY_TIER2_PERCENT' => '25',
+            'CANCELLATION_PENALTY_TIER3_PERCENT' => '50',
+            'DISPUTE_MEDIATION_DAYS' => '7',
+        ];
+
+        foreach ($defaults as $chave => $valor) {
+            DB::table('configuracoes')->insert([
+                'chave' => $chave,
+                'valor' => $valor,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
         }
 
-        if (DB::table('configuracoes')->where('chave', 'COMISSAO_PERCENT')->doesntExist()) {
-            $now = now();
-            $payload = ['chave' => 'COMISSAO_PERCENT', 'valor' => '10'];
-
-            if (Schema::hasColumn('configuracoes', 'atualizado_em')) {
-                $payload['atualizado_em'] = $now;
-            }
-
-            if (Schema::hasColumn('configuracoes', 'created_at')) {
-                $payload['created_at'] = $now;
-                $payload['updated_at'] = $now;
-            }
-
-            DB::table('configuracoes')->insert($payload);
-        }
-
-        if (! Schema::hasTable('auditorias')) {
-            Schema::create('auditorias', function (Blueprint $table): void {
-                $table->uuid('id')->primary();
-                $table->foreignUuid('usuario_id')->constrained('usuarios')->restrictOnDelete();
-                $table->string('acao', 80)->index();
-                $table->string('entidade', 80);
-                $table->uuid('id_entidade')->index();
-                $table->timestamp('data');
-                $table->string('ip', 45)->nullable();
-                $table->text('justificativa')->nullable();
-            });
-        }
+        Schema::create('auditorias', function (Blueprint $table): void {
+            $table->uuid('id')->primary();
+            $table->foreignUuid('usuario_id')->constrained('usuarios')->restrictOnDelete();
+            $table->string('acao', 80)->index();
+            $table->string('entidade', 80);
+            $table->uuid('id_entidade')->index();
+            $table->timestamp('data');
+            $table->string('ip', 45)->nullable();
+            $table->text('justificativa')->nullable();
+        });
     }
 
     public function down(): void
     {
         Schema::dropIfExists('auditorias');
+        Schema::dropIfExists('configuracoes');
     }
 };
