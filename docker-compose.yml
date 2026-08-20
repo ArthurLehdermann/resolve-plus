@@ -1,50 +1,43 @@
-# Desenvolvimento local (app + Postgres + Redis).
-#   cp .env.example .env
-#   docker compose up -d
-#   docker compose exec app php artisan key:generate
-#   docker compose exec app php artisan migrate
+# Deploy (Stage):
+#   docker compose --env-file /root/resolve-plus-secrets/vars.conf up -d
+#
+# Domínio: resolveplus.staging.bigworks.com.br (Traefik via labels no serviço app,
+# DNS wildcard *.staging.bigworks.com.br já aponta pra esta VPS).
+#
+# Ainda é staging: banco e redis rodam local neste compose (sem HA, sem backup
+# automatizado). Se um dia isso virar produção de verdade, migrar pra padrão
+# gerenciado como os outros projetos.
+
+networks:
+  resolve_plus_internal:
+    driver: bridge
+  traefik:
+    external: true
+
+volumes:
+  postgres_data:
+    name: resolve_plus_postgres_data
+  redis_data:
+    name: resolve_plus_redis_data
 
 services:
-  app:
-    image: arthurlehdermann/alpine-nginx-php8.4
-    container_name: resolve_plus_app
-    ports:
-      - "8080:80"
-    volumes:
-      - .:/var/www/html
-    env_file:
-      - .env
-    environment:
-      DB_CONNECTION: pgsql
-      DB_HOST: db
-      DB_PORT: 5432
-      REDIS_HOST: redis
-      CACHE_STORE: redis
-      QUEUE_CONNECTION: redis
-      SESSION_DRIVER: redis
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/up || exit 1"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 40s
-
   db:
     image: postgres:17-alpine
     container_name: resolve_plus_db
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256m
     environment:
       POSTGRES_DB: ${DB_DATABASE:-resolve_plus}
       POSTGRES_USER: ${DB_USERNAME:-resolve_plus}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?obrigatório}
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
+    networks:
+      - resolve_plus_internal
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-resolve_plus} -d ${DB_DATABASE:-resolve_plus}"]
       interval: 10s
@@ -54,16 +47,123 @@ services:
   redis:
     image: redis:7-alpine
     container_name: resolve_plus_redis
-    ports:
-      - "6379:6379"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128m
     volumes:
       - redis_data:/data
+    networks:
+      - resolve_plus_internal
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 10
 
-volumes:
-  postgres_data:
-  redis_data:
+  app:
+    image: arthurlehdermann/alpine-nginx-php8.4
+    container_name: resolve_plus_app
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 384m
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      APP_ENV: ${APP_ENV:-staging}
+      APP_DEBUG: ${APP_DEBUG:-false}
+      APP_NAME: "Resolve+"
+      APP_URL: ${APP_URL:-https://resolveplus.staging.bigworks.com.br}
+      APP_KEY: ${APP_KEY:?obrigatório}
+      APP_LOCALE: pt_BR
+      APP_FALLBACK_LOCALE: pt_BR
+      APP_TIMEZONE: America/Sao_Paulo
+
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-resolve_plus}
+      DB_USERNAME: ${DB_USERNAME:-resolve_plus}
+      DB_PASSWORD: ${DB_PASSWORD:?obrigatório}
+
+      CACHE_STORE: redis
+      SESSION_DRIVER: redis
+      SESSION_LIFETIME: 120
+      SESSION_SECURE_COOKIE: "true"
+      SESSION_SAME_SITE: lax
+      QUEUE_CONNECTION: redis
+
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+
+      LOG_CHANNEL: stderr
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - resolve_plus_internal
+      - traefik
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/up || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.services.resolve-plus.loadbalancer.server.port=80"
+      - "traefik.http.routers.resolve-plus.rule=Host(`resolveplus.staging.bigworks.com.br`)"
+      - "traefik.http.routers.resolve-plus.entrypoints=websecure"
+      - "traefik.http.routers.resolve-plus.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.resolve-plus.service=resolve-plus"
+      - "traefik.http.routers.resolve-plus.middlewares=compress-all@file"
+
+  queue:
+    image: arthurlehdermann/alpine-nginx-php8.4
+    container_name: resolve_plus_queue
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 192m
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: php artisan queue:work --tries=3 --timeout=90
+    environment:
+      APP_ENV: ${APP_ENV:-staging}
+      APP_KEY: ${APP_KEY:?obrigatório}
+      DB_CONNECTION: pgsql
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_DATABASE: ${DB_DATABASE:-resolve_plus}
+      DB_USERNAME: ${DB_USERNAME:-resolve_plus}
+      DB_PASSWORD: ${DB_PASSWORD:?obrigatório}
+      CACHE_STORE: redis
+      QUEUE_CONNECTION: redis
+      REDIS_CLIENT: phpredis
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      LOG_CHANNEL: stderr
+    volumes:
+      - ./:/var/www/html
+    networks:
+      - resolve_plus_internal
+    healthcheck:
+      test: ["CMD", "php", "-r", "exit(0);"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
