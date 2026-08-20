@@ -24,9 +24,12 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
-        <env name="DB_CONNECTION" value="sqlite" force="true"/>
-        <env name="DB_DATABASE" value=":memory:" force="true"/>
-        <env name="DB_URL" value="" force="true"/>
+        <!--
+            Sem DB_CONNECTION/DB_DATABASE aqui: o app usa jsonb e índices
+            parciais via DB::statement, que não existem em SQLite. A suíte
+            precisa de um Postgres de verdade - vem do ambiente (docker-compose
+            em stage, serviço postgres no CI), nunca é forçada pra sqlite.
+        -->
         <env name="MAIL_MAILER" value="array"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>

@@ -40,12 +40,14 @@ class ProposalTest extends TestCase
         $this->assertFalse(Schema::hasColumn('propostas', 'scope'));
 
         $sql = (string) (DB::selectOne(
-            "SELECT sql FROM sqlite_master WHERE type = 'index' AND name = 'propostas_solicitacao_aceita_unique'",
-        )->sql ?? '');
+            "SELECT indexdef FROM pg_indexes WHERE indexname = 'propostas_solicitacao_aceita_unique'",
+        )->indexdef ?? '');
 
         $this->assertNotSame('', $sql);
+        $this->assertStringContainsString('UNIQUE INDEX', $sql);
         $this->assertStringContainsString('solicitacao_id', $sql);
-        $this->assertStringContainsString("status = 'ACEITA'", $sql);
+        $this->assertStringContainsString('status', $sql);
+        $this->assertStringContainsString("'ACEITA'", $sql);
     }
 
     public function test_profissional_ativo_envia_proposta(): void
@@ -197,7 +199,13 @@ class ProposalTest extends TestCase
         ]);
 
         try {
-            $segunda->update(['status' => StatusProposta::Aceita]);
+            // Precisa da sua própria transação (savepoint): sem isso, a violação
+            // de constraint no Postgres aborta a transação inteira que o
+            // RefreshDatabase já mantém aberta pro teste, e as asserções abaixo
+            // falhariam mesmo com a exceção corretamente capturada.
+            DB::transaction(function () use ($segunda): void {
+                $segunda->update(['status' => StatusProposta::Aceita]);
+            });
             $this->fail('O índice parcial UNIQUE(solicitacao_id) WHERE status=ACEITA deveria impedir a segunda aceitação.');
         } catch (QueryException) {
             $this->assertTrue(true);
