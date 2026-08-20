@@ -20,6 +20,18 @@ class ApplyCancellationPenalty
      */
     public function __invoke(PaymentAuthorization $authorization, int $valorMulta, int $valorProposta, int $percentual): array
     {
+        // Pix ainda PENDENTE (webhook do Asaas não confirmou) não tem
+        // dinheiro nenhum retido - não existe multa possível sobre um
+        // pagamento que nunca aconteceu. Cancela a cobrança pendente no
+        // gateway e encerra, independente do percentual calculado.
+        if ($authorization->metodo === MetodoPagamento::Pix && $authorization->status === StatusPaymentAuthorization::Pendente) {
+            $authorization = ($this->cancelAuthorized)($authorization, [
+                'motivo' => 'CANCELAMENTO_PIX_NAO_CONFIRMADO',
+            ]);
+
+            return ['authorization' => $authorization, 'multa' => ['percentual' => 0, 'valor_centavos' => 0]];
+        }
+
         $multa = [
             'percentual' => $percentual,
             'valor_centavos' => $valorMulta,

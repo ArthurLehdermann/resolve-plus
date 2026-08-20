@@ -14,14 +14,13 @@ use Throwable;
  * Cartão: autoriza agora, captura só quando o serviço é aprovado
  * (CapturePaymentOnApproval / CapturePaymentJob).
  *
- * Pix está desabilitado (ver chargePix): o POST /v3/payments do Asaas com
- * billingType PIX cria uma cobrança PENDENTE, não confirma na hora - a
- * confirmação chega depois por webhook, que este repositório não
- * implementa. Sem isso, gravar a autorização como CAPTURADO na criação é
- * fabricar um pagamento que pode nunca ter acontecido (a plataforma
- * repassaria dinheiro próprio ao profissional). Reativar Pix exige status
- * PENDENTE em StatusPaymentAuthorization + endpoint de webhook assinado e
- * idempotente.
+ * Pix: o POST /v3/payments do Asaas com billingType PIX cria uma cobrança
+ * PENDENTE - não confirma na hora. A autorização nasce com o status que o
+ * gateway efetivamente devolveu ($charge->status), não uma constante
+ * escrita à mão; PENDENTE só vira CAPTURADO quando o webhook do Asaas
+ * confirma o pagamento (App\Payments\Webhooks\HandleAsaasWebhook). Gravar
+ * CAPTURADO direto na criação fabrica um pagamento que pode nunca ter
+ * acontecido - a plataforma repassaria dinheiro próprio ao profissional.
  *
  * `customerId` aqui é o id do Usuario (placeholder): este repositório
  * ainda não tem um fluxo de provisionamento de customer no Asaas. Serve
@@ -30,6 +29,8 @@ use Throwable;
  */
 class CreatePaymentAuthorization
 {
+    private const PIX_STATUS_JA_CONFIRMADO = ['CONFIRMED', 'RECEIVED'];
+
     public function __construct(
         private readonly PaymentGateway $gateway,
         private readonly RecordPaymentEvent $recordEvent,
@@ -69,10 +70,19 @@ class CreatePaymentAuthorization
 
     private function chargePix(Servico $servico, string $customerId): PaymentAuthorization
     {
-        throw new PaymentDomainException(
-            'Pagamento via Pix está temporariamente indisponível: a confirmação depende de '
-            .'webhook do Asaas, que ainda não existe neste ambiente. Use cartão.',
-            422,
+        $valor = $this->valorProposta($servico);
+        $charge = $this->gateway->chargePix($customerId, $valor);
+
+        $confirmado = in_array($charge->status, self::PIX_STATUS_JA_CONFIRMADO, true);
+
+        return $this->persist(
+            fn () => $this->createAndRecord($servico, $valor, MetodoPagamento::Pix, $customerId, [
+                'status' => $confirmado ? StatusPaymentAuthorization::Capturado : StatusPaymentAuthorization::Pendente,
+                'gateway_payment_id' => $charge->id,
+                'credit_card_token' => null,
+                'expira_em' => null,
+            ], $confirmado ? TipoPaymentEvent::Capturado : TipoPaymentEvent::Criado),
+            $charge->id,
         );
     }
 

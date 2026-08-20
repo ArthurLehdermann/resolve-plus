@@ -5,6 +5,7 @@ use App\Admin\Http\Controllers\AdminPanelController;
 use App\Auth\Http\Controllers\AuthController;
 use App\Categories\Http\Controllers\AdminCategoryController;
 use App\Categories\Http\Controllers\CategoryController;
+use App\Payments\Http\AsaasWebhookController;
 use App\Payments\Http\DisputeController;
 use App\Payments\Http\PaymentController;
 use App\Professionals\Http\Controllers\ProfissionalDocumentoController;
@@ -129,6 +130,12 @@ Route::prefix('v1')->group(function (): void {
 
     Route::get('/categories', [CategoryController::class, 'index']);
     Route::get('/categories/{categoria}', [CategoryController::class, 'show']);
+
+    // Sem auth:sanctum: quem chama é o Asaas, não um usuário logado. A
+    // autenticação é o token de webhook (AsaasWebhookController), não
+    // Sanctum.
+    Route::post('/webhooks/asaas', AsaasWebhookController::class)
+        ->middleware('throttle:webhook-asaas');
 
     Route::middleware(['auth:sanctum', 'can:admin'])->prefix('admin')->group(function (): void {
         Route::get('/categories', [AdminCategoryController::class, 'index']);

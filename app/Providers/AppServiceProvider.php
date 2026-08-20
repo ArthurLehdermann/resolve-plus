@@ -87,6 +87,10 @@ class AppServiceProvider extends ServiceProvider
             return Limit::perMinute(60)->by((string) ($request->user()?->id ?: $request->ip()));
         });
 
+        RateLimiter::for('webhook-asaas', function (Request $request) {
+            return Limit::perMinute(120)->by($request->ip());
+        });
+
         Event::listen(ServiceApproved::class, CapturePaymentOnApproval::class);
         Event::listen(ServiceApproved::class, IssueWarrantyOnApproval::class);
         Event::listen(ServiceApproved::class, RecordInterventionOnApproval::class);

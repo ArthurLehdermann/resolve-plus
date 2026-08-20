@@ -371,7 +371,7 @@ class ProposalTest extends TestCase
         $this->assertSame(0, Proposta::query()->count());
     }
 
-    public function test_accept_com_pix_e_recusado_por_falta_de_confirmacao_assincrona(): void
+    public function test_accept_com_pix_cria_autorizacao_pendente_ate_webhook_confirmar(): void
     {
         $cliente = Usuario::factory()->create();
         $solicitacao = Solicitacao::factory()->recebendoPropostas()->create([
@@ -387,12 +387,18 @@ class ProposalTest extends TestCase
             ->postJson("/api/v1/proposals/{$proposta->id}/accept", $this->acceptPayload([
                 'metodo_pagamento' => MetodoPagamento::Pix->value,
             ]))
-            ->assertStatus(422)
-            ->assertJsonPath('success', false);
+            ->assertCreated();
 
-        $this->assertSame(StatusProposta::Enviada, $proposta->fresh()->status);
-        $this->assertSame(0, Servico::query()->count());
-        $this->assertSame(0, PaymentAuthorization::query()->count());
+        $servico = Servico::query()->where('proposta_id', $proposta->id)->firstOrFail();
+        $authorization = PaymentAuthorization::query()->where('servico_id', $servico->id)->firstOrFail();
+
+        // PENDENTE, não CAPTURADO: o FakePaymentGateway devolve PENDING pra
+        // Pix (igual ao Asaas real) - só o webhook confirma o pagamento.
+        $this->assertSame(MetodoPagamento::Pix, $authorization->metodo);
+        $this->assertSame(StatusPaymentAuthorization::Pendente, $authorization->status);
+        $this->assertSame(45000, $authorization->valor);
+        $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Criado));
+        $this->assertFalse($authorization->hasEvent(TipoPaymentEvent::Capturado));
     }
 
     public function test_accept_com_cartao_cria_autorizacao_pendente_de_captura(): void

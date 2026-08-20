@@ -21,8 +21,8 @@ class CancelAuthorizedPayment
             return $authorization;
         }
 
-        if ($authorization->status !== StatusPaymentAuthorization::Autorizado) {
-            throw new PaymentDomainException('Somente autorização AUTORIZADO pode ser cancelada.');
+        if (! in_array($authorization->status, [StatusPaymentAuthorization::Autorizado, StatusPaymentAuthorization::Pendente], true)) {
+            throw new PaymentDomainException('Somente autorização AUTORIZADO ou PENDENTE pode ser cancelada.');
         }
 
         return DB::transaction(function () use ($authorization, $payload): PaymentAuthorization {

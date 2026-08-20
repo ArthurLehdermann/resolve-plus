@@ -61,9 +61,13 @@ class FakePaymentGateway implements PaymentGateway
             'type' => 'PIX',
         ];
 
+        // PENDING, igual ao Asaas real: a cobrança Pix não confirma na
+        // hora, só via webhook. Um teste que precise do caminho já
+        // confirmado deve simular isso explicitamente (troca de gateway
+        // ou POST no webhook), não confiar num fake otimista.
         return new GatewayCharge(
             id: $id,
-            status: 'CONFIRMED',
+            status: 'PENDING',
         );
     }
 

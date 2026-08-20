@@ -4,6 +4,7 @@ namespace App\Payments;
 
 enum TipoPaymentEvent: string
 {
+    case Criado = 'CRIADO';
     case Autorizado = 'AUTORIZADO';
     case Capturado = 'CAPTURADO';
     case Repassado = 'REPASSADO';
@@ -15,6 +16,7 @@ enum TipoPaymentEvent: string
     public function projectedStatus(): ?StatusPaymentAuthorization
     {
         return match ($this) {
+            self::Criado => StatusPaymentAuthorization::Pendente,
             self::Autorizado => StatusPaymentAuthorization::Autorizado,
             self::Capturado => StatusPaymentAuthorization::Capturado,
             self::Cancelado => StatusPaymentAuthorization::Cancelado,

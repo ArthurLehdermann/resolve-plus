@@ -44,9 +44,11 @@ class PaymentAuthorizationFactory extends Factory
                 return;
             }
 
-            $tipo = $authorization->status === StatusPaymentAuthorization::Capturado
-                ? TipoPaymentEvent::Capturado
-                : TipoPaymentEvent::Autorizado;
+            $tipo = match ($authorization->status) {
+                StatusPaymentAuthorization::Capturado => TipoPaymentEvent::Capturado,
+                StatusPaymentAuthorization::Pendente => TipoPaymentEvent::Criado,
+                default => TipoPaymentEvent::Autorizado,
+            };
 
             $event = PaymentEvent::query()->create([
                 'payment_authorization_id' => $authorization->id,
@@ -76,6 +78,16 @@ class PaymentAuthorizationFactory extends Factory
         return $this->state(fn (array $attributes): array => [
             'metodo' => MetodoPagamento::Pix,
             'status' => StatusPaymentAuthorization::Capturado,
+            'credit_card_token' => null,
+            'expira_em' => null,
+        ]);
+    }
+
+    public function pixPendente(): static
+    {
+        return $this->state(fn (array $attributes): array => [
+            'metodo' => MetodoPagamento::Pix,
+            'status' => StatusPaymentAuthorization::Pendente,
             'credit_card_token' => null,
             'expira_em' => null,
         ]);

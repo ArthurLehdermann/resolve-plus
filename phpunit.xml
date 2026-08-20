@@ -38,5 +38,6 @@
         <env name="NIGHTWATCH_ENABLED" value="false"/>
         <env name="OBJECT_STORAGE_DISK" value="s3" force="true"/>
         <env name="PAYMENT_GATEWAY" value="fake" force="true"/>
+        <env name="ASAAS_WEBHOOK_TOKEN" value="test-webhook-token" force="true"/>
     </php>
 </phpunit>

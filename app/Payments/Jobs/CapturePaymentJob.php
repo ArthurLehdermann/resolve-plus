@@ -54,7 +54,10 @@ class CapturePaymentJob implements ShouldQueue
         }
 
         if ($ultima->metodo === MetodoPagamento::Pix) {
-            // Pix é confirmado na hora (CreatePaymentAuthorization); não há captura posterior.
+            // Pix não tem captura por esse job: ou já foi confirmado pelo
+            // webhook do Asaas (CAPTURADO) e não há nada a fazer, ou ainda
+            // está PENDENTE e só o webhook pode confirmar - aprovar o
+            // serviço não força a captura de um Pix que não foi pago.
             return;
         }
 
