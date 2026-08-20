@@ -77,6 +77,13 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    command: >
+      sh -c "
+        composer install --no-dev --optimize-autoloader --no-interaction &&
+        chown -R www-data:www-data storage bootstrap/cache &&
+        php artisan migrate --force &&
+        exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+      "
     environment:
       APP_ENV: ${APP_ENV:-staging}
       APP_DEBUG: ${APP_DEBUG:-false}
@@ -140,6 +147,8 @@ services:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      app:
         condition: service_healthy
     command: php artisan queue:work --tries=3 --timeout=90
     environment:
