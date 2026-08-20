@@ -70,10 +70,9 @@ class CancelService
 
             $servico->loadMissing('proposta');
             $referencia = $this->referenciaAgendamento($servico);
-            $multaCalc = $this->penalty->calculate(
-                (int) $servico->proposta->valor,
-                $referencia,
-            );
+            $multaCalc = $referencia !== null
+                ? $this->penalty->calculate((int) $servico->proposta->valor, $referencia)
+                : ['percentual' => 0, 'valor_centavos' => 0];
 
             $authorization = PaymentAuthorization::query()
                 ->where('servico_id', $servico->id)
@@ -193,7 +192,13 @@ class CancelService
         ];
     }
 
-    private function referenciaAgendamento(Servico $servico): CarbonImmutable
+    /**
+     * Null quando não há nenhuma data de execução marcada (nem inicio, nem
+     * agenda): sem calendário pra medir antecedência, a multa é zero em vez
+     * de usar prazo_dias como proxy (o proxy já foi o bug original - ver
+     * cancelAgendado).
+     */
+    private function referenciaAgendamento(Servico $servico): ?CarbonImmutable
     {
         if ($servico->inicio !== null) {
             return CarbonImmutable::instance($servico->inicio);
@@ -207,10 +212,6 @@ class CancelService
             );
         }
 
-        // Sem agenda marcada ainda: só resta o prazo prometido na proposta como proxy.
-        $servico->loadMissing('proposta');
-
-        return CarbonImmutable::instance($servico->created_at)
-            ->addDays(max(1, (int) $servico->proposta->prazo_dias));
+        return null;
     }
 }

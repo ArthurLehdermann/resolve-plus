@@ -51,6 +51,12 @@ class ServiceCancellationTest extends TestCase
 
         [$cliente, , $servico] = $this->contexto(StatusServico::Agendado);
 
+        Agenda::factory()->create([
+            'servico_id' => $servico->id,
+            'data' => now()->addDays(5)->toDateString(),
+            'hora' => '10:00:00',
+        ]);
+
         $authorization = PaymentAuthorization::factory()->create([
             'servico_id' => $servico->id,
             'valor' => 35_000,
