@@ -5,6 +5,7 @@ namespace Tests\Feature\Services;
 use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
+use App\Payments\PaymentAuthorization;
 use App\Proposals\Proposta;
 use App\Proposals\StatusProposta;
 use App\Requests\Solicitacao;
@@ -80,6 +81,42 @@ class ServiceExecutionTest extends TestCase
     public function test_nao_inicia_servico_fora_de_agendado(): void
     {
         [, $profissional, $servico] = $this->contexto(StatusServico::EmAndamento);
+
+        $this->asUser($profissional)
+            ->postJson("/api/v1/services/{$servico->id}/start")
+            ->assertStatus(409)
+            ->assertJsonPath('success', false);
+    }
+
+    public function test_nao_inicia_servico_com_pix_pendente(): void
+    {
+        [, $profissional, $servico] = $this->contextoSemAutorizacao();
+        PaymentAuthorization::factory()->pixPendente()->create(['servico_id' => $servico->id]);
+
+        $this->asUser($profissional)
+            ->postJson("/api/v1/services/{$servico->id}/start")
+            ->assertStatus(409)
+            ->assertJsonPath('success', false);
+
+        $this->assertSame(StatusServico::Agendado, $servico->fresh()->status);
+        $this->assertNull($servico->fresh()->inicio);
+    }
+
+    public function test_inicia_servico_com_pix_ja_confirmado(): void
+    {
+        [, $profissional, $servico] = $this->contextoSemAutorizacao();
+        PaymentAuthorization::factory()->pixCapturado()->create(['servico_id' => $servico->id]);
+
+        $this->asUser($profissional)
+            ->postJson("/api/v1/services/{$servico->id}/start")
+            ->assertOk();
+
+        $this->assertSame(StatusServico::EmAndamento, $servico->fresh()->status);
+    }
+
+    public function test_nao_inicia_servico_sem_autorizacao_de_pagamento(): void
+    {
+        [, $profissional, $servico] = $this->contextoSemAutorizacao();
 
         $this->asUser($profissional)
             ->postJson("/api/v1/services/{$servico->id}/start")
@@ -304,6 +341,18 @@ class ServiceExecutionTest extends TestCase
      * @return array{0: Usuario, 1: Usuario, 2: Servico}
      */
     private function contexto(StatusServico $status = StatusServico::Agendado): array
+    {
+        $contexto = $this->contextoSemAutorizacao($status);
+
+        PaymentAuthorization::factory()->create(['servico_id' => $contexto[2]->id]);
+
+        return $contexto;
+    }
+
+    /**
+     * @return array{0: Usuario, 1: Usuario, 2: Servico}
+     */
+    private function contextoSemAutorizacao(StatusServico $status = StatusServico::Agendado): array
     {
         $cliente = Usuario::factory()->create();
         $profissional = $this->profissionalAtivo();

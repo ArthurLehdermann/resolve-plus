@@ -79,6 +79,7 @@ class CancelService
                 ->whereIn('status', [
                     StatusPaymentAuthorization::Autorizado,
                     StatusPaymentAuthorization::Capturado,
+                    StatusPaymentAuthorization::Pendente,
                 ])
                 ->lockForUpdate()
                 ->latest('criado_em')

@@ -165,6 +165,30 @@ class ServiceCancellationTest extends TestCase
         $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Cancelado));
     }
 
+    public function test_cancela_agendado_com_pix_pendente_cancela_cobranca_sem_multa(): void
+    {
+        [$cliente, , $servico] = $this->contexto(StatusServico::Agendado);
+
+        $authorization = PaymentAuthorization::factory()->pixPendente()->create([
+            'servico_id' => $servico->id,
+            'valor' => 35_000,
+        ]);
+
+        $this->asUser($cliente)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson("/api/v1/services/{$servico->id}/cancel")
+            ->assertOk()
+            ->assertJsonPath('data.servico.status', 'CANCELADO')
+            ->assertJsonPath('data.multa.valor_centavos', 0);
+
+        $authorization->refresh();
+        $this->assertSame(StatusPaymentAuthorization::Cancelado, $authorization->status);
+        $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Cancelado));
+
+        $gateway = app(FakePaymentGateway::class);
+        $this->assertContains($authorization->gateway_payment_id, $gateway->cancels);
+    }
+
     public function test_cenario_c_em_andamento_abre_disputa_em_vez_de_cancelar(): void
     {
         [$cliente, $profissional, $servico] = $this->contexto(StatusServico::EmAndamento);

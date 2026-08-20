@@ -113,6 +113,12 @@ services:
       REDIS_PORT: 6379
 
       LOG_CHANNEL: stderr
+
+      PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-fake}
+      ASAAS_API_KEY: ${ASAAS_API_KEY:-}
+      ASAAS_BASE_URL: ${ASAAS_BASE_URL:-https://api-sandbox.asaas.com}
+      ASAAS_FALLBACK_REMOTE_IP: ${ASAAS_FALLBACK_REMOTE_IP:-127.0.0.1}
+      ASAAS_WEBHOOK_TOKEN: ${ASAAS_WEBHOOK_TOKEN:-}
     volumes:
       - ./:/var/www/html
     networks:
@@ -166,6 +172,10 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       LOG_CHANNEL: stderr
+      PAYMENT_GATEWAY: ${PAYMENT_GATEWAY:-fake}
+      ASAAS_API_KEY: ${ASAAS_API_KEY:-}
+      ASAAS_BASE_URL: ${ASAAS_BASE_URL:-https://api-sandbox.asaas.com}
+      ASAAS_FALLBACK_REMOTE_IP: ${ASAAS_FALLBACK_REMOTE_IP:-127.0.0.1}
     volumes:
       - ./:/var/www/html
     networks:
