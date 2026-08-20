@@ -4,6 +4,9 @@ namespace Tests\Feature\Payments;
 
 use App\Payments\ExpirePendingPixPayments;
 use App\Payments\Gateway\FakePaymentGateway;
+use App\Payments\Gateway\GatewayCharge;
+use App\Payments\Gateway\GatewayException;
+use App\Payments\Gateway\PaymentGateway;
 use App\Payments\PaymentAuthorization;
 use App\Payments\StatusPaymentAuthorization;
 use App\Payments\TipoPaymentEvent;
@@ -82,6 +85,60 @@ class ExpirePendingPixPaymentsTest extends TestCase
         $this->assertSame(0, $processados);
         $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->fresh()->status);
         $this->assertSame(StatusServico::Agendado, $servico->fresh()->status);
+    }
+
+    public function test_aborta_expiracao_quando_cancel_falha_no_gateway(): void
+    {
+        $this->freezeTime();
+
+        // O motivo mais provável do cancel falhar é o Pix já ter sido pago
+        // (Asaas não remove cobrança recebida) - falha aqui não pode virar
+        // warning-e-segue (N9), senão a autorização é marcada EXPIRADO por
+        // cima de dinheiro que já chegou.
+        $this->app->instance(PaymentGateway::class, new class implements PaymentGateway
+        {
+            public function authorizeCard(string $customerId, int $amountCents, string $creditCardToken): GatewayCharge
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function capture(string $gatewayPaymentId, int $amountCents, array $splits = []): GatewayCharge
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function chargePix(string $customerId, int $amountCents): GatewayCharge
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function cancel(string $gatewayPaymentId): void
+            {
+                throw new GatewayException('cobrança já recebida, não pode ser cancelada');
+            }
+
+            public function transfer(string $walletId, int $amountCents): string
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+        });
+
+        [$solicitacao, $proposta, $servico] = $this->contexto();
+
+        $authorization = PaymentAuthorization::factory()->pixPendente()->create([
+            'servico_id' => $servico->id,
+            'criado_em' => now()->subHours(25),
+        ]);
+
+        app(ExpirePendingPixPayments::class)();
+
+        $authorization->refresh();
+        $this->assertSame(StatusPaymentAuthorization::Pendente, $authorization->status);
+        $this->assertFalse($authorization->hasEvent(TipoPaymentEvent::Expirado));
+
+        $this->assertSame(StatusServico::Agendado, $servico->fresh()->status);
+        $this->assertSame(StatusProposta::Aceita, $proposta->fresh()->status);
+        $this->assertSame(StatusSolicitacao::Contratada, $solicitacao->fresh()->status);
     }
 
     /**

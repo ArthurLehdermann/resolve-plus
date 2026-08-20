@@ -16,6 +16,10 @@ Artisan::command('payments:reauthorize', function () {
     $this->info('Concluído.');
 })->purpose('Reautoriza cobranças de cartão próximas da expiração (INV-046)');
 
-Schedule::command('services:auto-approve')->hourly();
-Schedule::job(new ReauthorizeExpiringPaymentsJob)->hourly();
-Schedule::job(new ExpirePendingPixPaymentsJob)->hourly();
+// withoutOverlapping: se uma corrida atrasar (gateway lento, muitos Pix
+// vencendo), o próximo disparo horário não pode empilhar por cima -
+// duas instâncias do mesmo job mexendo nas mesmas autorizações é
+// exatamente o tipo de corrida que gerou N9.
+Schedule::command('services:auto-approve')->hourly()->withoutOverlapping();
+Schedule::job(new ReauthorizeExpiringPaymentsJob)->hourly()->withoutOverlapping();
+Schedule::job(new ExpirePendingPixPaymentsJob)->hourly()->withoutOverlapping();

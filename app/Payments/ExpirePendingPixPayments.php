@@ -43,9 +43,42 @@ class ExpirePendingPixPayments
         return $processed;
     }
 
+    /**
+     * O cancel é HTTP (até 15s) e roda fora de qualquer transação/lock de
+     * propósito (N10): cinquenta Pix expirando com o Asaas lento não podem
+     * segurar uma transação com lockForUpdate por vez dentro do laço de
+     * __invoke. O motivo mais provável do cancel falhar é o Pix já ter sido
+     * pago - Asaas não remove cobrança recebida - então falha aqui aborta
+     * esta autorização (N9): não é warning-e-segue, porque marcar EXPIRADO
+     * por cima de um pagamento que na verdade aconteceu é dinheiro do
+     * cliente sumindo sem serviço e sem reembolso. A tentativa seguinte do
+     * job horário cobre o caso de falha transitória de rede.
+     */
     private function process(string $authorizationId): void
     {
+        $authorization = PaymentAuthorization::query()->find($authorizationId);
+
+        if ($authorization === null || $authorization->status !== StatusPaymentAuthorization::Pendente) {
+            return;
+        }
+
+        if ($authorization->gateway_payment_id !== null) {
+            try {
+                $this->gateway->cancel($authorization->gateway_payment_id);
+            } catch (GatewayException $exception) {
+                Log::error('INCIDENTE: falha ao cancelar Pix pendente expirado no gateway - provável pagamento já recebido, autorização mantida PENDENTE.', [
+                    'authorization_id' => $authorization->id,
+                    'servico_id' => $authorization->servico_id,
+                    'error' => $exception->getMessage(),
+                ]);
+
+                return;
+            }
+        }
+
         DB::transaction(function () use ($authorizationId): void {
+            // Relock e reconfirma PENDENTE: entre o cancel acima (sem lock)
+            // e aqui, o webhook pode ter confirmado o pagamento primeiro.
             $authorization = PaymentAuthorization::query()
                 ->lockForUpdate()
                 ->with('servico.proposta.solicitacao')
@@ -53,17 +86,6 @@ class ExpirePendingPixPayments
 
             if ($authorization === null || $authorization->status !== StatusPaymentAuthorization::Pendente) {
                 return;
-            }
-
-            if ($authorization->gateway_payment_id !== null) {
-                try {
-                    $this->gateway->cancel($authorization->gateway_payment_id);
-                } catch (GatewayException $exception) {
-                    Log::warning('Falha ao cancelar Pix pendente expirado no gateway.', [
-                        'authorization_id' => $authorization->id,
-                        'error' => $exception->getMessage(),
-                    ]);
-                }
             }
 
             ($this->recordEvent)($authorization, TipoPaymentEvent::Expirado, [

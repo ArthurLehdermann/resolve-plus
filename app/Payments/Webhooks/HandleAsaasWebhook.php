@@ -5,6 +5,7 @@ namespace App\Payments\Webhooks;
 use App\Payments\MetodoPagamento;
 use App\Payments\PaymentAuthorization;
 use App\Payments\PaymentDispute;
+use App\Payments\PaymentRefund;
 use App\Payments\RecordPaymentEvent;
 use App\Payments\StatusPaymentAuthorization;
 use App\Payments\StatusPaymentDispute;
@@ -12,6 +13,7 @@ use App\Payments\TipoPaymentDispute;
 use App\Payments\TipoPaymentEvent;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Processa o webhook de pagamentos do Asaas. É o único jeito legítimo de
@@ -89,6 +91,11 @@ class HandleAsaasWebhook
         }
 
         if ($authorization->status !== StatusPaymentAuthorization::Pendente) {
+            if (in_array($paymentStatus, self::STATUS_CONFIRMADO, true)
+                && in_array($authorization->status, [StatusPaymentAuthorization::Expirado, StatusPaymentAuthorization::Cancelado], true)) {
+                $this->registrarConfirmacaoTardia($authorization, $eventType, $paymentId);
+            }
+
             return;
         }
 
@@ -108,6 +115,45 @@ class HandleAsaasWebhook
                 'gateway_payment_id' => $paymentId,
             ]);
         }
+    }
+
+    /**
+     * O Asaas confirmou um Pix que o sistema já tinha marcado EXPIRADO ou
+     * CANCELADO - dinheiro entrou depois que o sistema decidiu que não ia
+     * entrar (N9, tipicamente ExpirePendingPixPayments cancelando um Pix
+     * que na verdade já tinha sido pago). O guard antigo (só age se
+     * PENDENTE) tratava isso como no-op e apagava o único sinal que
+     * restava. Reconstrói a verdade - CAPTURADO de fato aconteceu - e já
+     * deixa o reembolso integral registrado como pendência: não existe
+     * endpoint de estorno automático no gateway hoje, a execução é manual,
+     * mas o rastro fica correto e alertado em vez de silencioso.
+     */
+    private function registrarConfirmacaoTardia(PaymentAuthorization $authorization, string $eventType, string $paymentId): void
+    {
+        Log::error('INCIDENTE: Pix confirmado pelo Asaas após autorização já '.$authorization->status->value.' - dinheiro recebido sem serviço correspondente, reembolso manual necessário.', [
+            'authorization_id' => $authorization->id,
+            'servico_id' => $authorization->servico_id,
+            'valor' => $authorization->valor,
+            'gateway_payment_id' => $paymentId,
+            'gateway_event' => $eventType,
+        ]);
+
+        $event = ($this->recordEvent)($authorization, TipoPaymentEvent::Capturado, [
+            'motivo' => 'WEBHOOK_ASAAS_CONFIRMADO_APOS_'.$authorization->status->value,
+            'gateway_event' => $eventType,
+            'gateway_payment_id' => $paymentId,
+        ]);
+
+        PaymentRefund::query()->create([
+            'payment_event_id' => $event->id,
+            'valor' => $authorization->valor,
+            'motivo' => 'REEMBOLSO_PIX_CONFIRMADO_APOS_EXPIRACAO',
+        ]);
+
+        ($this->recordEvent)($authorization, TipoPaymentEvent::Reembolsado, [
+            'motivo' => 'REEMBOLSO_PIX_CONFIRMADO_APOS_EXPIRACAO',
+            'valor' => $authorization->valor,
+        ]);
     }
 
     /**

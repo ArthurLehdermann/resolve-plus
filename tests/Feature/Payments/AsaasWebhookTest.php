@@ -4,6 +4,7 @@ namespace Tests\Feature\Payments;
 
 use App\Payments\PaymentAuthorization;
 use App\Payments\PaymentDispute;
+use App\Payments\PaymentRefund;
 use App\Payments\StatusPaymentAuthorization;
 use App\Payments\StatusPaymentDispute;
 use App\Payments\TipoPaymentDispute;
@@ -103,6 +104,36 @@ class AsaasWebhookTest extends TestCase
         $authorization->refresh();
         $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->status);
         $this->assertSame($eventosAntes, $authorization->events()->count());
+    }
+
+    public function test_webhook_registra_incidente_e_reembolso_quando_confirma_pix_ja_expirado(): void
+    {
+        // Cenário N9: ExpirePendingPixPayments marcou EXPIRADO (ou o
+        // cancelamento no gateway "deu certo" indevidamente) e só depois o
+        // Asaas confirma que o Pix foi pago. O guard antigo (só age se
+        // PENDENTE) descartava esse sinal em silêncio.
+        $authorization = PaymentAuthorization::factory()->create([
+            'metodo' => 'PIX',
+            'status' => StatusPaymentAuthorization::Expirado,
+            'gateway_payment_id' => 'pay_tardio_1',
+            'valor' => 12_345,
+        ]);
+
+        $this->withHeaders(['asaas-access-token' => 'test-webhook-token'])
+            ->postJson('/api/v1/webhooks/asaas', $this->payload('PAYMENT_RECEIVED', 'pay_tardio_1', 'RECEIVED', 'evt_tardio_1'))
+            ->assertOk();
+
+        $authorization->refresh();
+        $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->status);
+        $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Capturado));
+        $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Reembolsado));
+
+        $refund = PaymentRefund::query()
+            ->whereIn('payment_event_id', $authorization->events()->where('tipo', TipoPaymentEvent::Capturado)->pluck('id'))
+            ->first();
+
+        $this->assertNotNull($refund);
+        $this->assertSame(12_345, $refund->valor);
     }
 
     public function test_webhook_abre_disputa_de_chargeback_para_cartao(): void
