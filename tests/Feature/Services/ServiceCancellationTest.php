@@ -16,6 +16,7 @@ use App\Payments\TipoPaymentEvent;
 use App\Proposals\Proposta;
 use App\Requests\Solicitacao;
 use App\Requests\StatusSolicitacao;
+use App\Services\Agenda;
 use App\Services\Servico;
 use App\Services\StatusServico;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -77,6 +78,49 @@ class ServiceCancellationTest extends TestCase
         $gateway = app(FakePaymentGateway::class);
         $this->assertNotEmpty($gateway->captures);
         $this->assertContains($authorization->gateway_payment_id, $gateway->cancels);
+    }
+
+    public function test_cenario_b_multa_usa_data_da_agenda_e_nao_o_prazo_da_proposta(): void
+    {
+        $this->freezeTime();
+
+        $cliente = Usuario::factory()->create();
+        $profissional = Usuario::factory()->create([
+            'tipo' => TipoUsuario::Profissional,
+            'status' => StatusConta::Ativa,
+        ]);
+        $solicitacao = Solicitacao::factory()->contratada()->create(['cliente_id' => $cliente->id]);
+        $proposta = Proposta::factory()->aceita()->create([
+            'solicitacao_id' => $solicitacao->id,
+            'profissional_id' => $profissional->id,
+            'valor' => 35_000,
+            // prazo_dias curto (prazo p/ concluir o serviço) não tem relação com a
+            // data real do agendamento - é exatamente a confusão que gerava a multa errada.
+            'prazo_dias' => 1,
+        ]);
+        $servico = Servico::factory()->create([
+            'proposta_id' => $proposta->id,
+            'status' => StatusServico::Agendado,
+            'created_at' => now()->subDays(2),
+        ]);
+        Agenda::factory()->create([
+            'servico_id' => $servico->id,
+            'data' => now()->addDays(30)->toDateString(),
+            'hora' => '10:00:00',
+        ]);
+
+        $authorization = PaymentAuthorization::factory()->create(['servico_id' => $servico->id]);
+
+        $this->asUser($cliente)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson("/api/v1/services/{$servico->id}/cancel")
+            ->assertOk()
+            // created_at + prazo_dias(1) já teria vencido -> cairia no tier de 50%.
+            // A data real da agenda (daqui a 30 dias) está longe -> tier de 10%.
+            ->assertJsonPath('data.multa.percentual', 10);
+
+        $authorization->refresh();
+        $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Capturado));
     }
 
     public function test_cenario_b_multa_zero_cancela_autorizacao_sem_captura(): void

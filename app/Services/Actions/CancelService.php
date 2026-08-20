@@ -199,6 +199,15 @@ class CancelService
             return CarbonImmutable::instance($servico->inicio);
         }
 
+        $servico->loadMissing('agenda');
+
+        if ($servico->agenda !== null) {
+            return CarbonImmutable::parse(
+                $servico->agenda->data->toDateString().' '.$servico->agenda->hora,
+            );
+        }
+
+        // Sem agenda marcada ainda: só resta o prazo prometido na proposta como proxy.
         $servico->loadMissing('proposta');
 
         return CarbonImmutable::instance($servico->created_at)
