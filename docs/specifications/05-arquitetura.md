@@ -192,11 +192,10 @@ Evitar estrutura baseada apenas em Controllers e Models. Organizar por domínio 
 
 ## Pendências para Validação
 
-> Flutter/Laravel removidos desta lista em 2026-08-17, decididos em ADR-001, listá-los aqui como pendência contradizia o próprio ADR. Gateway de pagamento removido em 2026-08-17, decidido em `adr/ADR-005-gateway-pagamento.md` (Asaas, B006).
+> Flutter/Laravel removidos desta lista em 2026-08-17, decididos em ADR-001, listá-los aqui como pendência contradizia o próprio ADR. Gateway de pagamento removido em 2026-08-17, decidido em `adr/ADR-005-gateway-pagamento.md` (Asaas, B006). Login social (Google/Apple) removido em 2026-08-21: decisão fechada, Pós-MVP (V1), `08-planejamento.md`.
 
 - Google Maps ou Mapbox?
 - Chat via polling no MVP ou WebSocket?
-- Login social (Google/Apple) será incluído?
 - Hospedagem inicial (VPS própria ou cloud gerenciada)?
 - O painel administrativo será integrado ao backend ou uma aplicação separada?
 

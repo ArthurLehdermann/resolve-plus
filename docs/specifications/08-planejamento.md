@@ -140,8 +140,9 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 - Critérios de reputação?
 - Cidade piloto?
 
+> "Login social?" removida desta lista em 2026-08-21: decisão fechada, Pós-MVP (V1) (ver seção Roadmap acima), não é mais pergunta em aberto.
+
 **Médias**
-- Login social?
 - Cupom de desconto?
 - Programa de indicação?
 - Suporte via WhatsApp?
