@@ -2,6 +2,7 @@
 
 use App\Payments\Jobs\ExpirePendingPixPaymentsJob;
 use App\Payments\Jobs\ReauthorizeExpiringPaymentsJob;
+use App\Payments\Jobs\ReleaseApprovedPaymentsJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -23,3 +24,4 @@ Artisan::command('payments:reauthorize', function () {
 Schedule::command('services:auto-approve')->hourly()->withoutOverlapping();
 Schedule::job(new ReauthorizeExpiringPaymentsJob)->hourly()->withoutOverlapping();
 Schedule::job(new ExpirePendingPixPaymentsJob)->hourly()->withoutOverlapping();
+Schedule::job(new ReleaseApprovedPaymentsJob)->hourly()->withoutOverlapping();
