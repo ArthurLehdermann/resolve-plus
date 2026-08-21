@@ -3,6 +3,7 @@
 namespace App\Warranty\Actions;
 
 use App\Auth\Models\Usuario;
+use App\Warranty\Events\GarantiaAcionada;
 use App\Warranty\Exceptions\WarrantyException;
 use App\Warranty\Garantia;
 use App\Warranty\StatusGarantia;
@@ -18,7 +19,7 @@ class ClaimWarranty
      */
     public function __invoke(Garantia $garantia, Usuario $cliente, string $descricao, array $photos): Garantia
     {
-        return DB::transaction(function () use ($garantia, $cliente, $descricao, $photos): Garantia {
+        $garantia = DB::transaction(function () use ($garantia, $cliente, $descricao, $photos): Garantia {
             $garantia = Garantia::query()
                 ->whereKey($garantia->id)
                 ->lockForUpdate()
@@ -46,5 +47,9 @@ class ClaimWarranty
 
             return $garantia->refresh()->load('claims');
         });
+
+        GarantiaAcionada::dispatch($garantia);
+
+        return $garantia;
     }
 }

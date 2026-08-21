@@ -3,6 +3,7 @@
 namespace App\Payments\Actions;
 
 use App\Admin\Configuracao;
+use App\Payments\Events\PaymentDisputeResolvida;
 use App\Payments\PaymentDispute;
 use App\Payments\ResultadoPaymentDispute;
 use App\Payments\StatusPaymentDispute;
@@ -100,6 +101,8 @@ class ResolveExpiredDisputes
             if ($servico->fresh()->status === StatusServico::Aprovado) {
                 ServiceApproved::dispatch($servico->fresh(), automatico: true);
             }
+
+            PaymentDisputeResolvida::dispatch($dispute, $servico);
 
             return true;
         });

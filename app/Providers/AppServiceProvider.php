@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Auth\Enums\TipoUsuario;
 use App\Categories\Models\Categoria;
 use App\Categories\Policies\CategoriaPolicy;
+use App\Payments\Events\PaymentDisputeResolvida;
 use App\Payments\Gateway\AsaasPaymentGateway;
 use App\Payments\Gateway\FakePaymentGateway;
 use App\Payments\Gateway\PaymentGateway;
@@ -15,7 +16,10 @@ use App\Ratings\Listeners\RecalcularPerfilOnAvaliacao;
 use App\Requests\Events\SolicitacaoCriada;
 use App\Requests\Listeners\NotifyEligibleProfessionals;
 use App\Services\Events\ServiceApproved;
+use App\Users\Listeners\RecalcularPerfilOnDisputeResolvida;
+use App\Warranty\Events\GarantiaAcionada;
 use App\Warranty\Listeners\IssueWarrantyOnApproval;
+use App\Warranty\Listeners\RecalcularPerfilOnGarantiaAcionada;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -96,5 +100,7 @@ class AppServiceProvider extends ServiceProvider
         Event::listen(ServiceApproved::class, RecordInterventionOnApproval::class);
         Event::listen(SolicitacaoCriada::class, NotifyEligibleProfessionals::class);
         Event::listen(AvaliacaoRegistrada::class, RecalcularPerfilOnAvaliacao::class);
+        Event::listen(PaymentDisputeResolvida::class, RecalcularPerfilOnDisputeResolvida::class);
+        Event::listen(GarantiaAcionada::class, RecalcularPerfilOnGarantiaAcionada::class);
     }
 }

@@ -19,8 +19,10 @@ use App\Requests\StatusSolicitacao;
 use App\Services\Agenda;
 use App\Services\Servico;
 use App\Services\StatusServico;
+use App\Users\Jobs\RecalcularPerfilConfiancaJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -302,6 +304,68 @@ class ServiceCancellationTest extends TestCase
             ->assertJsonPath('data.servico_status', 'APROVADO');
 
         $this->assertSame(StatusServico::Aprovado, $servico->fresh()->status);
+    }
+
+    public function test_admin_resolve_contestacao_conclusao_cancelado_recalcula_perfil_do_profissional(): void
+    {
+        // foundation/05-trust-level.md: PaymentDispute RESOLVIDA com
+        // desfecho desfavorável ao profissional (contestação de conclusão
+        // julgada procedente) conta como reclamação (reclamacoes_12m) -
+        // achado de auditoria 2026-08-21, único desfecho mecanicamente
+        // inequívoco o suficiente para automatizar.
+        [$cliente, $profissional, $servico] = $this->contexto(StatusServico::AguardandoAprovacao);
+        $admin = Usuario::factory()->create(['tipo' => TipoUsuario::Admin]);
+
+        $this->asUser($cliente)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson("/api/v1/services/{$servico->id}/contest", ['motivo' => 'Serviço incompleto'])
+            ->assertOk();
+
+        $dispute = PaymentDispute::query()->firstOrFail();
+
+        Queue::fake();
+
+        $this->asUser($admin)
+            ->putJson("/api/v1/disputes/{$dispute->id}/resolve", [
+                'resultado' => 'CANCELADO',
+                'justificativa' => 'Serviço não conforme ao escopo acordado.',
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.servico_status', 'CANCELADO');
+
+        Queue::assertPushed(
+            RecalcularPerfilConfiancaJob::class,
+            fn (RecalcularPerfilConfiancaJob $job): bool => $job->profissionalId === $profissional->id,
+        );
+    }
+
+    public function test_admin_resolve_cancelamento_execucao_nao_recalcula_perfil(): void
+    {
+        // Fora de escopo de propósito: PaymentDispute não registra quem
+        // pediu o cancelamento (cliente ou profissional), então o
+        // desfecho de CANCELAMENTO_EXECUCAO não pode ser atribuído a um
+        // dos dois só pelo `resultado` (ver
+        // RecalcularPerfilOnDisputeResolvida).
+        [$cliente, , $servico] = $this->contexto(StatusServico::EmAndamento);
+        $admin = Usuario::factory()->create(['tipo' => TipoUsuario::Admin]);
+
+        $this->asUser($cliente)
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson("/api/v1/services/{$servico->id}/cancel")
+            ->assertOk();
+
+        $dispute = PaymentDispute::query()->firstOrFail();
+
+        Queue::fake();
+
+        $this->asUser($admin)
+            ->putJson("/api/v1/disputes/{$dispute->id}/resolve", [
+                'resultado' => 'CANCELADO',
+                'justificativa' => 'Motivo razoável para encerrar o serviço.',
+            ])
+            ->assertOk();
+
+        Queue::assertNotPushed(RecalcularPerfilConfiancaJob::class);
     }
 
     public function test_post_services_disputes_cria_payment_dispute(): void

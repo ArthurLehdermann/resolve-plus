@@ -11,6 +11,7 @@ use App\Requests\Solicitacao;
 use App\Services\Actions\ApproveService;
 use App\Services\Servico;
 use App\Services\StatusServico;
+use App\Users\Jobs\RecalcularPerfilConfiancaJob;
 use App\Warranty\Actions\CloseWarranty;
 use App\Warranty\Actions\IssueWarranty;
 use App\Warranty\Garantia;
@@ -126,10 +127,12 @@ class WarrantyTest extends TestCase
 
     public function test_claim_aciona_garantia_com_evidencias(): void
     {
-        [$cliente, , $servico] = $this->contextoAprovado();
+        [$cliente, $profissional, $servico] = $this->contextoAprovado();
         $garantia = Garantia::factory()->create([
             'servico_id' => $servico->id,
         ]);
+
+        Queue::fake();
 
         $this->asUser($cliente)
             ->postJson("/api/v1/warranties/{$garantia->id}/claim", [
@@ -143,6 +146,13 @@ class WarrantyTest extends TestCase
         $garantia->refresh();
         $this->assertSame(StatusGarantia::Acionada, $garantia->status);
         $this->assertSame(1, Servico::query()->where('garantia_origem_id', $garantia->id)->count());
+
+        // foundation/05-trust-level.md: GarantiaAcionada conta como
+        // reclamação do profissional (reclamacoes_12m), mesmo em mediação.
+        Queue::assertPushed(
+            RecalcularPerfilConfiancaJob::class,
+            fn (RecalcularPerfilConfiancaJob $job): bool => $job->profissionalId === $profissional->id,
+        );
     }
 
     public function test_inv_053_acionar_e_encerrar_garantia_nao_cria_eventos_financeiros(): void

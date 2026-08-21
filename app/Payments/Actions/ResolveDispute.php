@@ -4,6 +4,7 @@ namespace App\Payments\Actions;
 
 use App\Auth\Models\Usuario;
 use App\Payments\Auditoria;
+use App\Payments\Events\PaymentDisputeResolvida;
 use App\Payments\PaymentDispute;
 use App\Payments\PaymentDomainException;
 use App\Payments\ResultadoPaymentDispute;
@@ -79,7 +80,11 @@ class ResolveDispute
                 ServiceApproved::dispatch($servico->fresh(), automatico: false);
             }
 
-            return $dispute->refresh();
+            $dispute = $dispute->refresh();
+
+            PaymentDisputeResolvida::dispatch($dispute, $servico);
+
+            return $dispute;
         });
     }
 
