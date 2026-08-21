@@ -28,6 +28,8 @@ Transformar a visão do produto em um plano de execução incremental, reduzindo
 
 **Épico 7, Administração**: gestão de usuários, categorias, tabelas de preço, serviços, relatórios básicos.
 
+> Decomposição em telas de frontend (Flutter + Painel Admin), com endpoints e regras de domínio por tela: `11-epicos-frontend.md` (adicionado em 2026-08-20).
+
 ### Pós-MVP (V1)
 
 Notificações em tempo real, login Google/Apple, múltiplos imóveis, painel financeiro avançado, cupons, cashback, sistema de disputas, painel de suporte.
