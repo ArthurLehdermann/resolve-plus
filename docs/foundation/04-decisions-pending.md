@@ -42,7 +42,7 @@ Relacionado a `INV-031` e `INV-041` (`00-domain-invariants.md`): o pagamento do 
 
 **Decisão provisória do PO (2026-08-17):**
 - **Cenário B (multa):** tabela decrescente por antecedência ao agendamento: ≥48h → 10%, ≥24h → 25%, <24h → 50% do valor da proposta. Parâmetros `CANCELLATION_PENALTY_*` em `Configuração`.
-- **Cenário B (financeiro):** captura parcial da autorização `AUTORIZADO` (valor = multa), libera saldo restante; fallback captura+reembolso se gateway não suportar parcial (depende de D1). Pix: reembolso parcial pós-captura imediata.
+- **Cenário B (financeiro):** captura parcial da autorização `AUTORIZADO` (valor = multa), libera saldo restante; fallback captura+reembolso se gateway não suportar parcial (depende de D1). Pix: se ainda `PENDENTE`, só cancela a cobrança (sem multa); se já `CAPTURADO` (webhook confirmou), reembolso parcial (corrigido em 2026-08-20, INV-047).
 - **Resolução de `Em Contestação`:** Admin manual no MVP (`Usuario.tipo = ADMIN`); prazo `DISPUTE_MEDIATION_DAYS` = 7 dias; timeout automático: `CONTESTACAO_CONCLUSAO` → `Aprovado` (captura), `CANCELAMENTO_EXECUCAO` → `Cancelado` (libera autorização). Tipos de disputa e transições em `02-state-machine.md` §3.
 
 **O que continua pendente:**
@@ -108,7 +108,7 @@ Nenhum documento até 2026-08-17 tratava de quem responde quando um profissional
 
 **Decisão:**
 - Gateway único do MVP: **Asaas**. Pesquisa Mercado Pago × Stripe × Asaas no corpo do ADR-005 (reautorização, split nativo, taxas, presença no Brasil, Pix).
-- **Pix aceito no MVP**, com ajuste de modelo só nesse método: captura imediata, `PaymentAuthorization` nasce `CAPTURADO`, dinheiro retido na conta Asaas da plataforma até `REPASSADO`. Cartão permanece autorizar → capturar → repassar (`adr/ADR-002-financeiro.md`).
+- **Pix aceito no MVP**, com ajuste de modelo só nesse método: `PaymentAuthorization` nasce `PENDENTE` (o Asaas não confirma a cobrança Pix no ato do `POST`) e vira `CAPTURADO` por confirmação do webhook, com reconciliação ativa no job de expiração antes de desistir (INV-047/049, corrigido em 2026-08-20, a decisão original abaixo previa captura imediata, a implementação mostrou que isso fabricaria pagamento sem confirmação real). Dinheiro retido na conta Asaas da plataforma até `REPASSADO`. Cartão permanece autorizar → capturar → repassar (`adr/ADR-002-financeiro.md`).
 - Resolve as três pendências residuais do ADR-002 (Pix, INV-046, INV-044).
 
 **Responsável:** Produto (decidido). Fica aberto apenas MCC/janela de 25 dias na abertura da conta e o parecer jurídico de B001 se contradisser a premissa de custódia no Asaas.
@@ -127,3 +127,4 @@ Nenhum documento até 2026-08-17 tratava de quem responde quando um profissional
 | 2026-08-17 | B006 resolvido provisoriamente: Asaas no MVP, Pix aceito com captura imediata (`adr/ADR-005-gateway-pagamento.md`). Pendências residuais do ADR-002 deixam de bloquear o épico Financeiro. |
 | 2026-08-17 | Sexta revisão do PO: B005 parcialmente resolvido (decisão provisória: profissional responde, plataforma media, seguro RC obrigatório no cadastro via RF002/`DocumentoProfissional`, sinistro usa fluxo `Em Contestação`, parecer jurídico definitivo continua bloqueado). Pesquisa de mercado (TaskRabbit, GetNinjas, Angi) registrada. |
 | 2026-08-17 | Sexta revisão do PO: B003 resolvido provisoriamente (multa Cenário B, captura parcial, mediação Admin + timeout 7d, `03-cancellation-rules.md`). |
+| 2026-08-20 | B006: corrige a premissa "Pix nasce `CAPTURADO`", a implementação (INV-047/048/049) mostrou que o Asaas não confirma a cobrança Pix no ato, só via webhook; `PaymentAuthorization` de Pix nasce `PENDENTE`. |

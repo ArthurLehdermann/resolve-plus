@@ -300,13 +300,13 @@ Campos do template **podem** declarar `ajuste_preco` opcional (fator em basis po
 
 > Corrigido em 2026-08-17: cardinalidade era `Serviço` 1:1 `PaymentAuthorization`. Isso tornava reautorização impossível, autorização de cartão expira em ~5-7 dias, mas um serviço pode ser agendado para 2+ semanas depois. Sem caminho de volta, o serviço virava órfão financeiro assim que a autorização expirasse antes da conclusão. Agora é `Serviço` 1:N `PaymentAuthorization` (INV-046).
 
-**Campos**: id, servico_id, valor (INTEGER, centavos), metodo (`MetodoPagamento`: `CARTAO | PIX`), status (`StatusPaymentAuthorization`: `AUTORIZADO | CAPTURADO | CANCELADO | EXPIRADO`), criado_em, expira_em
+**Campos**: id, servico_id, valor (INTEGER, centavos), metodo (`MetodoPagamento`: `CARTAO | PIX`), status (`StatusPaymentAuthorization`: `AUTORIZADO | PENDENTE | CAPTURADO | CANCELADO | EXPIRADO`, `PENDENTE` adicionado em 2026-08-20, INV-047), criado_em, expira_em
 
 **Índice obrigatório**: `UNIQUE (servico_id) WHERE status = 'AUTORIZADO'`, no máximo uma autorização ativa por serviço a qualquer momento, física, não só de aplicação (mesmo padrão do índice parcial de Proposta).
 
 **Regra**: toda autorização termina em `CAPTURADO`, `CANCELADO` ou `EXPIRADO`, nunca fica em `AUTORIZADO` indefinidamente (INV-042). `expira_em` é o campo que sustenta essa regra via job. Se expira e o Serviço ainda não está `CANCELADO`/`APROVADO`, o job cria automaticamente uma nova `PaymentAuthorization`, registrado como evento `REAUTORIZADO` em `PaymentEvent` (INV-046).
 
-**Regra (Pix, `adr/ADR-005-gateway-pagamento.md`)**: `metodo = PIX` nasce `CAPTURADO` (captura imediata no Asaas); `expira_em` é nulo; INV-046 não dispara. `metodo = CARTAO` nasce `AUTORIZADO`. Gateway do MVP: Asaas (B006).
+**Regra (Pix, `adr/ADR-005-gateway-pagamento.md`, corrigida em 2026-08-20)**: `metodo = PIX` nasce `PENDENTE` (o Asaas não confirma a cobrança Pix no ato do `POST`); vira `CAPTURADO` quando `App\Payments\Webhooks\HandleAsaasWebhook` confirma, ou quando o job `ExpirePendingPixPayments` reconcilia com o gateway antes de expirar (INV-047/049). `expira_em` é nulo (a autorização Pix expira por `PIX_EXPIRATION_HOURS`, não por `expira_em`); INV-046 não dispara. `metodo = CARTAO` nasce `AUTORIZADO`. Gateway do MVP: Asaas (B006). Ver ciclo completo em `foundation/02-state-machine.md` §4a-Pix.
 
 **Cancelamento Cenário B (B003, `foundation/03-cancellation-rules.md`):** enquanto Serviço `AGENDADO`, cancelamento pelo cliente pode gerar captura parcial (= multa) ou cancelamento integral (multa zero):
 
@@ -318,7 +318,8 @@ Campos do template **podem** declarar `ajuste_preco` opcional (fator em basis po
    - `PaymentAuthorization.status = CAPTURADO` (terminal, INV-042; valor retido = multa).
    - `PaymentSplit` gerado sobre esse evento de captura (comissão sobre a multa).
 4. **`valor_multa > 0`, cartão, gateway sem captura parcial (fallback):** captura integral via gateway → `PaymentEvent CAPTURADO` → `PaymentEvent REEMBOLSADO` com `payload.valor = valor - valor_multa` (libera ao cliente o que não é multa). Mesmo `status` terminal `CAPTURADO`.
-5. **Pix (já `CAPTURADO` no aceite):** Cancelamento Cenário B usa `PaymentRefund` parcial (`valor - valor_multa`) em vez de captura parcial; multa retida na plataforma até o `REPASSADO` da parcela do profissional.
+5. **Pix, ainda `PENDENTE` (webhook não confirmou, corrigido em 2026-08-20):** sem dinheiro retido, não há multa possível. Cancela a cobrança pendente no gateway e encerra a autorização (`CANCELAMENTO_PIX_NAO_CONFIRMADO`).
+6. **Pix, já `CAPTURADO` (webhook confirmou):** Cancelamento Cenário B usa `PaymentRefund` parcial (`valor - valor_multa`) em vez de captura parcial; multa retida na plataforma até o `REPASSADO` da parcela do profissional.
 
 `PaymentRefund` (INV-043) **não** se aplica ao caminho cartão com autorização ainda `AUTORIZADO`; o evento correto é `CAPTURADO` parcial ou `CANCELADO` integral.
 
@@ -326,7 +327,7 @@ Campos do template **podem** declarar `ajuste_preco` opcional (fator em basis po
 
 > Log append-only. Fonte de verdade do histórico financeiro, `PaymentAuthorization.status` é uma projeção/cache do último evento, nunca editada diretamente (INV-040).
 
-**Campos**: id, payment_authorization_id, tipo (`AUTORIZADO | CAPTURADO | REPASSADO | CANCELADO | EXPIRADO | REEMBOLSADO | REAUTORIZADO`), payload (JSON), criado_em
+**Campos**: id, payment_authorization_id, tipo (`CRIADO | AUTORIZADO | CAPTURADO | REPASSADO | CANCELADO | EXPIRADO | REEMBOLSADO | REAUTORIZADO`, `CRIADO` adicionado em 2026-08-20 para o nascimento `PENDENTE` do Pix), payload (JSON), criado_em
 
 > `REAUTORIZADO` marca o evento em que uma `PaymentAuthorization` expirada gera a próxima (INV-046); o `payload` referencia o `id` da autorização anterior.
 
@@ -338,7 +339,7 @@ Campos do template **podem** declarar `ajuste_preco` opcional (fator em basis po
 
 **Campos**: id, payment_event_id (o evento de captura), valor_profissional, valor_plataforma, aliquota_vigente
 
-**Regra**: calculado no momento da captura com a alíquota vigente naquele instante; alterar a comissão depois não recalcula splits antigos (INV-044). `valor_profissional` é repassado integralmente ao profissional na janela de 72h (`adr/ADR-004-prazo-aceite-automatico.md`), sem retenção adicional (INV-053). Em Pix (`adr/ADR-005-gateway-pagamento.md`), a captura é o aceite da proposta: o `PaymentSplit` nasce aí, mas o dinheiro só sai da conta Asaas da plataforma no evento `REPASSADO` (transferência interna, sem `splits` na cobrança Pix).
+**Regra**: calculado no momento da captura com a alíquota vigente naquele instante; alterar a comissão depois não recalcula splits antigos (INV-044). `valor_profissional` é repassado integralmente ao profissional na janela de 72h (`adr/ADR-004-prazo-aceite-automatico.md`), sem retenção adicional (INV-053). Em Pix (`adr/ADR-005-gateway-pagamento.md`, INV-047), a captura é a confirmação do webhook (ou a reconciliação do job de expiração), não mais o aceite da proposta, o `PaymentSplit` nasce aí, mas o dinheiro só sai da conta Asaas da plataforma no evento `REPASSADO` (transferência interna, sem `splits` na cobrança Pix).
 
 ### PaymentRefund
 
@@ -348,7 +349,7 @@ Campos do template **podem** declarar `ajuste_preco` opcional (fator em basis po
 
 ### PaymentDispute
 
-**Campos**: id, servico_id, tipo (`CONTESTACAO_CONCLUSAO | CANCELAMENTO_EXECUCAO`), status (`ABERTA | RESOLVIDA`), aberta_em, resolvida_em, resolvida_por_id (UUID, Admin), resultado (`APROVADO | CANCELADO`, preenchido na resolução), justificativa (obrigatória na resolução, INV-070)
+**Campos**: id, servico_id, tipo (`CONTESTACAO_CONCLUSAO | CANCELAMENTO_EXECUCAO | CHARGEBACK`, `CHARGEBACK` adicionado em 2026-08-20), status (`ABERTA | RESOLVIDA`), aberta_em, resolvida_em, resolvida_por_id (UUID, Admin), resultado (`APROVADO | CANCELADO`, preenchido na resolução), justificativa (obrigatória na resolução, INV-070)
 
 **Regra**: enquanto `ABERTA`, bloqueia geração de evento `REPASSADO`, mas não bloqueia novos `PaymentEvent` de outro tipo (INV-045). Pausa o timer de aceite automático (`AUTO_APPROVAL_HOURS`) enquanto `CONTESTACAO_CONCLUSAO` estiver aberta.
 
@@ -358,6 +359,16 @@ Campos do template **podem** declarar `ajuste_preco` opcional (fator em basis po
 - `CANCELAMENTO_EXECUCAO` + `CANCELADO` → Serviço `CANCELADO`, autorização liberada integralmente.
 - `CANCELAMENTO_EXECUCAO` + `APROVADO` → Serviço retorna a `EM_ANDAMENTO` (pedido de cancelamento negado).
 - Timeout após `DISPUTE_MEDIATION_DAYS` (7 dias, `Configuração`): resolução automática conforme tabela em `03-cancellation-rules.md`.
+
+**`CHARGEBACK` (2026-08-20, `02-state-machine.md` §3):** única `tipo` que não nasce de ação do usuário (`POST /services/{id}/cancel`/`contest`). Aberta pelo webhook do Asaas (`HandleAsaasWebhook`) quando o gateway reporta `PAYMENT_CHARGEBACK_REQUESTED`/`PAYMENT_CHARGEBACK_DISPUTE`/`PAYMENT_AWAITING_CHARGEBACK_REVERSAL` para uma autorização de cartão. Não muda `Serviço.status` nem `PaymentAuthorization.status` (a captura de fato aconteceu; o chargeback é risco sobre ela, não correção de estado), só existe para bloquear `REPASSADO` via INV-045 enquanto `ABERTA`. Resolução continua manual (`PUT /disputes/{id}/resolve`); não há timeout automático nem regra de mérito específica ainda.
+
+### PaymentWebhookEvent
+
+> Adicionada em 2026-08-20 (N8): registro bruto de cada webhook recebido do gateway, existia no código desde a introdução do webhook do Asaas mas nunca tinha entrado no modelo de dados documentado.
+
+**Campos**: id, provider (`asaas`), gateway_event_id (UNIQUE), event_type, payload (JSON), criado_em
+
+**Regra**: gravado **antes** de qualquer efeito colateral, na mesma transação que atualiza a `PaymentAuthorization` (`HandleAsaasWebhook`). A constraint UNIQUE em `gateway_event_id` é o mecanismo de idempotência: se o Asaas reentregar o mesmo evento (comportamento normal de webhook, reenvia até receber 2xx), a segunda tentativa esbarra na constraint e não reprocessa, não existe checagem de "já processei isso" em código, é a constraint do banco. Não é a fonte de verdade do estado do pagamento (isso continua em `PaymentAuthorization`/`PaymentEvent`); serve para reconciliação manual e auditoria de replay quando o estado interno divergir do Asaas. Índices em `criado_em` e `event_type` para consulta de investigação.
 
 ## Auditoria
 
@@ -470,13 +481,17 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 
 **StatusServico**: `AGENDADO`, `EM_ANDAMENTO`, `AGUARDANDO_APROVACAO`, `APROVADO`, `EM_CONTESTACAO`, `CANCELADO`
 
-> Substituídos `CONCLUIDO`/`FINALIZADO`, que não existiam na state machine. `APROVADO` dispara captura **integral** de **cartão** (Pix já foi capturado no aceite, `adr/ADR-005-gateway-pagamento.md`) e `Garantia`. `CANCELADO` no Cenário B dispara captura **parcial** da multa (INV-032/INV-041), sem garantia.
+> Substituídos `CONCLUIDO`/`FINALIZADO`, que não existiam na state machine. `APROVADO` dispara captura **integral** de **cartão** (Pix normalmente já está `CAPTURADO` bem antes disso, confirmado pelo webhook logo após o aceite, `adr/ADR-005-gateway-pagamento.md`) e `Garantia`. `CANCELADO` no Cenário B dispara captura **parcial** da multa (INV-032/INV-041), sem garantia. `Agendado → Em Andamento` exige `PaymentAuthorization` `CAPTURADO`/`AUTORIZADO`, não `PENDENTE` (INV-048, `StartService`, 2026-08-20).
 
-**StatusPaymentAuthorization**: `AUTORIZADO`, `CAPTURADO`, `CANCELADO`, `EXPIRADO`
+**StatusPaymentAuthorization**: `AUTORIZADO`, `PENDENTE`, `CAPTURADO`, `CANCELADO`, `EXPIRADO`
+
+> `PENDENTE` adicionado em 2026-08-20 (INV-047): status de nascimento do Pix, antes de o webhook do Asaas confirmar o pagamento. Cartão nunca passa por `PENDENTE`, nasce direto em `AUTORIZADO`.
 
 **MetodoPagamento**: `CARTAO`, `PIX` (MVP, `adr/ADR-005-gateway-pagamento.md`)
 
-**TipoPaymentEvent**: `AUTORIZADO`, `CAPTURADO`, `REPASSADO`, `CANCELADO`, `EXPIRADO`, `REEMBOLSADO`, `REAUTORIZADO`
+**TipoPaymentEvent**: `CRIADO`, `AUTORIZADO`, `CAPTURADO`, `REPASSADO`, `CANCELADO`, `EXPIRADO`, `REEMBOLSADO`, `REAUTORIZADO`
+
+> `CRIADO` adicionado em 2026-08-20: evento registrado na criação de uma `PaymentAuthorization` de Pix ainda `PENDENTE` (antes de existir `AUTORIZADO`/`CAPTURADO` para registrar). Cartão pula direto para `AUTORIZADO`.
 
 **StatusGarantia**: `ATIVA`, `EXPIRADA`, `ACIONADA`, `ENCERRADA`
 
@@ -565,3 +580,4 @@ Espelho de `02-state-machine.md`, não editar aqui sem editar lá.
 | 2026-08-17 (issue #4) | Adiciona entidade `PerfilProfissional` (nível de confiança, métricas cacheadas, enum `NivelConfianca`) e referencia critérios/recálculo em `foundation/05-trust-level.md`. |
 | 2026-08-17 | RF002: critérios de verificação documental (`DocumentoProfissional`), matriz base + NR-10 para Elétrica, enums `TipoDocumentoProfissional`/`StatusDocumentoProfissional`, regra de `Conta.status` → `ATIVA` (INV-002). |
 | 2026-08-17 | B003: cancelamento Cenário B (captura parcial/multa), `PaymentDispute.tipo` + campos de resolução, parâmetros `CANCELLATION_PENALTY_*` e `DISPUTE_MEDIATION_DAYS` em `Configuração`. |
+| 2026-08-20 | Corrige a premissa "Pix nasce `CAPTURADO`" em todo o documento: adiciona `PENDENTE` a `StatusPaymentAuthorization` (5 valores) e `CRIADO` a `TipoPaymentEvent` (INV-047); Cenário B ganha o caso "Pix ainda `PENDENTE`" (sem multa, só cancela a cobrança); `StartService` exige pagamento confirmado para iniciar o serviço (INV-048). Adiciona entidade `PaymentWebhookEvent` (idempotência de webhook, N8) e `PaymentDispute.tipo = CHARGEBACK` (aberto pelo webhook, não pelo usuário, N6). |

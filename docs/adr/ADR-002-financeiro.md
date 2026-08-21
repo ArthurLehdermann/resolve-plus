@@ -41,7 +41,7 @@ Do ponto de vista do usuário, a experiência continua sendo "pagamento protegid
 
 > Resolvidas em 2026-08-17 por `adr/ADR-005-gateway-pagamento.md` (B006). Esta decisão sozinha não escolhia provedor nem Pix; o ADR-005 fecha as três pontas abaixo.
 
-- **Pix não tem autorizar/capturar.** Aceito no MVP com captura imediata e retenção no Asaas (IP autorizada pelo BCB) até o evento `REPASSADO`. Cartão permanece autorizar → capturar → repassar. Não é escrow bancário em conta própria da plataforma.
+- **Pix não tem autorizar/capturar.** Aceito no MVP nascendo `PENDENTE` até o webhook do Asaas confirmar (INV-047, corrigido em 2026-08-20; a decisão original aqui previa captura imediata), com retenção no Asaas (IP autorizada pelo BCB) até o evento `REPASSADO`. Cartão permanece autorizar → capturar → repassar. Não é escrow bancário em conta própria da plataforma.
 - **Expiração de autorização de cartão** (INV-046): Asaas cobre com nova cobrança `authorizeOnly` no `creditCardToken` (sem CVV na reautorização). Janela configurável de 3 a 25 dias. Gateway deixa de ser "Necessita Validação" em `05-arquitetura.md`.
 - **Split nativo na captura** (INV-044): Asaas `splits` na captura de cartão. Pix calcula `PaymentSplit` no `CAPTURADO` e move o dinheiro no `REPASSADO` via transferência interna (`walletId`).
 
@@ -60,3 +60,4 @@ Este ADR rejeitou escrow bancário especificamente para não reter dinheiro de t
 | 2026-08-17 | Reaberto: `INV-053` (reserva de garantia sobre repasse do profissional) tem o mesmo enquadramento regulatório que este ADR rejeitou. Fundido com B001. |
 | 2026-08-17 | Fechado novamente na mesma data: decisão provisória de B001 remove a retenção sobre o repasse do profissional (`ADR-003-garantia.md`), o enquadramento de escrow deixa de se aplicar. |
 | 2026-08-17 | Pendências residuais (Pix, reautorização, split nativo) resolvidas por `adr/ADR-005-gateway-pagamento.md` (B006): Asaas no MVP, Pix aceito com captura imediata. |
+| 2026-08-20 | Corrige "Pix aceito com captura imediata": a implementação mostrou que o Asaas não confirma a cobrança Pix no ato, só via webhook. Pix nasce `PENDENTE`, não `CAPTURADO` (INV-047, `adr/ADR-005-gateway-pagamento.md`). |

@@ -129,7 +129,7 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 - Quais categorias estarão disponíveis no lançamento?
 - Valor mínimo de cobertura da apólice RC e parecer jurídico definitivo de responsabilidade civil (B005, decisão provisória registrada: profissional responde, plataforma media, seguro RC no cadastro)
 
-> "Pagamento em escrow ou autorizado/capturado depois?" removida desta lista em 2026-08-17, respondida por `adr/ADR-002-financeiro.md` (autorizar→capturar→repassar, não escrow). Pendências residuais (Pix, reautorização, split nativo) resolvidas em 2026-08-17 por `adr/ADR-005-gateway-pagamento.md` (Asaas, Pix aceito com captura imediata, B006).
+> "Pagamento em escrow ou autorizado/capturado depois?" removida desta lista em 2026-08-17, respondida por `adr/ADR-002-financeiro.md` (autorizar→capturar→repassar, não escrow). Pendências residuais (Pix, reautorização, split nativo) resolvidas em 2026-08-17 por `adr/ADR-005-gateway-pagamento.md` (Asaas, Pix aceito, B006; "captura imediata" corrigido em 2026-08-20, Pix nasce `PENDENTE` até o webhook confirmar, INV-047).
 
 **Altas**
 - Comissão fixa ou variável?

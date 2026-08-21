@@ -52,9 +52,14 @@ Fluxo preferencial quando o gateway (D1, ainda "Necessita Validação" em `05-ar
 
 **Dependência de D1:** se o gateway escolhido **não** suportar captura parcial, usar fallback documentado em `04-modelo-dados.md` (captura integral imediata + `PaymentEvent REEMBOLSADO` do excedente). Implementação concreta do adapter fica bloqueada até D1 fechar.
 
-### Pix (captura imediata)
+### Pix
 
-Pix não tem autorizar/capturar (`ADR-002-financeiro.md`). No MVP o Pix já nasce `CAPTURADO` no aceite da proposta (`adr/ADR-005-gateway-pagamento.md`). Cancelamento Cenário B vira **`PaymentRefund` parcial** ao cliente (`valor_proposta - valor_multa`), retendo a multa até o `REPASSADO` da parcela do profissional (INV-041). Ver caminho Pix em `04-modelo-dados.md`.
+Pix não tem autorizar/capturar (`ADR-002-financeiro.md`). No MVP o Pix nasce `PENDENTE` (INV-047, corrigido em 2026-08-20; a versão original deste documento assumia captura imediata, mas a cobrança Pix no Asaas não confirma na hora). Dois casos, dependendo de a autorização já ter sido confirmada pelo webhook ou não:
+
+- **Ainda `PENDENTE`** (webhook não confirmou): não há dinheiro retido, não existe multa possível. `ApplyCancellationPenalty` cancela a cobrança pendente no gateway e encerra a autorização (`CANCELAMENTO_PIX_NAO_CONFIRMADO`), independente do percentual calculado pela tabela de antecedência.
+- **Já `CAPTURADO`** (webhook confirmou antes do cancelamento): Cancelamento Cenário B vira **`PaymentRefund` parcial** ao cliente (`valor_proposta - valor_multa`), retendo a multa até o `REPASSADO` da parcela do profissional (INV-041).
+
+Ver caminho Pix em `04-modelo-dados.md` e ciclo de vida completo (incluindo expiração e reconciliação com o gateway) em `foundation/02-state-machine.md` §4a-Pix.
 
 ## Resolução de `Em Contestação`
 
@@ -99,7 +104,7 @@ Decisão exige `justificativa` no request (auditoria, INV-070).
 
 **Cenário A** já está coberto por `02-state-machine.md` §1 (Solicitação: `Aberta|Recebendo Propostas --(cliente: cancela)--> Cancelada`, FA002). Trivial financeiramente: pagamento só é autorizado quando a proposta é aceita (`Contratada`, que dispara criação do `Serviço`), então cancelar antes disso não tem nada para estornar.
 
-**Cenário B** coberto por este documento (multa + captura parcial) e `04-modelo-dados.md` (entidades de pagamento). Cartão: captura parcial da autorização (ou fallback captura+reembolso se o Asaas não suportar parcial, `adr/ADR-005-gateway-pagamento.md`). Pix: já nasce `CAPTURADO`; multa é `PaymentRefund` parcial.
+**Cenário B** coberto por este documento (multa + captura parcial) e `04-modelo-dados.md` (entidades de pagamento). Cartão: captura parcial da autorização (ou fallback captura+reembolso se o Asaas não suportar parcial, `adr/ADR-005-gateway-pagamento.md`). Pix: se ainda `PENDENTE`, só cancela a cobrança (sem multa); se já `CAPTURADO`, multa é `PaymentRefund` parcial (ver seção "Mecânica financeira, Cenário B" acima, corrigida em 2026-08-20).
 
 **Cenário C** coberto pela seção "Resolução de `Em Contestação`", tipo `CANCELAMENTO_EXECUCAO`.
 
@@ -124,3 +129,4 @@ Produto (decisões provisórias registradas). Jurídico valida multa antes de pr
 | 2026-08-17 | Criado a partir do rascunho do PO sobre B003 (`04-decisions-pending.md`). Mapeia os 4 cenários para os estados já existentes em `02-state-machine.md`, registra Cenário A como já coberto, Cenário B/C como decisão parcial de fluxo (sem valores fechados), Cenário D como dois mecanismos distintos (contestação de conclusão vs. garantia), não um só. |
 | 2026-08-17 | Cenário B: distingue cartão (ainda `AUTORIZADO`) de Pix (já `CAPTURADO`, `adr/ADR-005-gateway-pagamento.md`). |
 | 2026-08-17 | B003 resolvido provisoriamente: multa decrescente Cenário B (10/25/50%), mecânica de captura parcial, resolução de `Em Contestação` (Admin manual, 7 dias, timeout por tipo), parâmetros em `Configuração`. |
+| 2026-08-20 | Corrige a seção Pix da mecânica financeira: Pix nasce `PENDENTE`, não `CAPTURADO` (INV-047, `02-state-machine.md` §4a-Pix). Cancelamento de Pix ainda `PENDENTE` não tem multa (só cancela a cobrança); o caminho de `PaymentRefund` parcial descrito originalmente só se aplica se o webhook já tiver confirmado a captura antes do cancelamento. |

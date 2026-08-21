@@ -35,7 +35,7 @@ Enviada --(profissional: retira antes do aceite)--> Retirada
 
 ```
 (criado a partir de PropostaAceita) --> Agendado [INV-021]
-Agendado --(profissional: comparece e inicia)--> Em Andamento
+Agendado --(profissional: comparece e inicia, PaymentAuthorization CAPTURADO/AUTORIZADO)--> Em Andamento [INV-048, StartService]
 Em Andamento --(profissional: registra conclusão)--> Aguardando Aprovação [FP003]
 Aguardando Aprovação --(cliente: confirma)--> Aprovado [P4/P5 do Event Storm: captura pagamento + emite garantia]
 Aguardando Aprovação --(sistema: janela de aceite automático expira sem contestação)--> Aprovado [AUTO_APPROVAL_HOURS = 72h, adr/ADR-004-prazo-aceite-automatico.md]
@@ -54,10 +54,13 @@ Em Andamento --(cliente/profissional: solicita cancelamento)--> Em Contestação
 - `Cancelado` nunca gera garantia nem libera pagamento **integral** do serviço (INV-032); captura/repasse da multa no Cenário B é a exceção explícita de INV-041 (`03-cancellation-rules.md`).
 - `Agendado → Cancelado` aplica multa decrescente (10/25/50%) e captura parcial da `PaymentAuthorization` vigente; ver `foundation/03-cancellation-rules.md` e `04-modelo-dados.md`.
 - Resolução de `Em Contestação` é manual por Admin no MVP, prazo `DISPUTE_MEDIATION_DAYS` (7d), com timeout automático por tipo de disputa (`03-cancellation-rules.md`).
+- `PaymentDispute.tipo` tem um terceiro valor não coberto por nenhuma transição de `Serviço` acima: `CHARGEBACK`. Aberto automaticamente pelo webhook do Asaas (`HandleAsaasWebhook`, não por `POST /services/{id}/cancel`/`contest`) quando o gateway reporta chargeback de cartão. Não muda o `status` da autorização (a captura aconteceu de fato), só bloqueia `REPASSADO` via INV-045 enquanto `ABERTA`. Resolução continua manual (`PUT /disputes/{id}/resolve`); não existe timeout automático nem efeito sobre `Serviço.status` para este tipo. Adicionado em 2026-08-20.
 
 ## 4. Pagamento (`PaymentAuthorization` × `PaymentEvent`, duas máquinas, não uma)
 
 > Corrigido em 2026-08-17 (3ª revisão do PO, `scripts/check-docs.sh`): a versão anterior misturava os dois no mesmo diagrama, tratando `Repassado`/`Reembolsado` como se fossem status de `PaymentAuthorization`. Não são, `StatusPaymentAuthorization` (`04-modelo-dados.md`) tem só 4 valores: `AUTORIZADO | CAPTURADO | CANCELADO | EXPIRADO`. `CAPTURADO` é terminal para a autorização em si (INV-042: toda autorização termina em captura/cancelamento/expiração). `Repassado`/`Reembolsado`/`Reautorizado` são **tipos de `PaymentEvent`**, registrados por cima de uma autorização já `CAPTURADO`, não mudam o `status` da autorização, só acrescentam histórico (INV-040, append-only).
+>
+> Corrigido em 2026-08-20: a premissa de que Pix "nasce `CAPTURADO`" (ver §4a original, `adr/ADR-005-gateway-pagamento.md`) nunca foi implementada como tal, a cobrança Pix no Asaas não confirma na hora, e gravar `CAPTURADO` sem confirmação fabricava pagamento que podia não ter acontecido. `StatusPaymentAuthorization` ganhou um 5º valor, `PENDENTE` (INV-047), que é o status de nascimento do Pix.
 
 **4a. Ciclo de vida de `PaymentAuthorization` (o `status`)**
 
@@ -72,7 +75,23 @@ Expirado --(sistema: Serviço ainda não Cancelado/Aprovado)--> nova PaymentAuth
 
 - Toda `PaymentAuthorization` termina em `Capturado`, `Cancelado` ou `Expirado`, nunca fica pendente indefinidamente (INV-042). `Capturado` é terminal: não existe transição de `status` para fora dele.
 - Uma autorização que expira sem o Serviço ter chegado a `Aprovado`/`Cancelado` gera automaticamente uma **nova** `PaymentAuthorization` (linha própria, não mudança de status), cobre o caso de serviço agendado além da janela de autorização do gateway (cartão expira em ~5-7 dias; agendamento pode passar de 2 semanas). Nunca mais de uma `PaymentAuthorization` `Autorizado` por serviço ao mesmo tempo.
-- Pix (`metodo = PIX`, `adr/ADR-005-gateway-pagamento.md`): a autorização **nasce** `Capturado` no aceite da proposta (captura imediata no Asaas). Não passa por `Autorizado`, INV-046 não dispara, `expira_em` é nulo. O diagrama acima é o fluxo de cartão.
+- O diagrama acima é o fluxo de **cartão**. Pix tem ciclo de vida próprio, abaixo (§4a-Pix).
+
+**4a-Pix. Ciclo de vida de `PaymentAuthorization` para Pix (`metodo = PIX`, INV-047, corrigido em 2026-08-20)**
+
+```
+(cobrança Pix criada no Asaas) --> Pendente [evento CRIADO, não passa por Autorizado; expira_em nulo]
+Pendente --(webhook: Asaas confirma pagamento, CONFIRMED/RECEIVED)--> Capturado [HandleAsaasWebhook, evento CAPTURADO]
+Pendente --(sistema: PIX_EXPIRATION_HOURS decorrido, gateway confirma PENDING)--> Expirado [ExpirePendingPixPayments cancela a cobrança e expira, INV-049]
+Pendente --(sistema: PIX_EXPIRATION_HOURS decorrido, gateway já diz CONFIRMED/RECEIVED)--> Capturado [reconciliação ativa antes de expirar, INV-049; webhook ainda não tinha chegado]
+Expirado|Cancelado --(webhook: Asaas confirma pagamento chegando depois, corrida)--> Capturado [confirmação tardia, INV-047; gera PaymentRefund integral pendente de execução manual + Log::error, nunca silêncio]
+```
+
+- `PENDENTE` é o status de nascimento do Pix: o `POST /v3/payments` do Asaas cria a cobrança, mas não confirma na hora (`CreatePaymentAuthorization::chargePix`). Só o webhook (ou a reconciliação ativa do job de expiração) leva a `CAPTURADO`. Gravar `CAPTURADO` na criação, sem confirmação do gateway, fabricaria um pagamento que pode nunca ter acontecido.
+- `StartService` bloqueia o início do serviço (`Agendado → Em Andamento`) enquanto a autorização estiver `PENDENTE` (INV-048): o profissional não pode começar a trabalhar com um Pix ainda não confirmado.
+- `ExpirePendingPixPayments` (job horário, `withoutOverlapping`) nunca decide só pelo status local: consulta `PaymentGateway::find` antes de cancelar. Isso cobre o caso em que o Asaas já confirmou mas o webhook não chegou (não expira um pagamento real) e o caso em que o cancel falha porque o Pix já foi pago (aborta em vez de marcar `EXPIRADO` por cima do pagamento, `Log::error`, tenta de novo na próxima hora).
+- Cancelamento de Pix ainda `PENDENTE` (Cenário B, cliente cancela `Agendado`) não tem multa possível: não há dinheiro retido, a cobrança pendente é só cancelada no gateway (`ApplyCancellationPenalty`, `foundation/03-cancellation-rules.md`).
+- INV-046 (reautorização) **não dispara** para Pix, é exclusivo do fluxo de cartão (`Autorizado → Expirado → nova Autorizado`).
 
 **4b. Eventos registrados sobre uma autorização `Capturado` (o histórico, `PaymentEvent.tipo`)**
 
@@ -141,3 +160,4 @@ Rejeitado --(profissional: reenvia mesmo tipo)--> nova linha Pendente [históric
 | 2026-08-17 | §4a: Pix nasce `Capturado` no aceite (`adr/ADR-005-gateway-pagamento.md`, B006); o diagrama de `Autorizado → Capturado` permanece o fluxo de cartão. |
 | 2026-08-17 | §6 Conta: condição explícita de aprovação documental (RF002). §7 DocumentoProfissional: máquina `Pendente → Aprovado | Rejeitado`. |
 | 2026-08-17 | B003 resolvido provisoriamente: transições de `Em Contestação` por tipo de disputa + timeout; §4a captura parcial Cenário B. |
+| 2026-08-20 | Corrige §4a: "Pix nasce `Capturado`" nunca foi implementado, cobrança Pix não confirma na hora. Adiciona §4a-Pix (ciclo de vida próprio via `PENDENTE`, INV-047/048/049): webhook confirma, job de expiração reconcilia com o gateway antes de decidir, confirmação tardia após `Expirado`/`Cancelado` reconstrói `Capturado` + reembolso. §3 Serviço: `Agendado → Em Andamento` passa a exigir pagamento confirmado (INV-048); adiciona `PaymentDispute.tipo = CHARGEBACK` (aberto pelo webhook, não pelo usuário). |

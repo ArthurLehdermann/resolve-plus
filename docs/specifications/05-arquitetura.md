@@ -100,7 +100,7 @@ Executar em filas: envio de e-mails, push notifications, SMS, geração de hist�
 
 ## Integrações Externas
 
-**Pagamentos**: Asaas (único gateway no MVP). Cartão: autorizar/capturar com split nativo na captura. Pix: captura imediata, split de domínio no `CAPTURADO`, dinheiro no `REPASSADO`. Ver `adr/ADR-005-gateway-pagamento.md` (B006). Mercado Pago e Stripe foram avaliados e descartados para a v1.
+**Pagamentos**: Asaas (único gateway no MVP). Cartão: autorizar/capturar com split nativo na captura. Pix: nasce `PENDENTE`, webhook confirma → `CAPTURADO` (INV-047, corrigido em 2026-08-20; não é captura imediata), split de domínio no `CAPTURADO`, dinheiro no `REPASSADO`. Ver `adr/ADR-005-gateway-pagamento.md` (B006). Mercado Pago e Stripe foram avaliados e descartados para a v1.
 
 **Push**: Firebase Cloud Messaging (FCM)
 

@@ -201,7 +201,7 @@ Erros: 422 (`scope` não bate com `template_escopo` da categoria; código `PRECO
 
 **GET /services/{id}**, Detalhes.
 
-**POST /services/{id}/start**, Marca início.
+**POST /services/{id}/start**, Marca início (`Agendado → Em Andamento`). Só o profissional da proposta aceita. Bloqueia com 409 se a `PaymentAuthorization` do serviço estiver `PENDENTE` (Pix ainda não confirmado pelo webhook) ou ausente (INV-048, adicionado em 2026-08-20); `CAPTURADO`/`AUTORIZADO` liberam.
 
 **POST /services/{id}/finish**, Finaliza.
 ```json
@@ -278,6 +278,8 @@ Request
 
 Erros: 403 (fora do papel Admin), 409 (serviço não `APROVADO` e sem exceção administrativa), 422 (justificativa ausente)
 
+**POST /webhooks/asaas**, Recebe eventos de pagamento do Asaas (adicionado em 2026-08-20). Não é uma API de cliente: autenticação é o token de webhook do Asaas, não `sanctum`; roteado por `throttle:webhook-asaas`, não pelos limites padrão de usuário. Todo evento é gravado em `PaymentWebhookEvent` (`04-modelo-dados.md`) antes de qualquer efeito colateral, idempotente por `gateway_event_id` UNIQUE, reentrega do mesmo evento (comportamento normal de webhook) responde 2xx sem reprocessar. Efeitos por tipo de pagamento: Pix `PENDENTE` confirmado (`CONFIRMED`/`RECEIVED`) → `CAPTURADO` (INV-047); cartão com evento de chargeback (`PAYMENT_CHARGEBACK_REQUESTED`/`_DISPUTE`/`PAYMENT_AWAITING_CHARGEBACK_REVERSAL`) → abre `PaymentDispute` `tipo = CHARGEBACK`. Confirmação de um Pix que o sistema já tinha marcado `EXPIRADO`/`CANCELADO` (corrida com `ExpirePendingPixPayments`) reconstrói `CAPTURADO` e registra reembolso pendente em vez de descartar o evento (INV-047). Não requer `Idempotency-Key` (a idempotência é do provedor, via `gateway_event_id`).
+
 ## Garantias
 
 **GET /warranties**, Lista garantias.
@@ -296,7 +298,7 @@ Request
 
 ## Disputas
 
-**POST /services/{id}/disputes**, Abre disputa sobre o serviço (`PaymentDispute`, INV-045). No MVP, disputas nascem preferencialmente via `POST /services/{id}/cancel` (Cenário C) ou `POST /services/{id}/contest` (contestação de conclusão); este endpoint fica para casos administrativos ou extensões futuras. Bloqueia repasse até resolução, não bloqueia novos `PaymentEvent`.
+**POST /services/{id}/disputes**, Abre disputa sobre o serviço (`PaymentDispute`, INV-045). No MVP, disputas nascem preferencialmente via `POST /services/{id}/cancel` (Cenário C) ou `POST /services/{id}/contest` (contestação de conclusão); este endpoint fica para casos administrativos ou extensões futuras. Bloqueia repasse até resolução, não bloqueia novos `PaymentEvent`. Whitelist de `tipo` aceito neste endpoint **não** inclui `CHARGEBACK` (adicionado em 2026-08-20): esse tipo só é aberto pelo webhook do Asaas (`POST /webhooks/asaas`, `## Pagamentos`), nunca por request de usuário.
 
 **PUT /disputes/{id}/resolve**, Admin resolve disputa (`Usuario.tipo = ADMIN`). Serviço deve estar `Em Contestação`. Critérios em `foundation/03-cancellation-rules.md` (B003): prazo `DISPUTE_MEDIATION_DAYS` (7 dias), timeout automático se Admin não decidir.
 

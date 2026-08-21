@@ -48,21 +48,30 @@ Abstrair o Asaas atrás de uma porta de `PaymentGateway` no código (já sugerid
 
 Não aceitar Pix na v1 seria uma decisão de produto disfarçada de efeito colateral do ADR-002. Pix é o método dominante no Brasil; um marketplace presencial que só aceita cartão no lançamento perde conversão no momento em que o cliente deveria "pagar protegido".
 
-O ajuste (somente `metodo = PIX`):
+O ajuste (somente `metodo = PIX`), **corrigido em 2026-08-20**, o parágrafo abaixo era a decisão original; a implementação revelou que "captura imediata" descrevia mal o que o Asaas realmente devolve, ver nota logo após o diagrama:
 
 ```
 Cliente aceita proposta
       ↓
-Cobra Pix (captura imediata no Asaas)
+Cobra Pix no Asaas (POST /v3/payments, billingType PIX)
       ↓
-PaymentAuthorization já nasce CAPTURADO
+PaymentAuthorization nasce PENDENTE (INV-047), Asaas não confirma na hora
+      ↓
+Webhook Asaas confirma pagamento (CONFIRMED/RECEIVED) ──ou── job horário
+reconcilia antes de expirar (02-state-machine.md §4a-Pix, INV-049)
+      ↓
+PaymentAuthorization → CAPTURADO
 PaymentSplit calculado agora (INV-044, alíquota vigente)
 Valor permanece na conta Asaas da plataforma (IP autorizada)
+      ↓
+Serviço só pode iniciar (Agendado → Em Andamento) com CAPTURADO, não PENDENTE (INV-048)
       ↓
 Serviço executado → cliente aprova ou AUTO_APPROVAL_HOURS
       ↓
 Evento REPASSADO: transferência interna Asaas (walletId do profissional)
 ```
+
+**Nota de 2026-08-20:** a decisão original desta seção assumia que o Asaas confirma a cobrança Pix no ato do `POST`, e por isso `PaymentAuthorization` "já nascia `CAPTURADO`". Na implementação (`CreatePaymentAuthorization::chargePix`), o Asaas devolve a cobrança em `PENDING`; a confirmação chega depois, via webhook. Gravar `CAPTURADO` sem essa confirmação fabricaria um pagamento que pode nunca ter acontecido, a plataforma repassaria dinheiro próprio ao profissional se o cliente nunca pagasse. O modelo de negócio (Pix retido no Asaas até `REPASSADO`, sem `splits` na cobrança, sem passar por `Autorizado`) continua o mesmo; só o estado de nascimento muda de `CAPTURADO` para `PENDENTE`. Ver `foundation/00-domain-invariants.md` (INV-047/048/049) e `foundation/02-state-machine.md` §4a-Pix para o ciclo completo.
 
 O que **não** muda: cartão continua autorizar → capturar → repassar (`ADR-002-financeiro.md`). INV-041, lida com precisão, bloqueia o **repasse do serviço executado** (liberação ao profissional) antes da aprovação; o parêntese antigo "capturado + repassado" descrevia o cartão no caminho feliz, não proíbe captura imediata de Pix nem o repasse da **multa** do Cenário B (`foundation/03-cancellation-rules.md`). O dinheiro do Pix **não** entra em conta bancária da plataforma: fica custodiado pelo Asaas. Isso não reabre escrow bancário rejeitado pelo ADR-002; a plataforma não é instituição de pagamento.
 
@@ -80,7 +89,7 @@ INV-046 **não dispara** para Pix: não há autorização a expirar. Cancelament
 
 ## Consequências
 
-- `PaymentAuthorization.metodo` no MVP: `CARTAO | PIX`. Pix nasce `CAPTURADO`; cartão nasce `AUTORIZADO`.
+- `PaymentAuthorization.metodo` no MVP: `CARTAO | PIX`. Pix nasce `PENDENTE` e vira `CAPTURADO` só após confirmação (webhook ou reconciliação do job de expiração, INV-047, corrigido em 2026-08-20); cartão nasce `AUTORIZADO`.
 - Profissional precisa de subconta Asaas (`walletId`) no onboarding (RF002/verificação), senão não há destino de `REPASSADO`.
 - Confirmar na abertura da conta Asaas se o MCC do marketplace é elegível à janela de 25 dias. Se não for, INV-046 opera no padrão de 3 dias; o modelo já aguenta.
 - `specifications/05-arquitetura.md` deixa de listar o gateway como "Necessita Validação".
@@ -100,3 +109,4 @@ INV-046 **não dispara** para Pix: não há autorização a expirar. Cancelament
 |---|---|
 | 2026-08-17 | Decisão provisória de produto: Asaas no MVP; Pix aceito com captura imediata + retenção no gateway até `REPASSADO`. Pesquisa Mercado Pago × Stripe × Asaas registrada. Resolve as três pendências residuais do `ADR-002-financeiro.md` (B006). |
 | 2026-08-17 | B003: Cenário B deixa de ser pendência deste ADR; Pix = reembolso parcial, cartão = captura parcial (fallback captura+reembolso). INV-041 atualizada na fonte de verdade. |
+| 2026-08-20 | Corrige a premissa "Pix nasce `CAPTURADO`": a implementação mostrou que o Asaas não confirma a cobrança Pix no ato do `POST`, só via webhook. `PaymentAuthorization` de Pix nasce `PENDENTE` (INV-047); vira `CAPTURADO` por confirmação do webhook ou reconciliação do job de expiração (INV-049), com gate de início de serviço (INV-048). Modelo de negócio (retenção no Asaas, split calculado no `CAPTURADO`, sem `Autorizado`) inalterado. |
