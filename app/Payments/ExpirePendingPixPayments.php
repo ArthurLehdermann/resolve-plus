@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Log;
  */
 class ExpirePendingPixPayments
 {
+    private const STATUS_CONFIRMADO = ['CONFIRMED', 'RECEIVED'];
+
     public function __construct(
         private readonly PaymentGateway $gateway,
         private readonly RecordPaymentEvent $recordEvent,
@@ -44,15 +46,21 @@ class ExpirePendingPixPayments
     }
 
     /**
-     * O cancel é HTTP (até 15s) e roda fora de qualquer transação/lock de
-     * propósito (N10): cinquenta Pix expirando com o Asaas lento não podem
-     * segurar uma transação com lockForUpdate por vez dentro do laço de
-     * __invoke. O motivo mais provável do cancel falhar é o Pix já ter sido
-     * pago - Asaas não remove cobrança recebida - então falha aqui aborta
-     * esta autorização (N9): não é warning-e-segue, porque marcar EXPIRADO
-     * por cima de um pagamento que na verdade aconteceu é dinheiro do
-     * cliente sumindo sem serviço e sem reembolso. A tentativa seguinte do
-     * job horário cobre o caso de falha transitória de rede.
+     * Chamadas HTTP (find/cancel, até 15s cada) rodam fora de qualquer
+     * transação/lock de propósito (N10): cinquenta Pix expirando com o
+     * Asaas lento não podem segurar uma transação com lockForUpdate por vez
+     * dentro do laço de __invoke.
+     *
+     * Antes de decidir qualquer coisa, consulta o status real no gateway
+     * (N9): status local pode estar desatualizado se o webhook ainda não
+     * chegou. Só cancela o que o Asaas ainda diz PENDING; o que já foi
+     * confirmado lá fora é capturado em vez de expirado, sem depender do
+     * reembolso incidental do webhook (HandleAsaasWebhook::registrarConfirmacaoTardia)
+     * como única rede de segurança. Falha na consulta ou no cancel aborta
+     * esta autorização - nunca warning-e-segue, porque marcar EXPIRADO por
+     * cima de um pagamento que aconteceu é dinheiro do cliente sumindo sem
+     * serviço e sem reembolso. A tentativa seguinte do job horário cobre
+     * falha transitória de rede.
      */
     private function process(string $authorizationId): void
     {
@@ -62,7 +70,31 @@ class ExpirePendingPixPayments
             return;
         }
 
-        if ($authorization->gateway_payment_id !== null) {
+        if ($authorization->gateway_payment_id === null) {
+            $this->expireIfStillPending($authorizationId);
+
+            return;
+        }
+
+        try {
+            $status = $this->gateway->find($authorization->gateway_payment_id)->status;
+        } catch (GatewayException $exception) {
+            Log::error('INCIDENTE: falha ao consultar status do Pix pendente expirado no gateway - autorização mantida PENDENTE.', [
+                'authorization_id' => $authorization->id,
+                'servico_id' => $authorization->servico_id,
+                'error' => $exception->getMessage(),
+            ]);
+
+            return;
+        }
+
+        if (in_array($status, self::STATUS_CONFIRMADO, true)) {
+            $this->confirmIfStillPending($authorizationId);
+
+            return;
+        }
+
+        if ($status === 'PENDING') {
             try {
                 $this->gateway->cancel($authorization->gateway_payment_id);
             } catch (GatewayException $exception) {
@@ -76,9 +108,39 @@ class ExpirePendingPixPayments
             }
         }
 
+        $this->expireIfStillPending($authorizationId);
+    }
+
+    /**
+     * O gateway já diz confirmado, mas o webhook ainda não processou -
+     * confirma direto em vez de esperar. Relock e reconfirma PENDENTE:
+     * entre a consulta ao gateway (sem lock) e aqui, o webhook pode ter
+     * chegado primeiro.
+     */
+    private function confirmIfStillPending(string $authorizationId): void
+    {
         DB::transaction(function () use ($authorizationId): void {
-            // Relock e reconfirma PENDENTE: entre o cancel acima (sem lock)
-            // e aqui, o webhook pode ter confirmado o pagamento primeiro.
+            $authorization = PaymentAuthorization::query()
+                ->lockForUpdate()
+                ->find($authorizationId);
+
+            if ($authorization === null || $authorization->status !== StatusPaymentAuthorization::Pendente) {
+                return;
+            }
+
+            ($this->recordEvent)($authorization, TipoPaymentEvent::Capturado, [
+                'motivo' => 'RECONCILIACAO_GATEWAY_ANTES_DE_EXPIRAR',
+            ]);
+        });
+    }
+
+    /**
+     * Relock e reconfirma PENDENTE: entre o cancel (sem lock) e aqui, o
+     * webhook pode ter confirmado o pagamento primeiro.
+     */
+    private function expireIfStillPending(string $authorizationId): void
+    {
+        DB::transaction(function () use ($authorizationId): void {
             $authorization = PaymentAuthorization::query()
                 ->lockForUpdate()
                 ->with('servico.proposta.solicitacao')

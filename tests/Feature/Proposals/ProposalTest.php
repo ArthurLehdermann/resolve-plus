@@ -467,6 +467,11 @@ class ProposalTest extends TestCase
                 throw new GatewayException('não usado neste teste');
             }
 
+            public function find(string $gatewayPaymentId): GatewayCharge
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
             public function cancel(string $gatewayPaymentId): void {}
 
             public function transfer(string $walletId, int $amountCents): string

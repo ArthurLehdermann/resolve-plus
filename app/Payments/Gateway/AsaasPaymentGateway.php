@@ -75,6 +75,18 @@ class AsaasPaymentGateway implements PaymentGateway
         );
     }
 
+    public function find(string $gatewayPaymentId): GatewayCharge
+    {
+        $data = $this->request()->get('/v3/payments/'.$gatewayPaymentId)->json();
+
+        $this->assertOk($data, 'Falha ao consultar pagamento no Asaas.');
+
+        return new GatewayCharge(
+            id: (string) $data['id'],
+            status: (string) ($data['status'] ?? 'PENDING'),
+        );
+    }
+
     public function cancel(string $gatewayPaymentId): void
     {
         $response = $this->request()->delete('/v3/payments/'.$gatewayPaymentId);

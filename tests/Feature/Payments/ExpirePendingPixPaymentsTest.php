@@ -87,6 +87,37 @@ class ExpirePendingPixPaymentsTest extends TestCase
         $this->assertSame(StatusServico::Agendado, $servico->fresh()->status);
     }
 
+    public function test_confirma_em_vez_de_expirar_quando_gateway_ja_diz_confirmado(): void
+    {
+        $this->freezeTime();
+
+        [$solicitacao, $proposta, $servico] = $this->contexto();
+
+        $authorization = PaymentAuthorization::factory()->pixPendente()->create([
+            'servico_id' => $servico->id,
+            'criado_em' => now()->subHours(25),
+            'gateway_payment_id' => 'pay_ja_pago',
+        ]);
+
+        // O Asaas já tem o pagamento como recebido, mas o webhook ainda não
+        // chegou - a consulta ativa antes de expirar (N9) descobre isso.
+        app(FakePaymentGateway::class)->statuses['pay_ja_pago'] = 'RECEIVED';
+
+        app(ExpirePendingPixPayments::class)();
+
+        $authorization->refresh();
+        $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->status);
+        $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Capturado));
+        $this->assertFalse($authorization->hasEvent(TipoPaymentEvent::Expirado));
+
+        $this->assertSame(StatusServico::Agendado, $servico->fresh()->status);
+        $this->assertSame(StatusProposta::Aceita, $proposta->fresh()->status);
+        $this->assertSame(StatusSolicitacao::Contratada, $solicitacao->fresh()->status);
+
+        $gateway = app(FakePaymentGateway::class);
+        $this->assertNotContains('pay_ja_pago', $gateway->cancels);
+    }
+
     public function test_aborta_expiracao_quando_cancel_falha_no_gateway(): void
     {
         $this->freezeTime();
@@ -110,6 +141,11 @@ class ExpirePendingPixPaymentsTest extends TestCase
             public function chargePix(string $customerId, int $amountCents): GatewayCharge
             {
                 throw new GatewayException('não usado neste teste');
+            }
+
+            public function find(string $gatewayPaymentId): GatewayCharge
+            {
+                return new GatewayCharge(id: $gatewayPaymentId, status: 'PENDING');
             }
 
             public function cancel(string $gatewayPaymentId): void
@@ -136,6 +172,59 @@ class ExpirePendingPixPaymentsTest extends TestCase
         $this->assertSame(StatusPaymentAuthorization::Pendente, $authorization->status);
         $this->assertFalse($authorization->hasEvent(TipoPaymentEvent::Expirado));
 
+        $this->assertSame(StatusServico::Agendado, $servico->fresh()->status);
+        $this->assertSame(StatusProposta::Aceita, $proposta->fresh()->status);
+        $this->assertSame(StatusSolicitacao::Contratada, $solicitacao->fresh()->status);
+    }
+
+    public function test_aborta_expiracao_quando_consulta_ao_gateway_falha(): void
+    {
+        $this->freezeTime();
+
+        $this->app->instance(PaymentGateway::class, new class implements PaymentGateway
+        {
+            public function authorizeCard(string $customerId, int $amountCents, string $creditCardToken): GatewayCharge
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function capture(string $gatewayPaymentId, int $amountCents, array $splits = []): GatewayCharge
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function chargePix(string $customerId, int $amountCents): GatewayCharge
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function find(string $gatewayPaymentId): GatewayCharge
+            {
+                throw new GatewayException('timeout consultando o Asaas');
+            }
+
+            public function cancel(string $gatewayPaymentId): void
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function transfer(string $walletId, int $amountCents): string
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+        });
+
+        [$solicitacao, $proposta, $servico] = $this->contexto();
+
+        $authorization = PaymentAuthorization::factory()->pixPendente()->create([
+            'servico_id' => $servico->id,
+            'criado_em' => now()->subHours(25),
+        ]);
+
+        app(ExpirePendingPixPayments::class)();
+
+        $authorization->refresh();
+        $this->assertSame(StatusPaymentAuthorization::Pendente, $authorization->status);
         $this->assertSame(StatusServico::Agendado, $servico->fresh()->status);
         $this->assertSame(StatusProposta::Aceita, $proposta->fresh()->status);
         $this->assertSame(StatusSolicitacao::Contratada, $solicitacao->fresh()->status);

@@ -13,6 +13,14 @@ interface PaymentGateway
 
     public function chargePix(string $customerId, int $amountCents): GatewayCharge;
 
+    /**
+     * Consulta o status atual no gateway, sem efeito colateral. Usado antes
+     * de decisões irreversíveis sobre uma cobrança já criada (ex.: expirar
+     * um Pix pendente) - status local pode estar desatualizado se o webhook
+     * ainda não chegou (N9).
+     */
+    public function find(string $gatewayPaymentId): GatewayCharge;
+
     public function cancel(string $gatewayPaymentId): void;
 
     public function transfer(string $walletId, int $amountCents): string;
