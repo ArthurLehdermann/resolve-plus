@@ -56,6 +56,13 @@ class StartService
      */
     private function ensurePaymentConfirmed(Servico $servico): void
     {
+        // INV-033: revisita de garantia não tem proposta nem pagamento
+        // próprio (garantia_origem_id setado, proposta_id nulo por design);
+        // exigir PaymentAuthorization aqui bloquearia toda revisita.
+        if ($servico->isRevisitaGarantia()) {
+            return;
+        }
+
         $authorization = PaymentAuthorization::query()
             ->where('servico_id', $servico->id)
             ->latest('criado_em')

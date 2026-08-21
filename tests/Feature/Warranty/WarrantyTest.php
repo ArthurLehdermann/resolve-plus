@@ -178,7 +178,7 @@ class WarrantyTest extends TestCase
 
     public function test_inv_033_revisita_nao_gera_nova_cobranca_nem_nova_garantia(): void
     {
-        [$cliente, , $servico] = $this->contextoAprovado();
+        [$cliente, $profissional, $servico] = $this->contextoAprovado();
         $garantia = Garantia::factory()->create([
             'servico_id' => $servico->id,
         ]);
@@ -197,10 +197,22 @@ class WarrantyTest extends TestCase
         $this->assertSame(0, $this->contagemTabelaFinanceira('payment_authorizations', $revisita->id));
 
         Queue::fake();
-        $revisita->update([
-            'status' => StatusServico::AguardandoAprovacao,
-            'fim' => now(),
-        ]);
+
+        // Passa pelo fluxo real (start -> finish -> aprova): sem isso o
+        // teste não pega uma revisita sendo bloqueada pelo gate financeiro
+        // do INV-048 (que não se aplica aqui, revisita não tem
+        // PaymentAuthorization por design).
+        $this->asUser($profissional)
+            ->postJson("/api/v1/services/{$revisita->id}/start")
+            ->assertOk();
+
+        $this->asUser($profissional)
+            ->postJson("/api/v1/services/{$revisita->id}/finish", [
+                'notes' => 'Revisita concluída, vazamento corrigido.',
+                'photos' => ['fotos/revisita.jpg'],
+            ])
+            ->assertOk();
+
         app(ApproveService::class)->byCliente($revisita->fresh(), $cliente);
 
         Queue::assertNotPushed(IssueWarrantyJob::class);
