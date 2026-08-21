@@ -10,6 +10,7 @@ use App\Payments\Gateway\GatewayException;
 use App\Payments\Gateway\PaymentGateway;
 use App\Payments\MetodoPagamento;
 use App\Payments\PaymentAuthorization;
+use App\Payments\PaymentSplit;
 use App\Payments\StatusPaymentAuthorization;
 use App\Payments\TipoPaymentEvent;
 use App\Proposals\Events\ProposalAccepted;
@@ -399,6 +400,75 @@ class ProposalTest extends TestCase
         $this->assertSame(45000, $authorization->valor);
         $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Criado));
         $this->assertFalse($authorization->hasEvent(TipoPaymentEvent::Capturado));
+    }
+
+    public function test_accept_com_pix_ja_confirmado_pelo_gateway_cria_split_de_comissao(): void
+    {
+        // Caso raro (o Asaas real não confirma na hora), mas o código trata
+        // explicitamente: se chargePix devolver status já confirmado, a
+        // autorização nasce CAPTURADO direto. Achado de auditoria
+        // (2026-08-20): esse caminho gravava o evento CAPTURADO mas nunca
+        // calculava o PaymentSplit, então o repasse mais tarde não
+        // transferia nada ao profissional de verdade.
+        $this->app->instance(PaymentGateway::class, new class implements PaymentGateway
+        {
+            public function authorizeCard(string $customerId, int $amountCents, string $creditCardToken): GatewayCharge
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function capture(string $gatewayPaymentId, int $amountCents, array $splits = []): GatewayCharge
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function chargePix(string $customerId, int $amountCents): GatewayCharge
+            {
+                return new GatewayCharge(id: 'pay_pix_confirmado_na_hora', status: 'CONFIRMED');
+            }
+
+            public function find(string $gatewayPaymentId): GatewayCharge
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function cancel(string $gatewayPaymentId): void
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+
+            public function transfer(string $walletId, int $amountCents): string
+            {
+                throw new GatewayException('não usado neste teste');
+            }
+        });
+
+        $cliente = Usuario::factory()->create();
+        $solicitacao = Solicitacao::factory()->recebendoPropostas()->create([
+            'cliente_id' => $cliente->id,
+        ]);
+        $proposta = Proposta::factory()->create([
+            'solicitacao_id' => $solicitacao->id,
+            'valor' => 20000,
+        ]);
+
+        $this->withToken($this->token($cliente))
+            ->withHeader('Idempotency-Key', (string) Str::uuid())
+            ->postJson("/api/v1/proposals/{$proposta->id}/accept", $this->acceptPayload([
+                'metodo_pagamento' => MetodoPagamento::Pix->value,
+            ]))
+            ->assertCreated();
+
+        $servico = Servico::query()->where('proposta_id', $proposta->id)->firstOrFail();
+        $authorization = PaymentAuthorization::query()->where('servico_id', $servico->id)->firstOrFail();
+
+        $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->status);
+        $event = $authorization->captureEvent();
+        $this->assertNotNull($event);
+
+        $split = PaymentSplit::query()->where('payment_event_id', $event->id)->first();
+        $this->assertNotNull($split);
+        $this->assertSame(20000, $split->valor_profissional + $split->valor_plataforma);
     }
 
     public function test_accept_com_cartao_cria_autorizacao_pendente_de_captura(): void

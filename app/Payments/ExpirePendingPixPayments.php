@@ -23,6 +23,7 @@ class ExpirePendingPixPayments
     public function __construct(
         private readonly PaymentGateway $gateway,
         private readonly RecordPaymentEvent $recordEvent,
+        private readonly CreatePixSplit $createSplit,
     ) {}
 
     public function __invoke(): int
@@ -128,9 +129,11 @@ class ExpirePendingPixPayments
                 return;
             }
 
-            ($this->recordEvent)($authorization, TipoPaymentEvent::Capturado, [
+            $event = ($this->recordEvent)($authorization, TipoPaymentEvent::Capturado, [
                 'motivo' => 'RECONCILIACAO_GATEWAY_ANTES_DE_EXPIRAR',
             ]);
+
+            ($this->createSplit)($event, $authorization->valor);
         });
     }
 

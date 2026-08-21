@@ -34,6 +34,7 @@ class CreatePaymentAuthorization
     public function __construct(
         private readonly PaymentGateway $gateway,
         private readonly RecordPaymentEvent $recordEvent,
+        private readonly CreatePixSplit $createSplit,
     ) {}
 
     public function __invoke(
@@ -75,7 +76,7 @@ class CreatePaymentAuthorization
 
         $confirmado = in_array($charge->status, self::PIX_STATUS_JA_CONFIRMADO, true);
 
-        return $this->persist(
+        $authorization = $this->persist(
             fn () => $this->createAndRecord($servico, $valor, MetodoPagamento::Pix, $customerId, [
                 'status' => $confirmado ? StatusPaymentAuthorization::Capturado : StatusPaymentAuthorization::Pendente,
                 'gateway_payment_id' => $charge->id,
@@ -84,6 +85,16 @@ class CreatePaymentAuthorization
             ], $confirmado ? TipoPaymentEvent::Capturado : TipoPaymentEvent::Criado),
             $charge->id,
         );
+
+        if ($confirmado) {
+            $event = $authorization->captureEvent();
+
+            if ($event !== null) {
+                ($this->createSplit)($event, $valor);
+            }
+        }
+
+        return $authorization;
     }
 
     /**

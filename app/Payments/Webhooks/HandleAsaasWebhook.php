@@ -2,6 +2,7 @@
 
 namespace App\Payments\Webhooks;
 
+use App\Payments\CreatePixSplit;
 use App\Payments\MetodoPagamento;
 use App\Payments\PaymentAuthorization;
 use App\Payments\PaymentDispute;
@@ -43,6 +44,7 @@ class HandleAsaasWebhook
 
     public function __construct(
         private readonly RecordPaymentEvent $recordEvent,
+        private readonly CreatePixSplit $createSplit,
     ) {}
 
     /**
@@ -100,11 +102,13 @@ class HandleAsaasWebhook
         }
 
         if (in_array($paymentStatus, self::STATUS_CONFIRMADO, true)) {
-            ($this->recordEvent)($authorization, TipoPaymentEvent::Capturado, [
+            $event = ($this->recordEvent)($authorization, TipoPaymentEvent::Capturado, [
                 'motivo' => 'WEBHOOK_ASAAS_CONFIRMADO',
                 'gateway_event' => $eventType,
                 'gateway_payment_id' => $paymentId,
             ]);
+
+            ($this->createSplit)($event, $authorization->valor);
 
             return;
         }
@@ -127,6 +131,10 @@ class HandleAsaasWebhook
      * deixa o reembolso integral registrado como pendência: não existe
      * endpoint de estorno automático no gateway hoje, a execução é manual,
      * mas o rastro fica correto e alertado em vez de silencioso.
+     *
+     * Não cria PaymentSplit (CreatePixSplit) de propósito: o reembolso
+     * abaixo é integral, não sobra nada para repassar ao profissional, ver
+     * docblock de CreatePixSplit.
      */
     private function registrarConfirmacaoTardia(PaymentAuthorization $authorization, string $eventType, string $paymentId): void
     {

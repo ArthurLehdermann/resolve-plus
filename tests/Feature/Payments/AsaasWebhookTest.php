@@ -5,6 +5,7 @@ namespace Tests\Feature\Payments;
 use App\Payments\PaymentAuthorization;
 use App\Payments\PaymentDispute;
 use App\Payments\PaymentRefund;
+use App\Payments\PaymentSplit;
 use App\Payments\StatusPaymentAuthorization;
 use App\Payments\StatusPaymentDispute;
 use App\Payments\TipoPaymentDispute;
@@ -49,6 +50,16 @@ class AsaasWebhookTest extends TestCase
         $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->status);
         $this->assertTrue($authorization->hasEvent(TipoPaymentEvent::Capturado));
         $this->assertSame(1, PaymentWebhookEvent::query()->count());
+
+        // Achado de auditoria (2026-08-20): a confirmação via webhook nunca
+        // calculava o PaymentSplit (INV-044). Sem split, o repasse mais
+        // tarde (ReleasePayment) não transferia nada de verdade ao
+        // profissional, mas ainda gravava o evento REPASSADO.
+        $split = PaymentSplit::query()
+            ->where('payment_event_id', $authorization->captureEvent()->id)
+            ->first();
+        $this->assertNotNull($split);
+        $this->assertSame($authorization->valor, $split->valor_profissional + $split->valor_plataforma);
     }
 
     public function test_webhook_e_idempotente_por_event_id(): void
@@ -134,6 +145,14 @@ class AsaasWebhookTest extends TestCase
 
         $this->assertNotNull($refund);
         $this->assertSame(12_345, $refund->valor);
+
+        // Não cria PaymentSplit de propósito: o reembolso acima é integral,
+        // não sobra nada para repassar ao profissional (CreatePixSplit).
+        $this->assertNull(
+            PaymentSplit::query()
+                ->where('payment_event_id', $authorization->captureEvent()->id)
+                ->first(),
+        );
     }
 
     public function test_webhook_abre_disputa_de_chargeback_para_cartao(): void

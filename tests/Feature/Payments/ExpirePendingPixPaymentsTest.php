@@ -8,6 +8,7 @@ use App\Payments\Gateway\GatewayCharge;
 use App\Payments\Gateway\GatewayException;
 use App\Payments\Gateway\PaymentGateway;
 use App\Payments\PaymentAuthorization;
+use App\Payments\PaymentSplit;
 use App\Payments\StatusPaymentAuthorization;
 use App\Payments\TipoPaymentEvent;
 use App\Proposals\Proposta;
@@ -116,6 +117,15 @@ class ExpirePendingPixPaymentsTest extends TestCase
 
         $gateway = app(FakePaymentGateway::class);
         $this->assertNotContains('pay_ja_pago', $gateway->cancels);
+
+        // Achado de auditoria (2026-08-20): esta reconciliação gravava o
+        // evento CAPTURADO mas nunca calculava o PaymentSplit (INV-044),
+        // deixando o repasse futuro sem transferência real.
+        $split = PaymentSplit::query()
+            ->where('payment_event_id', $authorization->captureEvent()->id)
+            ->first();
+        $this->assertNotNull($split);
+        $this->assertSame($authorization->valor, $split->valor_profissional + $split->valor_plataforma);
     }
 
     public function test_aborta_expiracao_quando_cancel_falha_no_gateway(): void

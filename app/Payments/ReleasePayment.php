@@ -6,6 +6,7 @@ use App\Auth\Models\Usuario;
 use App\Payments\Gateway\PaymentGateway;
 use App\Services\StatusServico;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class ReleasePayment
 {
@@ -53,6 +54,20 @@ class ReleasePayment
 
             if ($walletId !== null && $split !== null) {
                 $this->gateway->transfer($walletId, $split->valor_profissional);
+            } elseif ($walletId !== null) {
+                // CreatePixSplit cobre o caminho normal de captura (webhook,
+                // reconciliação, confirmação imediata); chegar aqui sem split
+                // com wallet_id presente é anômalo - a captura ocorreu por um
+                // caminho que não passou por lá (ex.: confirmação tardia de um
+                // Pix já reembolsado, HandleAsaasWebhook::registrarConfirmacaoTardia,
+                // que não cria split de propósito). Gravar REPASSADO sem
+                // transferir de verdade e sem avisar ninguém foi exatamente o
+                // bug de auditoria de 2026-08-20 - não repetir em silêncio.
+                Log::error('INCIDENTE: repasse registrado sem PaymentSplit - nenhuma transferência real foi feita ao profissional.', [
+                    'authorization_id' => $locked->id,
+                    'servico_id' => $locked->servico_id,
+                    'wallet_id' => $walletId,
+                ]);
             }
 
             ($this->recordEvent)($locked, TipoPaymentEvent::Repassado, [

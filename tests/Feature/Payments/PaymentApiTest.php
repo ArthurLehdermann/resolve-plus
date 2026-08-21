@@ -174,6 +174,46 @@ class PaymentApiTest extends TestCase
         );
     }
 
+    public function test_admin_release_of_pix_confirmado_via_webhook_transfere_de_verdade(): void
+    {
+        // Diferente do teste acima (que usa PaymentAuthorization::factory()
+        // ->pixCapturado(), atalho que cria o PaymentSplit direto na
+        // factory), este passa pelo fluxo real: PENDENTE -> webhook do
+        // Asaas confirma -> release. É o caminho que expôs o achado de
+        // auditoria de 2026-08-20 (PaymentSplit nunca era calculado aqui,
+        // release não transferia nada e ainda gravava REPASSADO).
+        $admin = Usuario::factory()->create(['tipo' => TipoUsuario::Admin]);
+        $servico = $this->servicoDoCliente(Usuario::factory()->create(), StatusServico::Aprovado);
+        $authorization = PaymentAuthorization::factory()->pixPendente()->create([
+            'servico_id' => $servico->id,
+            'wallet_id' => 'wal_profissional_real',
+            'gateway_payment_id' => 'pay_release_real',
+            'valor' => 12000,
+        ]);
+
+        $this->withHeaders(['asaas-access-token' => 'test-webhook-token'])
+            ->postJson('/api/v1/webhooks/asaas', [
+                'id' => 'evt_release_real',
+                'event' => 'PAYMENT_CONFIRMED',
+                'payment' => ['id' => 'pay_release_real', 'status' => 'CONFIRMED'],
+            ])
+            ->assertOk();
+
+        $this->assertSame(StatusPaymentAuthorization::Capturado, $authorization->fresh()->status);
+
+        $this->withToken($admin->createToken('auth')->plainTextToken)
+            ->withHeaders(['Idempotency-Key' => (string) Str::uuid()])
+            ->postJson("/api/v1/payments/{$authorization->id}/release", [
+                'justificativa' => 'Repasse Pix confirmado via webhook.',
+            ])
+            ->assertOk();
+
+        $this->assertSame(
+            [['walletId' => 'wal_profissional_real', 'amount' => 10800]],
+            app(FakePaymentGateway::class)->transfers,
+        );
+    }
+
     public function test_release_rejects_non_admin_and_missing_justificativa(): void
     {
         $cliente = Usuario::factory()->create();
