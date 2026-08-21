@@ -3,6 +3,7 @@
 use App\Payments\Jobs\ExpirePendingPixPaymentsJob;
 use App\Payments\Jobs\ReauthorizeExpiringPaymentsJob;
 use App\Payments\Jobs\ReleaseApprovedPaymentsJob;
+use App\Payments\Jobs\ResolveExpiredDisputesJob;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -25,3 +26,8 @@ Schedule::command('services:auto-approve')->hourly()->withoutOverlapping();
 Schedule::job(new ReauthorizeExpiringPaymentsJob)->hourly()->withoutOverlapping();
 Schedule::job(new ExpirePendingPixPaymentsJob)->hourly()->withoutOverlapping();
 Schedule::job(new ReleaseApprovedPaymentsJob)->hourly()->withoutOverlapping();
+
+// Diário, não horário: DISPUTE_MEDIATION_DAYS é medido em dias corridos
+// (foundation/03-cancellation-rules.md, "Prazo e timeout") - não há
+// ganho em checar a cada hora se uma disputa passou de 7 dias.
+Schedule::job(new ResolveExpiredDisputesJob)->daily()->withoutOverlapping();

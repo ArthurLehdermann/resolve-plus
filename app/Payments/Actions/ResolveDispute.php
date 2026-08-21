@@ -4,14 +4,10 @@ namespace App\Payments\Actions;
 
 use App\Auth\Models\Usuario;
 use App\Payments\Auditoria;
-use App\Payments\CancelAuthorizedPayment;
-use App\Payments\PaymentAuthorization;
 use App\Payments\PaymentDispute;
 use App\Payments\PaymentDomainException;
 use App\Payments\ResultadoPaymentDispute;
-use App\Payments\StatusPaymentAuthorization;
 use App\Payments\StatusPaymentDispute;
-use App\Payments\TipoPaymentDispute;
 use App\Services\Events\ServiceApproved;
 use App\Services\Exceptions\ServiceException;
 use App\Services\Servico;
@@ -21,7 +17,7 @@ use Illuminate\Support\Facades\DB;
 class ResolveDispute
 {
     public function __construct(
-        private readonly CancelAuthorizedPayment $cancelAuthorized,
+        private readonly ApplyDisputeOutcome $applyOutcome,
     ) {}
 
     public function __invoke(
@@ -91,53 +87,6 @@ class ResolveDispute
         PaymentDispute $dispute,
         ResultadoPaymentDispute $resultado,
     ): void {
-        match ($dispute->tipo) {
-            TipoPaymentDispute::ContestacaoConclusao => $this->resolveContestacaoConclusao($servico, $resultado),
-            TipoPaymentDispute::CancelamentoExecucao => $this->resolveCancelamentoExecucao($servico, $resultado),
-            TipoPaymentDispute::Chargeback => throw new PaymentDomainException(
-                'Disputa de chargeback ainda não tem resolução automatizada por este endpoint; trate manualmente.',
-            ),
-        };
-    }
-
-    private function resolveContestacaoConclusao(Servico $servico, ResultadoPaymentDispute $resultado): void
-    {
-        if ($resultado === ResultadoPaymentDispute::Aprovado) {
-            $servico->status = StatusServico::Aprovado;
-            $servico->save();
-
-            return;
-        }
-
-        $servico->status = StatusServico::Cancelado;
-        $servico->save();
-        $this->releaseAuthorization($servico);
-    }
-
-    private function resolveCancelamentoExecucao(Servico $servico, ResultadoPaymentDispute $resultado): void
-    {
-        if ($resultado === ResultadoPaymentDispute::Aprovado) {
-            $servico->status = StatusServico::EmAndamento;
-            $servico->save();
-
-            return;
-        }
-
-        $servico->status = StatusServico::Cancelado;
-        $servico->save();
-        $this->releaseAuthorization($servico);
-    }
-
-    private function releaseAuthorization(Servico $servico): void
-    {
-        $authorization = PaymentAuthorization::query()
-            ->where('servico_id', $servico->id)
-            ->where('status', StatusPaymentAuthorization::Autorizado)
-            ->latest('criado_em')
-            ->first();
-
-        if ($authorization !== null) {
-            ($this->cancelAuthorized)($authorization, ['motivo' => 'DISPUTA_RESOLVIDA']);
-        }
+        ($this->applyOutcome)($servico, $dispute->tipo, $resultado);
     }
 }
