@@ -1,0 +1,32 @@
+[
+    {
+        "categoria_codigo": "eletrica",
+        "cidade": "São Paulo",
+        "valor_min": 8000,
+        "valor_max": 25000
+    },
+    {
+        "categoria_codigo": "hidraulica",
+        "cidade": "São Paulo",
+        "valor_min": 10000,
+        "valor_max": 35000
+    },
+    {
+        "categoria_codigo": "pintura",
+        "cidade": "São Paulo",
+        "valor_min": 30000,
+        "valor_max": 150000
+    },
+    {
+        "categoria_codigo": "pequenos_reparos",
+        "cidade": "São Paulo",
+        "valor_min": 6000,
+        "valor_max": 20000
+    },
+    {
+        "categoria_codigo": "montagem",
+        "cidade": "São Paulo",
+        "valor_min": 8000,
+        "valor_max": 30000
+    }
+]

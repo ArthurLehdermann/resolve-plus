@@ -9,6 +9,7 @@ use App\Payments\PaymentAuthorization;
 use App\Payments\StatusPaymentAuthorization;
 use App\Payments\TipoPaymentEvent;
 use App\PropertyHistory\Intervention;
+use App\Requests\TabelaPreco;
 use App\Warranty\Garantia;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Auth;
@@ -80,6 +81,12 @@ class FullJourneyTest extends TestCase
 
         // 3. Solicitação de serviço.
         $categoria = Categoria::factory()->mvp('pintura')->create();
+        TabelaPreco::factory()->create([
+            'categoria_id' => $categoria->id,
+            'cidade' => 'São Paulo',
+            'valor_min' => 30000,
+            'valor_max' => 150000,
+        ]);
 
         $solicitacao = $this->asToken($clienteToken)
             ->postJson('/api/v1/requests', [

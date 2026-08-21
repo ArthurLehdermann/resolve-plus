@@ -23,7 +23,7 @@ final class ApiResponse
         return response()->json($payload, $status);
     }
 
-    public static function error(string $message, int $status = 400, array $errors = []): JsonResponse
+    public static function error(string $message, int $status = 400, array $errors = [], ?string $code = null): JsonResponse
     {
         $payload = [
             'success' => false,
@@ -32,6 +32,10 @@ final class ApiResponse
 
         if ($errors !== []) {
             $payload['errors'] = $errors;
+        }
+
+        if ($code !== null) {
+            $payload['code'] = $code;
         }
 
         return response()->json($payload, $status);

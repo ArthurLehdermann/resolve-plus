@@ -14,6 +14,7 @@ use App\PropertyHistory\Http\Controllers\PropertyTransferController;
 use App\PropertyHistory\PropertyHistoryController;
 use App\Proposals\Http\Controllers\ProposalController;
 use App\Ratings\Http\Controllers\RatingController;
+use App\Requests\Http\Controllers\AdminPriceTableController;
 use App\Requests\Http\Controllers\RequestController;
 use App\Services\Http\Controllers\MessageController;
 use App\Services\Http\Controllers\ScheduleController;
@@ -63,6 +64,7 @@ Route::prefix('v1')->group(function (): void {
             ->whereUuid('id');
 
         Route::get('/requests', [RequestController::class, 'index']);
+        Route::post('/requests/estimate', [RequestController::class, 'estimate']);
         Route::post('/requests', [RequestController::class, 'store']);
         Route::get('/requests/{solicitacao}', [RequestController::class, 'show'])
             ->whereUuid('solicitacao');
@@ -144,6 +146,10 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/categories/{categoria}', [AdminCategoryController::class, 'show']);
         Route::put('/categories/{categoria}', [AdminCategoryController::class, 'update']);
         Route::delete('/categories/{categoria}', [AdminCategoryController::class, 'destroy']);
+        Route::get('/price-tables', [AdminPriceTableController::class, 'index']);
+        Route::post('/price-tables', [AdminPriceTableController::class, 'store']);
+        Route::put('/price-tables/{tabelaPreco}', [AdminPriceTableController::class, 'update'])
+            ->whereUuid('tabelaPreco');
         Route::patch('/professionals/documents/{documento}/review', [AdminDocumentoProfissionalController::class, 'review'])
             ->whereUuid('documento');
         Route::get('/users', [AdminPanelController::class, 'users']);

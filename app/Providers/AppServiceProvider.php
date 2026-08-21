@@ -15,6 +15,8 @@ use App\Ratings\Events\AvaliacaoRegistrada;
 use App\Ratings\Listeners\RecalcularPerfilOnAvaliacao;
 use App\Requests\Events\SolicitacaoCriada;
 use App\Requests\Listeners\NotifyEligibleProfessionals;
+use App\Requests\Policies\TabelaPrecoPolicy;
+use App\Requests\TabelaPreco;
 use App\Services\Events\ServiceApproved;
 use App\Users\Listeners\RecalcularPerfilOnDisputeResolvida;
 use App\Warranty\Events\GarantiaAcionada;
@@ -52,6 +54,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Gate::policy(Categoria::class, CategoriaPolicy::class);
+        Gate::policy(TabelaPreco::class, TabelaPrecoPolicy::class);
 
         ResetPassword::createUrlUsing(function (object $notifiable, string $token): string {
             $email = method_exists($notifiable, 'getEmailForPasswordReset')

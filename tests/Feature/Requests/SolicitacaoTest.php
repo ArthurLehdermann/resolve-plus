@@ -12,6 +12,7 @@ use App\Requests\Events\SolicitacaoCriada;
 use App\Requests\Jobs\ProcessSolicitacaoPhotoJob;
 use App\Requests\Solicitacao;
 use App\Requests\StatusSolicitacao;
+use App\Requests\TabelaPreco;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Event;
@@ -30,6 +31,12 @@ class SolicitacaoTest extends TestCase
         [$usuario, $token] = $this->clienteAutenticado();
         $property = Property::factory()->ownedBy($usuario)->create();
         $categoria = Categoria::factory()->mvp('pintura')->create();
+        TabelaPreco::factory()->create([
+            'categoria_id' => $categoria->id,
+            'cidade' => 'São Paulo',
+            'valor_min' => 30000,
+            'valor_max' => 150000,
+        ]);
 
         $response = $this->withToken($token)
             ->postJson('/api/v1/requests', [
@@ -47,16 +54,65 @@ class SolicitacaoTest extends TestCase
             ->assertJsonPath('data.property_id', $property->id)
             ->assertJsonPath('data.category_id', $categoria->id)
             ->assertJsonPath('data.scope.comodos', 2)
-            ->assertJsonPath('data.estimated_price_min', null);
+            ->assertJsonPath('data.estimated_price_min', 30000)
+            ->assertJsonPath('data.estimated_price_max', 150000)
+            ->assertJsonPath('data.estimated_price_factor_bp', 10000);
 
         $this->assertDatabaseHas('solicitacoes', [
             'cliente_id' => $usuario->id,
             'property_id' => $property->id,
             'categoria_id' => $categoria->id,
             'status' => StatusSolicitacao::Aberta->value,
+            'faixa_preco_min' => 30000,
+            'faixa_preco_max' => 150000,
         ]);
 
         Event::assertDispatched(SolicitacaoCriada::class);
+    }
+
+    public function test_post_requests_fails_when_no_active_price_table(): void
+    {
+        [$usuario, $token] = $this->clienteAutenticado();
+        $property = Property::factory()->ownedBy($usuario)->create();
+        $categoria = Categoria::factory()->mvp('pintura')->create();
+
+        $this->withToken($token)
+            ->postJson('/api/v1/requests', [
+                'property_id' => $property->id,
+                'category_id' => $categoria->id,
+                'description' => 'Sem tabela de preço cadastrada',
+                'scope' => $this->escopoPintura(),
+            ])
+            ->assertStatus(422)
+            ->assertJsonPath('code', 'PRECO_TABELA_AUSENTE');
+
+        $this->assertDatabaseCount('solicitacoes', 0);
+    }
+
+    public function test_post_requests_estimate_previews_price_without_persisting(): void
+    {
+        [$usuario, $token] = $this->clienteAutenticado();
+        $property = Property::factory()->ownedBy($usuario)->create();
+        $categoria = Categoria::factory()->mvp('pintura')->create();
+        TabelaPreco::factory()->create([
+            'categoria_id' => $categoria->id,
+            'cidade' => 'São Paulo',
+            'valor_min' => 30000,
+            'valor_max' => 150000,
+        ]);
+
+        $this->withToken($token)
+            ->postJson('/api/v1/requests/estimate', [
+                'property_id' => $property->id,
+                'category_id' => $categoria->id,
+                'description' => 'Só quero ver a faixa antes de contratar',
+                'scope' => $this->escopoPintura(),
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.estimated_price_min', 30000)
+            ->assertJsonPath('data.estimated_price_max', 150000);
+
+        $this->assertDatabaseCount('solicitacoes', 0);
     }
 
     public function test_post_requests_rejects_property_not_owned_by_authenticated_client(): void
@@ -339,6 +395,12 @@ class SolicitacaoTest extends TestCase
     private function solicitacaoDoCliente(Usuario $usuario, array $overrides = []): Solicitacao
     {
         $categoria = Categoria::factory()->mvp('pintura')->create();
+        TabelaPreco::factory()->create([
+            'categoria_id' => $categoria->id,
+            'cidade' => 'São Paulo',
+            'valor_min' => 30000,
+            'valor_max' => 150000,
+        ]);
 
         return Solicitacao::factory()->forCliente($usuario)->create([
             'categoria_id' => $categoria->id,

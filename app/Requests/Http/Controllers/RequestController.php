@@ -2,8 +2,11 @@
 
 namespace App\Requests\Http\Controllers;
 
+use App\Categories\Models\Categoria;
 use App\Http\Controllers\Controller;
+use App\PropertyHistory\Property;
 use App\Requests\Events\SolicitacaoCriada;
+use App\Requests\Exceptions\RequestException;
 use App\Requests\FotoSolicitacao;
 use App\Requests\Http\Requests\StoreSolicitacaoRequest;
 use App\Requests\Http\Requests\UpdateSolicitacaoRequest;
@@ -11,6 +14,7 @@ use App\Requests\Http\Requests\UploadSolicitacaoPhotoRequest;
 use App\Requests\Http\Resources\FotoSolicitacaoResource;
 use App\Requests\Http\Resources\SolicitacaoResource;
 use App\Requests\Jobs\ProcessSolicitacaoPhotoJob;
+use App\Requests\PricingEngine;
 use App\Requests\Solicitacao;
 use App\Requests\StatusSolicitacao;
 use App\Support\ApiResponse;
@@ -62,12 +66,46 @@ class RequestController extends Controller
         );
     }
 
-    public function store(StoreSolicitacaoRequest $request): JsonResponse
+    public function estimate(StoreSolicitacaoRequest $request, PricingEngine $pricingEngine): JsonResponse
     {
         $usuario = $request->user();
 
         if ($usuario === null) {
             return ApiResponse::error('Não autenticado.', 401);
+        }
+
+        $categoria = Categoria::query()->findOrFail($request->validated('category_id'));
+        $property = Property::query()->findOrFail($request->validated('property_id'));
+
+        try {
+            $precificacao = $pricingEngine->estimate($categoria, $property->cidade, $request->validated('scope'));
+        } catch (RequestException $exception) {
+            return $exception->render();
+        }
+
+        return ApiResponse::success([
+            'estimated_price_min' => $precificacao->min,
+            'estimated_price_max' => $precificacao->max,
+            'estimated_price_factor_bp' => $precificacao->fatorBp,
+            'price_table_id' => $precificacao->tabelaPrecoId,
+        ]);
+    }
+
+    public function store(StoreSolicitacaoRequest $request, PricingEngine $pricingEngine): JsonResponse
+    {
+        $usuario = $request->user();
+
+        if ($usuario === null) {
+            return ApiResponse::error('Não autenticado.', 401);
+        }
+
+        $categoria = Categoria::query()->findOrFail($request->validated('category_id'));
+        $property = Property::query()->findOrFail($request->validated('property_id'));
+
+        try {
+            $precificacao = $pricingEngine->estimate($categoria, $property->cidade, $request->validated('scope'));
+        } catch (RequestException $exception) {
+            return $exception->render();
         }
 
         $solicitacao = Solicitacao::query()->create([
@@ -78,6 +116,10 @@ class RequestController extends Controller
             'escopo' => $request->validated('scope'),
             'status' => StatusSolicitacao::Criada,
             'data_desejada' => $request->validated('desired_date'),
+            'faixa_preco_min' => $precificacao->min,
+            'faixa_preco_max' => $precificacao->max,
+            'faixa_preco_fator_bp' => $precificacao->fatorBp,
+            'tabela_preco_id' => $precificacao->tabelaPrecoId,
         ]);
 
         $solicitacao->forceFill([
@@ -109,7 +151,7 @@ class RequestController extends Controller
         );
     }
 
-    public function update(UpdateSolicitacaoRequest $request, Solicitacao $solicitacao): JsonResponse
+    public function update(UpdateSolicitacaoRequest $request, Solicitacao $solicitacao, PricingEngine $pricingEngine): JsonResponse
     {
         $usuario = $request->user();
 
@@ -133,23 +175,54 @@ class RequestController extends Controller
             'desired_date',
         ]);
 
-        if (array_key_exists('scope', $payload) && $this->escopoMudou($solicitacao, $payload['scope'])) {
-            if ($solicitacao->hasPropostas()) {
-                return ApiResponse::error(
-                    'Escopo não pode ser alterado após existirem propostas.',
-                    409,
-                );
+        $escopoMudou = array_key_exists('scope', $payload) && $this->escopoMudou($solicitacao, $payload['scope']);
+
+        if ($escopoMudou && $solicitacao->hasPropostas()) {
+            return ApiResponse::error(
+                'Escopo não pode ser alterado após existirem propostas.',
+                409,
+            );
+        }
+
+        $novaCategoriaId = $payload['category_id'] ?? $solicitacao->categoria_id;
+        $novoPropertyId = $payload['property_id'] ?? $solicitacao->property_id;
+        $novoEscopo = $payload['scope'] ?? $solicitacao->escopo;
+
+        // Faixa de preço só recalcula enquanto não há proposta; com proposta, o
+        // snapshot fica congelado junto com o escopo (10-motor-precificacao.md §2.4).
+        $precoMudou = $escopoMudou
+            || $novaCategoriaId !== $solicitacao->categoria_id
+            || $novoPropertyId !== $solicitacao->property_id;
+
+        $camposPreco = [];
+
+        if ($precoMudou && ! $solicitacao->hasPropostas()) {
+            $categoria = Categoria::query()->findOrFail($novaCategoriaId);
+            $property = Property::query()->findOrFail($novoPropertyId);
+
+            try {
+                $precificacao = $pricingEngine->estimate($categoria, $property->cidade, $novoEscopo);
+            } catch (RequestException $exception) {
+                return $exception->render();
             }
+
+            $camposPreco = [
+                'faixa_preco_min' => $precificacao->min,
+                'faixa_preco_max' => $precificacao->max,
+                'faixa_preco_fator_bp' => $precificacao->fatorBp,
+                'tabela_preco_id' => $precificacao->tabelaPrecoId,
+            ];
         }
 
         $solicitacao->fill([
-            'property_id' => $payload['property_id'] ?? $solicitacao->property_id,
-            'categoria_id' => $payload['category_id'] ?? $solicitacao->categoria_id,
+            'property_id' => $novoPropertyId,
+            'categoria_id' => $novaCategoriaId,
             'descricao' => $payload['description'] ?? $solicitacao->descricao,
-            'escopo' => $payload['scope'] ?? $solicitacao->escopo,
+            'escopo' => $novoEscopo,
             'data_desejada' => array_key_exists('desired_date', $payload)
                 ? $payload['desired_date']
                 : $solicitacao->data_desejada,
+            ...$camposPreco,
         ])->save();
 
         return ApiResponse::success(
