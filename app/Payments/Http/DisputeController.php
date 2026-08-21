@@ -2,7 +2,6 @@
 
 namespace App\Payments\Http;
 
-use App\Auth\Models\Usuario;
 use App\Http\Controllers\Controller;
 use App\Payments\Actions\ResolveDispute;
 use App\Payments\Http\Requests\ResolveDisputeRequest;
@@ -22,7 +21,7 @@ class DisputeController extends Controller
     ): JsonResponse {
         $usuario = $request->user();
 
-        if ($usuario === null || ! $usuario instanceof Usuario) {
+        if ($usuario === null) {
             return ApiResponse::error('Não autenticado.', 401);
         }
 

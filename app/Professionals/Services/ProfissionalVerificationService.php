@@ -63,6 +63,11 @@ final class ProfissionalVerificationService
             ->where('usuario_id', $profissional->id)
             ->first();
 
+        // Falso positivo do Larastan: cast 'array' faz o nível 5 tratar
+        // categorias_atendidas como sempre-array e ignorar que $perfil
+        // (::first()) pode ser null. Achado de auditoria 2026-08-21, ver
+        // phpstan.neon.
+        // @phpstan-ignore-next-line nullsafe.neverNull
         $categorias = $perfil?->categorias_atendidas ?? [];
 
         if ($categorias === []) {
@@ -92,6 +97,8 @@ final class ProfissionalVerificationService
             ->where('usuario_id', $profissional->id)
             ->first();
 
+        // Mesmo falso positivo acima.
+        // @phpstan-ignore-next-line nullsafe.neverNull
         $categorias = $perfil?->categorias_atendidas ?? [];
 
         PerfilProfissional::query()->updateOrCreate(

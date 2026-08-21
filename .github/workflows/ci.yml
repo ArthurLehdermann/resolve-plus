@@ -70,4 +70,3 @@ jobs:
 
       - name: Larastan
         run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
-        continue-on-error: true

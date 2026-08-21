@@ -10,6 +10,7 @@ use App\Ratings\Avaliacao;
 use App\Ratings\DirecaoAvaliacao;
 use App\Services\Servico;
 use App\Services\StatusServico;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
@@ -65,7 +66,7 @@ class RecalcularPerfilConfianca
 
                 if ($novoNivel !== $perfil->nivel_confianca) {
                     $perfil->nivel_confianca = $novoNivel;
-                    $perfil->nivel_atualizado_em = now();
+                    $perfil->nivel_atualizado_em = CarbonImmutable::now();
                 }
             }
 

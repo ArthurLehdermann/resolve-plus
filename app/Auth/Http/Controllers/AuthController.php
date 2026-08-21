@@ -70,7 +70,7 @@ class AuthController extends Controller
             return ApiResponse::error('Não autenticado.', 401);
         }
 
-        $usuario->currentAccessToken()?->delete();
+        $usuario->currentAccessToken()->delete();
 
         return ApiResponse::success();
     }

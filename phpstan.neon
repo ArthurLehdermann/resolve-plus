@@ -6,3 +6,16 @@ parameters:
     paths:
         - app
     parseModelCastsMethod: true
+
+    # Larastan deriva o tipo das properties dos models a partir de casts()
+    # (parseModelCastsMethod acima). Combinado com treatPhpDocTypesAsCertain
+    # (default do PHPStan), isso faz o nível 5 tratar esses tipos derivados
+    # como certeza absoluta - inclusive em casos onde o Eloquent genuinely
+    # devolve null em runtime (ex.: Model::query()->where(...)->first() que
+    # não encontra registro). Achado de auditoria (2026-08-21): pelo menos
+    # dois "sempre não-null" apontados pelo nível 5 eram falsos positivos
+    # comprovados por código real do próprio repo tratando o mesmo lookup
+    # como nullable (RecalcularPerfilConfianca.php, PropertyTransferController
+    # buscando Usuario por e-mail). Sem essa flag, "fixar" o apontamento
+    # (remover o `?->`) teria introduzido um null pointer real.
+    treatPhpDocTypesAsCertain: false

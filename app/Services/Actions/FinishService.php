@@ -7,6 +7,7 @@ use App\Services\Events\ServiceFinished;
 use App\Services\Exceptions\ServiceException;
 use App\Services\Servico;
 use App\Services\StatusServico;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 class FinishService
@@ -35,7 +36,7 @@ class FinishService
             }
 
             $servico->status = StatusServico::AguardandoAprovacao;
-            $servico->fim = now();
+            $servico->fim = CarbonImmutable::now();
             $servico->notas = $notes;
             $servico->fotos = $photos;
             $servico->save();

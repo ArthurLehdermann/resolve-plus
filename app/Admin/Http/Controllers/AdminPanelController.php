@@ -67,7 +67,7 @@ class AdminPanelController
                 'valor' => $authorization->valor,
                 'metodo' => $authorization->metodo->value,
                 'status' => $authorization->status->value,
-                'criado_em' => $authorization->criado_em?->utc()->toIso8601String(),
+                'criado_em' => $authorization->criado_em->utc()->toIso8601String(),
                 'expira_em' => $authorization->expira_em?->utc()->toIso8601String(),
             ])
             ->values()

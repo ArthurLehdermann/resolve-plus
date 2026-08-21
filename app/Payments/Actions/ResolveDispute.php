@@ -12,6 +12,7 @@ use App\Services\Events\ServiceApproved;
 use App\Services\Exceptions\ServiceException;
 use App\Services\Servico;
 use App\Services\StatusServico;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 class ResolveDispute
@@ -61,7 +62,7 @@ class ResolveDispute
             $dispute->status = StatusPaymentDispute::Resolvida;
             $dispute->resultado = $resultado;
             $dispute->justificativa = $justificativa;
-            $dispute->resolvida_em = now();
+            $dispute->resolvida_em = CarbonImmutable::now();
             $dispute->resolvida_por_id = $admin->id;
             $dispute->save();
 

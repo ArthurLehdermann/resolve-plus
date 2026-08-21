@@ -98,7 +98,7 @@ class PaymentController extends Controller
                 'id' => $event->id,
                 'tipo' => $event->tipo->value,
                 'payload' => $event->payload ?? [],
-                'criado_em' => $event->criado_em?->utc()->toIso8601String(),
+                'criado_em' => $event->criado_em->utc()->toIso8601String(),
             ])->values()->all(),
         );
     }
@@ -170,7 +170,7 @@ class PaymentController extends Controller
             'valor' => $authorization->valor,
             'metodo' => $authorization->metodo->value,
             'status' => $authorization->status->value,
-            'criado_em' => $authorization->criado_em?->utc()->toIso8601String(),
+            'criado_em' => $authorization->criado_em->utc()->toIso8601String(),
             'expira_em' => $authorization->expira_em?->utc()->toIso8601String(),
         ];
     }

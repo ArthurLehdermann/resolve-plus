@@ -6,6 +6,7 @@ use App\Auth\Models\Usuario;
 use App\Services\Agenda;
 use App\Services\Exceptions\ServiceException;
 use App\Services\StatusServico;
+use Carbon\Carbon;
 
 class RescheduleAgenda
 {
@@ -29,7 +30,7 @@ class RescheduleAgenda
             );
         }
 
-        $agenda->data = $payload['date'];
+        $agenda->data = Carbon::parse($payload['date']);
         $agenda->hora = strlen($payload['time']) === 5 ? $payload['time'].':00' : $payload['time'];
 
         if (array_key_exists('notes', $payload)) {

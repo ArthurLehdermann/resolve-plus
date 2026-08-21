@@ -12,6 +12,7 @@ use App\PropertyHistory\PropertyOwnership;
 use App\PropertyHistory\PropertyOwnershipTransfer;
 use App\PropertyHistory\StatusPropertyOwnershipTransfer;
 use App\Support\ApiResponse;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -132,7 +133,7 @@ class PropertyTransferController extends Controller
                 return ['ok' => false, 'transfer' => $locked];
             }
 
-            $now = now();
+            $now = CarbonImmutable::now();
             $current->ate = $now;
             $current->save();
 
@@ -228,6 +229,10 @@ class PropertyTransferController extends Controller
                 ->whereRaw('LOWER(email) = ?', [mb_strtolower($paraEmail)])
                 ->first();
             $paraClienteId = $destino?->id;
+            // Falso positivo do Larastan: $destino vem de ->first() (pode ser
+            // null de verdade, é busca por e-mail sem garantia de match).
+            // Achado de auditoria 2026-08-21, ver phpstan.neon.
+            // @phpstan-ignore-next-line nullsafe.neverNull
             $paraEmail = $destino?->email ?? $paraEmail;
         }
 

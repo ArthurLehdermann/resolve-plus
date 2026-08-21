@@ -17,6 +17,11 @@ class UsuarioMeResource extends UsuarioResource
             ...parent::toArray($request),
             'categorias_atendidas' => $this->when(
                 $this->tipo === TipoUsuario::Profissional,
+                // Falso positivo do Larastan: cast 'array' faz o nível 5 tratar
+                // categorias_atendidas como sempre-array e ignorar que
+                // perfilProfissional (HasOne) pode não existir ainda. Achado de
+                // auditoria 2026-08-21, ver phpstan.neon.
+                // @phpstan-ignore-next-line nullsafe.neverNull
                 fn (): array => $this->resource->perfilProfissional?->categorias_atendidas ?? []
             ),
             'trust_profile' => $this->when(

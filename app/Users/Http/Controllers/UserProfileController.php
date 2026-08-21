@@ -11,6 +11,7 @@ use App\Users\Http\Resources\UsuarioMeResource;
 use App\Users\Jobs\ProcessUserAvatarJob;
 use App\Users\NivelConfianca;
 use App\Users\PerfilProfissional;
+use Carbon\CarbonImmutable;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -51,7 +52,7 @@ class UserProfileController extends Controller
                 $perfil->nota_media_dez = null;
                 $perfil->taxa_cancelamento_pct = 0;
                 $perfil->reclamacoes_12m = 0;
-                $perfil->nivel_atualizado_em = now();
+                $perfil->nivel_atualizado_em = CarbonImmutable::now();
             }
 
             $perfil->save();

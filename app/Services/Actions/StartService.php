@@ -9,6 +9,7 @@ use App\Services\Events\ServiceStarted;
 use App\Services\Exceptions\ServiceException;
 use App\Services\Servico;
 use App\Services\StatusServico;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -37,7 +38,7 @@ class StartService
             $this->ensurePaymentConfirmed($servico);
 
             $servico->status = StatusServico::EmAndamento;
-            $servico->inicio = now();
+            $servico->inicio = CarbonImmutable::now();
             $servico->save();
 
             ServiceStarted::dispatch($servico);

@@ -10,6 +10,7 @@ use App\Payments\TipoPaymentDispute;
 use App\Services\Events\ServiceApproved;
 use App\Services\Servico;
 use App\Services\StatusServico;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -93,7 +94,7 @@ class ResolveExpiredDisputes
             $dispute->status = StatusPaymentDispute::Resolvida;
             $dispute->resultado = $resultado;
             $dispute->justificativa = 'TIMEOUT_AUTOMATICO';
-            $dispute->resolvida_em = now();
+            $dispute->resolvida_em = CarbonImmutable::now();
             $dispute->save();
 
             if ($servico->fresh()->status === StatusServico::Aprovado) {
