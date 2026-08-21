@@ -39,6 +39,57 @@ class DocumentoProfissionalWorkflowTest extends TestCase
             ->assertExists($documento->arquivo);
     }
 
+    public function test_index_lista_slots_vazio_quando_profissional_nao_declarou_categorias(): void
+    {
+        $profissional = Usuario::factory()->profissional()->create();
+        $token = $profissional->createToken('auth')->plainTextToken;
+
+        $this->withToken($token)->getJson('/api/v1/professionals/documents')
+            ->assertOk()
+            ->assertJsonPath('data.categorias_atendidas', [])
+            ->assertJsonPath('data.slots', []);
+    }
+
+    public function test_index_lista_slots_base_mais_nr10_para_categoria_eletrica(): void
+    {
+        $profissional = Usuario::factory()->profissional()->create();
+        PerfilProfissional::factory()->create([
+            'usuario_id' => $profissional->id,
+            'categorias_atendidas' => ['eletrica'],
+        ]);
+        DocumentoProfissional::factory()->create([
+            'profissional_id' => $profissional->id,
+            'tipo' => TipoDocumentoProfissional::IdentidadeFiscal,
+            'status' => StatusDocumentoProfissional::Rejeitado,
+            'motivo_rejeicao' => 'Documento ilegível',
+        ]);
+        $token = $profissional->createToken('auth')->plainTextToken;
+
+        $response = $this->withToken($token)->getJson('/api/v1/professionals/documents')
+            ->assertOk()
+            ->assertJsonPath('data.categorias_atendidas', ['eletrica']);
+
+        $tipos = collect($response->json('data.slots'))->pluck('tipo');
+        $this->assertEqualsCanonicalizing(
+            [
+                TipoDocumentoProfissional::IdentidadeFiscal->value,
+                TipoDocumentoProfissional::ComprovanteEndereco->value,
+                TipoDocumentoProfissional::SelfieIdentidade->value,
+                TipoDocumentoProfissional::SeguroRc->value,
+                TipoDocumentoProfissional::CertificadoNr10->value,
+            ],
+            $tipos->all()
+        );
+
+        $slotIdentidade = collect($response->json('data.slots'))
+            ->firstWhere('tipo', TipoDocumentoProfissional::IdentidadeFiscal->value);
+        $this->assertSame(StatusDocumentoProfissional::Rejeitado->value, $slotIdentidade['documento']['status']);
+
+        $slotNr10 = collect($response->json('data.slots'))
+            ->firstWhere('tipo', TipoDocumentoProfissional::CertificadoNr10->value);
+        $this->assertNull($slotNr10['documento']);
+    }
+
     public function test_admin_review_approves_all_required_documents_and_activates_profissional(): void
     {
         $profissional = Usuario::factory()->profissional()->create([

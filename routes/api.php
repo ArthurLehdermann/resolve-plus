@@ -45,6 +45,7 @@ Route::prefix('v1')->group(function (): void {
         Route::put('/users/me', [UserProfileController::class, 'update']);
         Route::post('/users/photo', [UserProfileController::class, 'uploadPhoto'])
             ->middleware('throttle:upload');
+        Route::get('/professionals/documents', [ProfissionalDocumentoController::class, 'index']);
         Route::post('/professionals/documents', [ProfissionalDocumentoController::class, 'store'])
             ->middleware('throttle:upload');
 
