@@ -52,6 +52,31 @@ class ServicoResource extends JsonResource
                 'authorizations',
                 fn (): ?array => $this->paymentPayload(),
             ),
+            // Garantia nasce da aprovação (INV-050): é daqui que a tela do
+            // serviço leva o cliente até ela.
+            'warranty' => $this->whenLoaded(
+                'garantia',
+                fn (): ?array => $this->garantia === null ? null : [
+                    'id' => $this->garantia->id,
+                    'status' => $this->garantia->status->value,
+                    'fim' => $this->garantia->fim?->toIso8601String(),
+                ],
+            ),
+            // A tela precisa saber se o usuário já avaliou para não oferecer de
+            // novo (a API recusaria a segunda avaliação).
+            'ratings' => $this->whenLoaded(
+                'avaliacoes',
+                fn (): array => $this->avaliacoes
+                    ->map(fn ($avaliacao): array => [
+                        'id' => $avaliacao->id,
+                        'autor_id' => $avaliacao->autor_id,
+                        'direcao' => $avaliacao->direcao->value,
+                        'nota' => $avaliacao->nota,
+                        'comentario' => $avaliacao->comentario,
+                    ])
+                    ->values()
+                    ->all(),
+            ),
         ];
     }
 

@@ -136,6 +136,9 @@ Route::prefix('v1')->group(function (): void {
             ->whereUuid('id');
         Route::post('/warranties/{id}/claim', [WarrantyController::class, 'claim'])
             ->whereUuid('id');
+        Route::post('/warranties/{id}/photos', [WarrantyController::class, 'uploadEvidence'])
+            ->middleware('throttle:upload')
+            ->whereUuid('id');
 
         Route::get('/properties/{id}/history', [PropertyHistoryController::class, 'show'])
             ->whereUuid('id');

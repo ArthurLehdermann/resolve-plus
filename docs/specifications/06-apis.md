@@ -290,6 +290,8 @@ Erros: 403 (fora do papel Admin), 409 (serviço não `APROVADO` e sem exceção 
 
 **GET /warranties/{id}**, Detalhes.
 
+**POST /warranties/{id}/photos**, Sobe uma evidência (multipart, campo `photo`, imagem até 5 MB) e devolve `path`/`url`. O `path` é o que entra em `photos` do claim: `claim` exige pelo menos uma evidência em string e não havia como o app produzir essa string. Só cliente ou profissional do serviço; mesmo padrão de `POST /requests/{id}/photos`.
+
 **POST /warranties/{id}/claim**, Cliente aciona garantia com evidências (INV-052).
 
 Request

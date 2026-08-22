@@ -20,10 +20,12 @@ use App\Warranty\ResponsavelFinanceiro;
 use App\Warranty\StatusGarantia;
 use App\Warranty\WarrantyClaim;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class WarrantyTest extends TestCase
@@ -123,6 +125,47 @@ class WarrantyTest extends TestCase
 
         $this->assertSame(StatusGarantia::Ativa, $garantia->fresh()->status);
         $this->assertSame(0, WarrantyClaim::query()->count());
+    }
+
+    public function test_upload_de_evidencia_devolve_caminho_para_o_claim(): void
+    {
+        Storage::fake('s3');
+
+        [$cliente, , $servico] = $this->contextoAprovado();
+        $garantia = Garantia::factory()->create(['servico_id' => $servico->id]);
+
+        $resposta = $this->asUser($cliente)
+            ->post("/api/v1/warranties/{$garantia->id}/photos", [
+                'photo' => UploadedFile::fake()->image('defeito.jpg'),
+            ])
+            ->assertCreated();
+
+        $path = $resposta->json('data.path');
+        $this->assertNotNull($path);
+        Storage::disk('s3')->assertExists($path);
+
+        // O caminho devolvido serve, sem tradução, como evidência do claim.
+        $this->asUser($cliente)
+            ->postJson("/api/v1/warranties/{$garantia->id}/claim", [
+                'descricao' => 'O disjuntor voltou a desarmar.',
+                'photos' => [$path],
+            ])
+            ->assertOk();
+    }
+
+    public function test_upload_de_evidencia_barra_quem_nao_e_do_servico(): void
+    {
+        Storage::fake('s3');
+
+        [, , $servico] = $this->contextoAprovado();
+        $garantia = Garantia::factory()->create(['servico_id' => $servico->id]);
+        $estranho = Usuario::factory()->create();
+
+        $this->asUser($estranho)
+            ->post("/api/v1/warranties/{$garantia->id}/photos", [
+                'photo' => UploadedFile::fake()->image('defeito.jpg'),
+            ])
+            ->assertForbidden();
     }
 
     public function test_claim_aciona_garantia_com_evidencias(): void

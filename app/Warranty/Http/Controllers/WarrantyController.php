@@ -9,9 +9,12 @@ use App\Warranty\Actions\ClaimWarranty;
 use App\Warranty\Exceptions\WarrantyException;
 use App\Warranty\Garantia;
 use App\Warranty\Http\Requests\ClaimWarrantyRequest;
+use App\Warranty\Http\Requests\UploadWarrantyEvidenceRequest;
 use App\Warranty\Http\Resources\GarantiaResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class WarrantyController extends Controller
 {
@@ -48,6 +51,33 @@ class WarrantyController extends Controller
         $this->autorizarVisualizacao($garantia, $this->usuario($request));
 
         return ApiResponse::success(new GarantiaResource($garantia));
+    }
+
+    /**
+     * Sobe uma evidência e devolve o caminho para entrar em `photos` do claim.
+     *
+     * `POST /warranties/{id}/claim` exige pelo menos uma foto (string), e não
+     * existia como o app produzir essa string: mesmo padrão de
+     * `POST /requests/{id}/photos`, agora para a garantia.
+     */
+    public function uploadEvidence(UploadWarrantyEvidenceRequest $request, string $id): JsonResponse
+    {
+        $garantia = Garantia::query()->with('servico.proposta.solicitacao')->findOrFail($id);
+        $this->autorizarVisualizacao($garantia, $this->usuario($request));
+
+        $file = $request->file('photo');
+        $disk = (string) config('filesystems.object_disk', 's3');
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
+        $path = $file->storeAs('warranties/'.$garantia->id, Str::uuid()->toString().'.'.$extension, [
+            'disk' => $disk,
+            'visibility' => 'public',
+        ]);
+
+        if ($path === false) {
+            return ApiResponse::error('Falha ao enviar a evidência para o Object Storage.', 500);
+        }
+
+        return ApiResponse::success(['path' => $path, 'url' => Storage::disk($disk)->url($path)], 201);
     }
 
     public function claim(ClaimWarrantyRequest $request, string $id, ClaimWarranty $action): JsonResponse

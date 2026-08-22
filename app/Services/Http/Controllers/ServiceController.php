@@ -38,6 +38,8 @@ class ServiceController extends Controller
         'proposta.profissional',
         'agenda',
         'authorizations',
+        'avaliacoes',
+        'garantia',
         'garantiaOrigem.servico.proposta.solicitacao',
     ];
 
