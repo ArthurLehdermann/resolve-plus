@@ -30,7 +30,8 @@
             precisa de um Postgres de verdade - vem do ambiente (docker-compose
             em stage, serviço postgres no CI), nunca é forçada pra sqlite.
         -->
-        <env name="MAIL_MAILER" value="array"/>
+        <env name="MAIL_MAILER" value="array" force="true"/>
+        <server name="MAIL_MAILER" value="array" force="true"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

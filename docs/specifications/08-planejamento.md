@@ -34,7 +34,7 @@ Transformar a visão do produto em um plano de execução incremental, reduzindo
 
 Notificações em tempo real, login Google/Apple, múltiplos imóveis, painel financeiro avançado, cupons, cashback, sistema de disputas, painel de suporte.
 
-> Login por magic link (link único por e-mail, sem senha) levantado pelo PO em 2026-08-21 como possível alternativa/complemento ao login social. Ainda não é decisão, registrado aqui como candidato a avaliar junto com login Google/Apple na mesma leva, não faz sentido decidir estratégia de auth em duas rodadas separadas.
+> Login por magic link: implementado em 2026-08-21 (`POST /auth/magic-link` + `/auth/magic-link/verify`), decisão do PO de seguir com isso já, fora da leva conjunta com login Google/Apple cogitada anteriormente. É complementar ao login por senha, não substitui.
 
 ### V2
 
