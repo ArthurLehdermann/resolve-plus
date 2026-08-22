@@ -70,6 +70,7 @@ Route::prefix('v1')->group(function (): void {
             ->whereUuid('id');
 
         Route::get('/requests', [RequestController::class, 'index']);
+        Route::get('/requests/available', [RequestController::class, 'available']);
         Route::post('/requests/estimate', [RequestController::class, 'estimate']);
         Route::post('/requests', [RequestController::class, 'store']);
         Route::get('/requests/{solicitacao}', [RequestController::class, 'show'])

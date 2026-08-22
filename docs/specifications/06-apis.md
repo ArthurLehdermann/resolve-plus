@@ -114,6 +114,8 @@ Erros: 403 (não é o dono vigente), 404, 422 (nem `para_cliente_id` nem `para_e
 
 Filtros: `status`, `categoria`, `data`
 
+**GET /requests/available**, Feed de oportunidades do profissional (`11-epicos-frontend.md` F5): solicitações `ABERTA`/`RECEBENDO_PROPOSTAS` cujo `categoria.codigo` está em `PerfilProfissional.categorias_atendidas`. Adicionado em 2026-08-22, decisão do PO: acessível a qualquer usuário `tipo = PROFISSIONAL`, **sem** exigir `status = ATIVA` (RN001/INV-002, ver `00-domain-invariants.md`); o gate de verificação continua só em `POST /requests/{id}/proposals`. Sem `categorias_atendidas` cadastrado, devolve lista vazia (mesmo padrão de `GET /professionals/documents`).
+
 **POST /requests/estimate**, Pré-visualização da faixa (OBJ-MVP-01: antes de contratar / antes de falar com profissional). Mesmo body de `POST /requests`, **não persiste**. Recalcula a cada chamada.
 
 Request

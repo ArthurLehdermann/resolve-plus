@@ -2,6 +2,7 @@
 
 namespace App\Requests\Http\Controllers;
 
+use App\Auth\Enums\TipoUsuario;
 use App\Categories\Models\Categoria;
 use App\Http\Controllers\Controller;
 use App\PropertyHistory\Property;
@@ -18,6 +19,7 @@ use App\Requests\PricingEngine;
 use App\Requests\Solicitacao;
 use App\Requests\StatusSolicitacao;
 use App\Support\ApiResponse;
+use App\Users\PerfilProfissional;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -52,6 +54,47 @@ class RequestController extends Controller
         if ($request->filled('data')) {
             $query->whereDate('data_desejada', (string) $request->input('data'));
         }
+
+        $total = $query->count();
+        $items = $query
+            ->forPage($page, $perPage)
+            ->get();
+
+        return ApiResponse::paginated(
+            SolicitacaoResource::collection($items)->resolve($request),
+            $page,
+            $perPage,
+            $total,
+        );
+    }
+
+    public function available(Request $request): JsonResponse
+    {
+        $usuario = $request->user();
+
+        if ($usuario === null) {
+            return ApiResponse::error('Não autenticado.', 401);
+        }
+
+        if ($usuario->tipo !== TipoUsuario::Profissional) {
+            return ApiResponse::error('Apenas profissionais podem consultar oportunidades.', 403);
+        }
+
+        $page = max(1, (int) $request->integer('page', 1));
+        $perPage = min(100, max(1, (int) $request->integer('per_page', 20)));
+
+        $perfil = PerfilProfissional::query()->where('usuario_id', $usuario->id)->first();
+        $categorias = $perfil?->categorias_atendidas ?? [];
+
+        if ($categorias === []) {
+            return ApiResponse::paginated([], $page, $perPage, 0);
+        }
+
+        $query = Solicitacao::query()
+            ->with('fotos')
+            ->whereIn('status', [StatusSolicitacao::Aberta, StatusSolicitacao::RecebendoPropostas])
+            ->whereHas('categoria', fn ($q) => $q->whereIn('codigo', $categorias))
+            ->orderByDesc('criado_em');
 
         $total = $query->count();
         $items = $query

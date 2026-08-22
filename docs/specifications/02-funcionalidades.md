@@ -104,7 +104,7 @@ Login → Receber oportunidade → Analisar solicitação → Enviar proposta �
 
 | ID | Regra |
 |---|---|
-| RN001 | Apenas profissionais verificados podem receber solicitações. |
+| RN001 | Qualquer profissional pode visualizar solicitações abertas compatíveis com suas categorias (`GET /requests/available`), independente do status de verificação. Só profissionais verificados (`status = ATIVA`) podem enviar proposta. Antes de 2026-08-22 o gate de `ATIVA` cobria as duas coisas (INV-002, `00-domain-invariants.md`). |
 | RN002 | Cliente só pode contratar uma proposta por solicitação. |
 | RN003 | Cartão: pagamento é autorizado no aceite da proposta e só é capturado **integralmente** após conclusão e aprovação. Pix: nasce `PENDENTE` no aceite, vira `CAPTURADO` quando o webhook do Asaas confirma o pagamento (INV-047, corrigido em 2026-08-20; não é captura imediata), e `Agendado → Em Andamento` fica bloqueado enquanto `PENDENTE` (INV-048); só o **repasse** do serviço executado espera aprovação (`adr/ADR-005-gateway-pagamento.md`, INV-041). Exceção Cenário B: multa pode ser capturada/repassada sem `APROVADO` (`foundation/03-cancellation-rules.md`). Não é escrow bancário, é autorizar→capturar→repassar no cartão (ver `adr/ADR-002-financeiro.md`). Redigido em 2026-08-16 com vocabulário de escrow ("retido"), corrigido em 2026-08-17, ajustado para Pix e B003 em 2026-08-17, corrigido para o Pix real (`PENDENTE`→webhook) em 2026-08-20. |
 | RN004 | Avaliação só é permitida com o Serviço em `APROVADO` (não existe estado "concluído" separado, ver `foundation/02-state-machine.md`). |
