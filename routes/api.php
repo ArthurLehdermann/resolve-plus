@@ -156,6 +156,9 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/price-tables', [AdminPriceTableController::class, 'store']);
         Route::put('/price-tables/{tabelaPreco}', [AdminPriceTableController::class, 'update'])
             ->whereUuid('tabelaPreco');
+        Route::get('/professionals/documents', [AdminPanelController::class, 'documents']);
+        Route::get('/professionals/documents/{documento}/download', [AdminDocumentoProfissionalController::class, 'download'])
+            ->whereUuid('documento');
         Route::patch('/professionals/documents/{documento}/review', [AdminDocumentoProfissionalController::class, 'review'])
             ->whereUuid('documento');
         Route::get('/users', [AdminPanelController::class, 'users']);

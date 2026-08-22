@@ -6,6 +6,8 @@ use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
 use App\Payments\PaymentAuthorization;
+use App\Professionals\DocumentoProfissional;
+use App\Professionals\Enums\StatusDocumentoProfissional;
 use App\Services\Servico;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -26,6 +28,7 @@ class AdminPanelTest extends TestCase
         $this->withToken($token)->getJson('/api/v1/admin/services')->assertForbidden();
         $this->withToken($token)->getJson('/api/v1/admin/payments')->assertForbidden();
         $this->withToken($token)->getJson('/api/v1/admin/dashboard')->assertForbidden();
+        $this->withToken($token)->getJson('/api/v1/admin/professionals/documents')->assertForbidden();
     }
 
     public function test_get_admin_users_returns_paginated_users(): void
@@ -139,6 +142,72 @@ class AdminPanelTest extends TestCase
         $this->assertCount(2, $ids);
         $this->assertSame(2, $response->json('data.pagination.total'));
         $this->assertEqualsCanonicalizing($authorizations->pluck('id')->all(), $ids);
+    }
+
+    public function test_get_admin_documents_returns_paginated_documentos_with_profissional(): void
+    {
+        $admin = Usuario::factory()->create([
+            'tipo' => TipoUsuario::Admin->value,
+            'status' => StatusConta::Ativa,
+        ]);
+        $adminToken = $admin->createToken('auth')->plainTextToken;
+
+        $profissional = Usuario::factory()->create([
+            'tipo' => TipoUsuario::Profissional->value,
+            'status' => StatusConta::Ativa,
+        ]);
+        DocumentoProfissional::factory()->count(2)->create([
+            'profissional_id' => $profissional->id,
+            'status' => StatusDocumentoProfissional::Pendente->value,
+        ]);
+        DocumentoProfissional::factory()->create([
+            'status' => StatusDocumentoProfissional::Aprovado->value,
+        ]);
+
+        $response = $this->withToken($adminToken)
+            ->getJson('/api/v1/admin/professionals/documents?page=1&per_page=20');
+
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonStructure([
+                'data' => [
+                    'data' => [
+                        ['id', 'profissional_id', 'profissional' => ['id', 'nome', 'email'], 'tipo', 'status'],
+                    ],
+                    'pagination' => [
+                        'page',
+                        'per_page',
+                        'total',
+                        'last_page',
+                    ],
+                ],
+            ]);
+
+        $this->assertSame(3, $response->json('data.pagination.total'));
+    }
+
+    public function test_get_admin_documents_filters_by_status(): void
+    {
+        $admin = Usuario::factory()->create([
+            'tipo' => TipoUsuario::Admin->value,
+            'status' => StatusConta::Ativa,
+        ]);
+        $adminToken = $admin->createToken('auth')->plainTextToken;
+
+        DocumentoProfissional::factory()->count(2)->create([
+            'status' => StatusDocumentoProfissional::Pendente->value,
+        ]);
+        DocumentoProfissional::factory()->create([
+            'status' => StatusDocumentoProfissional::Aprovado->value,
+        ]);
+
+        $response = $this->withToken($adminToken)
+            ->getJson('/api/v1/admin/professionals/documents?status='.StatusDocumentoProfissional::Pendente->value);
+
+        $response->assertOk();
+        $this->assertSame(2, $response->json('data.pagination.total'));
+        $statuses = collect($response->json('data.data'))->pluck('status')->all();
+        $this->assertSame([StatusDocumentoProfissional::Pendente->value, StatusDocumentoProfissional::Pendente->value], $statuses);
     }
 
     public function test_get_admin_dashboard_returns_general_indicators_and_leakage_metrics(): void

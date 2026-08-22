@@ -161,4 +161,46 @@ class DocumentoProfissionalWorkflowTest extends TestCase
         $profissional->refresh();
         $this->assertSame(StatusConta::PendenteVerificacao, $profissional->status);
     }
+
+    public function test_admin_can_download_documento(): void
+    {
+        Storage::fake((string) config('filesystems.object_disk', 's3'));
+        $admin = Usuario::factory()->create([
+            'tipo' => TipoUsuario::Admin,
+            'status' => StatusConta::Ativa,
+        ]);
+        $documento = DocumentoProfissional::factory()->create([
+            'arquivo' => 'documentos-profissional/algum-id/arquivo.pdf',
+        ]);
+        Storage::disk((string) config('filesystems.object_disk', 's3'))
+            ->put($documento->arquivo, 'conteudo-fake-pdf');
+
+        $this->withToken($admin->createToken('auth')->plainTextToken)
+            ->get("/api/v1/admin/professionals/documents/{$documento->id}/download")
+            ->assertOk();
+    }
+
+    public function test_non_admin_cannot_download_documento(): void
+    {
+        $profissional = Usuario::factory()->profissional()->create();
+        $documento = DocumentoProfissional::factory()->create();
+
+        $this->withToken($profissional->createToken('auth')->plainTextToken)
+            ->get("/api/v1/admin/professionals/documents/{$documento->id}/download")
+            ->assertForbidden();
+    }
+
+    public function test_download_returns_404_when_arquivo_missing_from_disk(): void
+    {
+        Storage::fake((string) config('filesystems.object_disk', 's3'));
+        $admin = Usuario::factory()->create([
+            'tipo' => TipoUsuario::Admin,
+            'status' => StatusConta::Ativa,
+        ]);
+        $documento = DocumentoProfissional::factory()->create();
+
+        $this->withToken($admin->createToken('auth')->plainTextToken)
+            ->get("/api/v1/admin/professionals/documents/{$documento->id}/download")
+            ->assertNotFound();
+    }
 }

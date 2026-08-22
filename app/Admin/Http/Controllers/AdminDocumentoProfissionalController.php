@@ -11,12 +11,36 @@ use App\Professionals\Http\Resources\DocumentoProfissionalResource;
 use App\Professionals\Services\ProfissionalVerificationService;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AdminDocumentoProfissionalController extends Controller
 {
     public function __construct(
         private readonly ProfissionalVerificationService $verificationService,
     ) {}
+
+    public function download(Request $request, DocumentoProfissional $documento): StreamedResponse|JsonResponse
+    {
+        $usuario = $request->user();
+
+        if ($usuario === null) {
+            return ApiResponse::error('Não autenticado.', 401);
+        }
+
+        if ($usuario->tipo !== TipoUsuario::Admin) {
+            return ApiResponse::error('Apenas administradores podem visualizar documentos.', 403);
+        }
+
+        $disk = (string) config('filesystems.object_disk', 's3');
+
+        if (! Storage::disk($disk)->exists($documento->arquivo)) {
+            return ApiResponse::error('Arquivo não encontrado.', 404);
+        }
+
+        return Storage::disk($disk)->response($documento->arquivo);
+    }
 
     public function review(
         ReviewDocumentoProfissionalRequest $request,

@@ -2,6 +2,7 @@
 
 namespace App\Professionals\Http\Resources;
 
+use App\Auth\Http\Resources\UsuarioResource;
 use App\Professionals\DocumentoProfissional;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -19,6 +20,10 @@ class DocumentoProfissionalResource extends JsonResource
         return [
             'id' => $this->id,
             'profissional_id' => $this->profissional_id,
+            'profissional' => $this->whenLoaded(
+                'profissional',
+                fn () => new UsuarioResource($this->profissional),
+            ),
             'tipo' => $this->tipo->value,
             'arquivo' => $this->arquivo,
             'status' => $this->status->value,

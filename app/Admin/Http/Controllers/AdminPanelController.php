@@ -5,6 +5,9 @@ namespace App\Admin\Http\Controllers;
 use App\Auth\Http\Resources\UsuarioResource;
 use App\Auth\Models\Usuario;
 use App\Payments\PaymentAuthorization;
+use App\Professionals\DocumentoProfissional;
+use App\Professionals\Enums\StatusDocumentoProfissional;
+use App\Professionals\Http\Resources\DocumentoProfissionalResource;
 use App\Services\Http\Resources\ServicoResource;
 use App\Services\Servico;
 use App\Support\ApiResponse;
@@ -70,6 +73,30 @@ class AdminPanelController
                 'criado_em' => $authorization->criado_em->utc()->toIso8601String(),
                 'expira_em' => $authorization->expira_em?->utc()->toIso8601String(),
             ])
+            ->values()
+            ->all();
+
+        return $this->paginated($paginator, $items);
+    }
+
+    public function documents(Request $request): JsonResponse
+    {
+        [$perPage, $page] = $this->paginationParams($request);
+
+        $status = $request->query('status');
+
+        $query = DocumentoProfissional::query()->with('profissional');
+
+        if (is_string($status) && $status !== '') {
+            $query->where('status', StatusDocumentoProfissional::from($status)->value);
+        }
+
+        $paginator = $query
+            ->orderByDesc('created_at')
+            ->paginate($perPage, ['*'], 'page', $page);
+
+        $items = $paginator->getCollection()
+            ->map(fn (DocumentoProfissional $documento): array => (new DocumentoProfissionalResource($documento))->toArray($request))
             ->values()
             ->all();
 
