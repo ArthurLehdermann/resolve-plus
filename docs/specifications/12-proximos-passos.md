@@ -7,18 +7,17 @@
 | Superfície | Estado |
 |---|---|
 | API (`resolve-plus`) | Domínio do MVP implementado ponta a ponta, suíte verde. É a parte madura. |
-| App Flutter (`resolve-plus-app`) | F1-F6 no ar em Stage: auth, documentos, imóveis, solicitação, propostas e execução do serviço (iniciar, concluir, aprovar, contestar, cancelar, chat). |
+| App Flutter (`resolve-plus-app`) | F1-F8 no ar em Stage: auth, documentos, imóveis, solicitação, propostas, execução do serviço, garantia e avaliação. |
 | Painel Admin (`resolve-plus-admin`) | Dashboard, categorias, usuários, serviços, pagamentos, documentos. No ar em `admin.resolveplus.staging.bigworks.com.br`. |
 
-A jornada vai do cadastro até a aprovação do serviço com liberação de pagamento (F5 e F6 entregues em 2026-08-22). O que falta na interface é a volta: garantia, avaliação e prontuário.
+A jornada fecha o ciclo: cadastro, solicitação, propostas, contratação, execução, aprovação com liberação de pagamento, garantia acionável e avaliação (F5, F6 e F8 entregues em 2026-08-22). Falta o prontuário do imóvel, que é o diferencial competitivo do produto e hoje só existe no backend.
 
 ## Sequência
 
-### 1. Pagamentos, garantia e avaliação (P0)
+### 1. Prontuário do imóvel e histórico de pagamento (P0/P1)
 
-- **App F8**: histórico de pagamento por serviço, extrato de eventos, acionar garantia com evidências, avaliar o profissional depois da aprovação.
-- Hoje o serviço aprovado emite garantia e entra no prontuário, mas o cliente não vê nem uma coisa nem outra pela tela.
-- **App F9** (prontuário) vem junto na sequência: `GET /properties/{id}/history` já existe; o pedaço de registro `MANUAL` continua barrado por B004.
+- **App F9**: timeline de intervenções por imóvel (`GET /properties/{id}/history`), com selo de origem (`PLATAFORMA | MANUAL | IMPORTADO`, INV-062) diferenciado visualmente. O pedaço de registro `MANUAL` continua barrado por B004.
+- **Resto de F8**: histórico de pagamentos e extrato de eventos (`GET /payments`, `/payments/{id}/events`). Hoje o serviço mostra o status do pagamento vigente, que resolve o essencial; o extrato é a parte que falta.
 
 ### 2. Agenda e evidências de conclusão (P1, resto de F6)
 
@@ -62,3 +61,4 @@ Pareceres definitivos de B001 e B005, validação de B004, identidade visual/pro
 | 2026-08-22 | Criação. Registra a sequência escolhida depois do diagnóstico dos três repos; entrega `GET /services`/`GET /services/{id}` e o isolamento do banco de teste que motivaram o item 2. |
 | 2026-08-22 | F5 entregue (app) e painel admin deployado: os dois itens saem da fila. Sobe execução do serviço para primeiro. Cartão vira item próprio, com a pendência de tokenização explicitada. |
 | 2026-08-22 | F6 entregue (lista, detalhe, ações de estado e chat). Sobra dele agenda e fotos de conclusão, que viram item P1 separado. Garantia/avaliação/prontuário assumem o topo. |
+| 2026-08-22 | F8 entregue (garantia com acionamento por evidência e avaliação). O upload de evidência de garantia foi criado no backend para destravar isso. Prontuário assume o topo. |
