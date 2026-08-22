@@ -2,6 +2,7 @@
 
 namespace App\Services\Http\Controllers;
 
+use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
 use App\Http\Controllers\Controller;
 use App\Services\Actions\ApproveService;
@@ -17,13 +18,81 @@ use App\Services\Http\Requests\FinishServiceRequest;
 use App\Services\Http\Requests\OpenDisputeRequest;
 use App\Services\Http\Resources\ServicoResource;
 use App\Services\Servico;
+use App\Services\StatusServico;
 use App\Support\ApiResponse;
 use App\Support\IdempotentOperation;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class ServiceController extends Controller
 {
+    /**
+     * Relações que as telas de lista e detalhe (F6/F7) precisam para montar o
+     * card do serviço sem uma segunda rodada de chamadas.
+     *
+     * @var list<string>
+     */
+    private const CONTEXTO = [
+        'proposta.solicitacao',
+        'proposta.profissional',
+        'agenda',
+        'authorizations',
+        'garantiaOrigem.servico.proposta.solicitacao',
+    ];
+
+    /**
+     * Serviços em que o usuário é cliente ou profissional. Inclui revisita de
+     * garantia (INV-033), que não tem proposta própria e amarra no serviço de
+     * origem via `garantia_origem_id`.
+     */
+    public function index(Request $request): JsonResponse
+    {
+        $usuario = $this->usuario($request);
+
+        $page = max(1, (int) $request->integer('page', 1));
+        $perPage = min(100, max(1, (int) $request->integer('per_page', 20)));
+
+        $query = Servico::query()
+            ->with(self::CONTEXTO)
+            ->where(fn ($builder) => $this->doUsuario($builder, $usuario))
+            ->orderByDesc('created_at');
+
+        $status = $request->string('status')->toString();
+
+        if ($status !== '') {
+            $caso = StatusServico::tryFrom($status);
+
+            if ($caso === null) {
+                throw ServiceException::unprocessable("Status inválido: {$status}.");
+            }
+
+            $query->where('status', $caso);
+        }
+
+        $total = $query->count();
+        $servicos = $query->forPage($page, $perPage)->get();
+
+        return ApiResponse::paginated(
+            ServicoResource::collection($servicos)->resolve($request),
+            $page,
+            $perPage,
+            $total,
+        );
+    }
+
+    public function show(Request $request, string $id): JsonResponse
+    {
+        $usuario = $this->usuario($request);
+        $servico = Servico::query()->with(self::CONTEXTO)->findOrFail($id);
+
+        if (! $servico->isParticipante($usuario) && $usuario->tipo !== TipoUsuario::Admin) {
+            throw ServiceException::forbidden('Sem permissão para visualizar este serviço.');
+        }
+
+        return ApiResponse::success(new ServicoResource($servico));
+    }
+
     public function start(Request $request, string $id, StartService $action): JsonResponse
     {
         $servico = Servico::query()->with('proposta.solicitacao')->findOrFail($id);
@@ -120,6 +189,23 @@ class ServiceController extends Controller
             'status' => $dispute->status->value,
             'servico_id' => $dispute->servico_id,
         ], 201);
+    }
+
+    /**
+     * Cliente e profissional chegam por dois caminhos: pela proposta do próprio
+     * serviço ou, na revisita de garantia, pela proposta do serviço de origem.
+     *
+     * @param  Builder<Servico>  $builder
+     */
+    private function doUsuario(Builder $builder, Usuario $usuario): void
+    {
+        $participante = fn ($proposta) => $proposta
+            ->where('profissional_id', $usuario->id)
+            ->orWhereHas('solicitacao', fn ($solicitacao) => $solicitacao->where('cliente_id', $usuario->id));
+
+        $builder
+            ->whereHas('proposta', $participante)
+            ->orWhereHas('garantiaOrigem.servico.proposta', $participante);
     }
 
     private function usuario(Request $request): Usuario

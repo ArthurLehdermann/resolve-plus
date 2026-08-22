@@ -97,6 +97,9 @@ Route::prefix('v1')->group(function (): void {
         Route::put('/schedule/{id}', [ScheduleController::class, 'update'])
             ->whereUuid('id');
 
+        Route::get('/services', [ServiceController::class, 'index']);
+        Route::get('/services/{id}', [ServiceController::class, 'show'])
+            ->whereUuid('id');
         Route::post('/services/{id}/start', [ServiceController::class, 'start'])
             ->whereUuid('id');
         Route::post('/services/{id}/finish', [ServiceController::class, 'finish'])

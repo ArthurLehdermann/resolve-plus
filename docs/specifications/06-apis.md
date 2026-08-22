@@ -199,9 +199,11 @@ Erros: 422 (`scope` não bate com `template_escopo` da categoria; código `PRECO
 
 ## Serviços
 
-**GET /services**, Lista serviços.
+**GET /services**, Lista os serviços em que o usuário autenticado é cliente ou profissional, mais recentes primeiro. Paginado (`page`, `per_page`, default 20, teto 100). Filtro opcional `status` (valor de `StatusServico`; valor fora do enum devolve 422). Inclui revisita de garantia (INV-033), que não tem proposta própria e herda cliente/profissional do serviço de origem.
 
-**GET /services/{id}**, Detalhes.
+**GET /services/{id}**, Detalhes. Só cliente, profissional do serviço ou Admin (403 para terceiro).
+
+Resposta (ambos): campos base do serviço (`id`, `proposal_id`, `status`, `started_at`, `finished_at`, `notes`, `photos`, `warranty_origin_id`, `client_id`, `professional_id`) mais os blocos de contexto que a tela de execução precisa: `proposal`, `request`, `schedule` e `payment` (autorização vigente: a mais recente, porque reautorização de cartão cria linha nova, INV-046). Os blocos só aparecem nestes dois endpoints; as ações (`start`, `finish`, ...) continuam devolvendo o serviço cru.
 
 **POST /services/{id}/start**, Marca início (`Agendado → Em Andamento`). Só o profissional da proposta aceita. Bloqueia com 409 se a `PaymentAuthorization` do serviço estiver `PENDENTE` (Pix ainda não confirmado pelo webhook) ou ausente (INV-048, adicionado em 2026-08-20); `CAPTURADO`/`AUTORIZADO` liberam.
 

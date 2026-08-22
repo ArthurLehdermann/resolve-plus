@@ -44,6 +44,10 @@ class AdminPanelController
         [$perPage, $page] = $this->paginationParams($request);
 
         $paginator = Servico::query()
+            // ServicoResource resolve cliente e profissional pela proposta (ou
+            // pela garantia de origem, na revisita): sem eager loading a
+            // listagem vira N+1.
+            ->with(['proposta.solicitacao', 'garantiaOrigem.servico.proposta.solicitacao'])
             ->orderByDesc('created_at')
             ->paginate($perPage, ['*'], 'page', $page);
 
