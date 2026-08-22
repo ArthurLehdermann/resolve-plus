@@ -18,7 +18,7 @@ class VerifyMagicLinkRequest extends FormRequest
     {
         return [
             'email' => ['required', 'email'],
-            'token' => ['required', 'string'],
+            'codigo' => ['required', 'string', 'size:6'],
         ];
     }
 }

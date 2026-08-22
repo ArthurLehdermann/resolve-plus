@@ -21,7 +21,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
@@ -88,7 +87,7 @@ class AuthController extends Controller
         $usuario = Usuario::query()->where('email', $request->string('email')->toString())->first();
 
         if ($usuario !== null) {
-            $plainToken = Str::random(64);
+            $codigo = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
             LinkMagico::query()
                 ->where('usuario_id', $usuario->id)
@@ -97,36 +96,32 @@ class AuthController extends Controller
 
             LinkMagico::query()->create([
                 'usuario_id' => $usuario->id,
-                'token_hash' => hash('sha256', $plainToken),
+                'token_hash' => hash('sha256', $codigo),
                 'expires_at' => now()->addMinutes(self::MAGIC_LINK_TTL_MINUTES),
                 'created_at' => now(),
             ]);
 
-            $url = config('app.url').'/api/v1/auth/magic-link/verify'
-                .'?token='.$plainToken
-                .'&email='.urlencode($usuario->email);
-
             Mail::to($usuario->email)->send(new MagicLinkMail(
                 nome: $usuario->nome,
-                url: $url,
+                codigo: $codigo,
                 expiraEmMinutos: self::MAGIC_LINK_TTL_MINUTES,
             ));
         }
 
         return ApiResponse::success([
-            'message' => 'Se o e-mail estiver cadastrado, enviaremos um link de acesso.',
+            'message' => 'Se o e-mail estiver cadastrado, enviaremos um código de acesso.',
         ]);
     }
 
     public function verifyMagicLink(VerifyMagicLinkRequest $request): JsonResponse
     {
         $usuario = Usuario::query()->where('email', $request->string('email')->toString())->first();
-        $tokenHash = hash('sha256', $request->string('token')->toString());
+        $codigoHash = hash('sha256', $request->string('codigo')->toString());
 
         $link = $usuario !== null
             ? LinkMagico::query()
                 ->where('usuario_id', $usuario->id)
-                ->where('token_hash', $tokenHash)
+                ->where('token_hash', $codigoHash)
                 ->whereNull('used_at')
                 ->where('expires_at', '>', now())
                 ->first()
@@ -134,7 +129,7 @@ class AuthController extends Controller
 
         if ($usuario === null || $link === null) {
             throw ValidationException::withMessages([
-                'token' => ['Link inválido ou expirado.'],
+                'codigo' => ['Código inválido ou expirado.'],
             ]);
         }
 

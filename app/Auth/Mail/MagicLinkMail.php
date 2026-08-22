@@ -14,14 +14,14 @@ class MagicLinkMail extends Mailable
 
     public function __construct(
         public readonly string $nome,
-        public readonly string $url,
+        public readonly string $codigo,
         public readonly int $expiraEmMinutos,
     ) {}
 
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Seu link de acesso ao Resolve+',
+            subject: 'Seu código de acesso ao Resolve+',
         );
     }
 
