@@ -51,8 +51,17 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
+        <!--
+            Estes três também precisam do par <env>/<server>: o container de
+            stage passou a receber ASAAS_WEBHOOK_TOKEN de verdade pelo compose,
+            e só com <env> a suíte herdava o token real e tomava 401 no webhook.
+            Mesma armadilha do DB_DATABASE e do MAIL_MAILER acima.
+        -->
         <env name="OBJECT_STORAGE_DISK" value="s3" force="true"/>
+        <server name="OBJECT_STORAGE_DISK" value="s3" force="true"/>
         <env name="PAYMENT_GATEWAY" value="fake" force="true"/>
+        <server name="PAYMENT_GATEWAY" value="fake" force="true"/>
         <env name="ASAAS_WEBHOOK_TOKEN" value="test-webhook-token" force="true"/>
+        <server name="ASAAS_WEBHOOK_TOKEN" value="test-webhook-token" force="true"/>
     </php>
 </phpunit>
