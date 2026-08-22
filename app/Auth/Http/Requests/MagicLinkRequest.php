@@ -6,6 +6,8 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class MagicLinkRequest extends FormRequest
 {
+    use NormalizaEmail;
+
     public function authorize(): bool
     {
         return true;

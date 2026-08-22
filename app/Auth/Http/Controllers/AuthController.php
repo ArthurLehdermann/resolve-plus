@@ -53,7 +53,7 @@ class AuthController extends Controller
 
     public function login(LoginRequest $request): JsonResponse
     {
-        $usuario = Usuario::query()->where('email', $request->string('email')->toString())->first();
+        $usuario = Usuario::query()->comEmail($request->string('email')->toString())->first();
 
         if ($usuario === null || ! Hash::check($request->string('senha')->toString(), $usuario->senha_hash)) {
             throw ValidationException::withMessages([
@@ -84,7 +84,7 @@ class AuthController extends Controller
 
     public function requestMagicLink(MagicLinkRequest $request): JsonResponse
     {
-        $usuario = Usuario::query()->where('email', $request->string('email')->toString())->first();
+        $usuario = Usuario::query()->comEmail($request->string('email')->toString())->first();
 
         if ($usuario !== null) {
             $codigo = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
@@ -115,7 +115,7 @@ class AuthController extends Controller
 
     public function verifyMagicLink(VerifyMagicLinkRequest $request): JsonResponse
     {
-        $usuario = Usuario::query()->where('email', $request->string('email')->toString())->first();
+        $usuario = Usuario::query()->comEmail($request->string('email')->toString())->first();
         $codigoHash = hash('sha256', $request->string('codigo')->toString());
 
         $link = $usuario !== null

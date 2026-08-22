@@ -8,6 +8,8 @@ use Illuminate\Validation\Rule;
 
 class RegisterRequest extends FormRequest
 {
+    use NormalizaEmail;
+
     public function authorize(): bool
     {
         return true;

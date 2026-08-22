@@ -128,6 +128,42 @@ class AuthTest extends TestCase
             ->assertJsonStructure(['data' => ['token']]);
     }
 
+    public function test_login_ignora_caixa_do_email(): void
+    {
+        $senha = self::senhaValida();
+        $usuario = Usuario::factory()->create([
+            'email' => 'arthur@example.com',
+            'senha_hash' => $senha,
+        ]);
+
+        // Teclado de celular capitaliza a primeira letra sozinho; isso não pode
+        // virar "credenciais inválidas" com a senha certa.
+        $this->postJson('/api/v1/auth/login', [
+            'email' => '  Arthur@Example.com ',
+            'senha' => $senha,
+        ])
+            ->assertOk()
+            ->assertJsonPath('data.user.id', $usuario->id);
+    }
+
+    public function test_cadastro_normaliza_email_e_bloqueia_duplicata_por_caixa(): void
+    {
+        $payload = [
+            'tipo' => 'CLIENTE',
+            'nome' => 'Arthur',
+            'email' => 'Novo.Cliente@Example.com',
+            'telefone' => '51999990000',
+            'senha' => self::senhaValida(),
+        ];
+
+        $this->postJson('/api/v1/auth/register', $payload)
+            ->assertCreated()
+            ->assertJsonPath('data.user.email', 'novo.cliente@example.com');
+
+        $this->postJson('/api/v1/auth/register', [...$payload, 'email' => 'NOVO.CLIENTE@example.com'])
+            ->assertStatus(422);
+    }
+
     public function test_login_rejects_invalid_credentials(): void
     {
         Usuario::factory()->create([
