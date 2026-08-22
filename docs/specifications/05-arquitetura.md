@@ -106,7 +106,7 @@ Executar em filas: envio de e-mails, push notifications, SMS, geração de hist�
 
 **Mapas**: Google Maps, Mapbox, usados para geolocalização, distância, endereços.
 
-**CEP**: ViaCEP (Brasil), para preenchimento automático do endereço.
+**CEP**: BrasilAPI (`https://brasilapi.com.br/api/cep/v2/{cep}`), para preenchimento automático do endereço.
 
 **IA (Futuro)**: OpenAI ou modelo equivalente para organização automática do escopo, estimativa inicial de preço, sugestão de materiais. Fora do MVP. A faixa de preço do MVP **não** é este item: é a heurística de `TabelaPreco` + `template_escopo` em `10-motor-precificacao.md` (OBJ-MVP-01 / OBJ-TEC-02 / RF029).
 
