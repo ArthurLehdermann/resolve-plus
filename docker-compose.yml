@@ -135,6 +135,7 @@ services:
       - ASAAS_WEBHOOK_TOKEN
     volumes:
       - ./:/var/www/html
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
     networks:
       - resolve_plus_internal
       - traefik
