@@ -31,6 +31,12 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/login', [AuthController::class, 'login'])
             ->middleware('throttle:auth-login');
 
+        Route::post('/magic-link', [AuthController::class, 'requestMagicLink'])
+            ->middleware('throttle:auth-login');
+
+        Route::post('/magic-link/verify', [AuthController::class, 'verifyMagicLink'])
+            ->middleware('throttle:auth-login');
+
         Route::post('/forgot-password', [AuthController::class, 'forgotPassword'])
             ->middleware('throttle:auth-login');
 

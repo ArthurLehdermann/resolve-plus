@@ -6,20 +6,28 @@ use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Http\Requests\ForgotPasswordRequest;
 use App\Auth\Http\Requests\LoginRequest;
+use App\Auth\Http\Requests\MagicLinkRequest;
 use App\Auth\Http\Requests\RegisterRequest;
 use App\Auth\Http\Requests\ResetPasswordRequest;
+use App\Auth\Http\Requests\VerifyMagicLinkRequest;
 use App\Auth\Http\Resources\UsuarioResource;
+use App\Auth\Mail\MagicLinkMail;
+use App\Auth\Models\LinkMagico;
 use App\Auth\Models\Usuario;
 use App\Http\Controllers\Controller;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    private const MAGIC_LINK_TTL_MINUTES = 15;
+
     public function register(RegisterRequest $request): JsonResponse
     {
         $tipo = TipoUsuario::from($request->string('tipo')->toString());
@@ -73,6 +81,71 @@ class AuthController extends Controller
         $usuario->currentAccessToken()->delete();
 
         return ApiResponse::success();
+    }
+
+    public function requestMagicLink(MagicLinkRequest $request): JsonResponse
+    {
+        $usuario = Usuario::query()->where('email', $request->string('email')->toString())->first();
+
+        if ($usuario !== null) {
+            $plainToken = Str::random(64);
+
+            LinkMagico::query()
+                ->where('usuario_id', $usuario->id)
+                ->whereNull('used_at')
+                ->delete();
+
+            LinkMagico::query()->create([
+                'usuario_id' => $usuario->id,
+                'token_hash' => hash('sha256', $plainToken),
+                'expires_at' => now()->addMinutes(self::MAGIC_LINK_TTL_MINUTES),
+                'created_at' => now(),
+            ]);
+
+            $url = config('app.url').'/api/v1/auth/magic-link/verify'
+                .'?token='.$plainToken
+                .'&email='.urlencode($usuario->email);
+
+            Mail::to($usuario->email)->send(new MagicLinkMail(
+                nome: $usuario->nome,
+                url: $url,
+                expiraEmMinutos: self::MAGIC_LINK_TTL_MINUTES,
+            ));
+        }
+
+        return ApiResponse::success([
+            'message' => 'Se o e-mail estiver cadastrado, enviaremos um link de acesso.',
+        ]);
+    }
+
+    public function verifyMagicLink(VerifyMagicLinkRequest $request): JsonResponse
+    {
+        $usuario = Usuario::query()->where('email', $request->string('email')->toString())->first();
+        $tokenHash = hash('sha256', $request->string('token')->toString());
+
+        $link = $usuario !== null
+            ? LinkMagico::query()
+                ->where('usuario_id', $usuario->id)
+                ->where('token_hash', $tokenHash)
+                ->whereNull('used_at')
+                ->where('expires_at', '>', now())
+                ->first()
+            : null;
+
+        if ($usuario === null || $link === null) {
+            throw ValidationException::withMessages([
+                'token' => ['Link inválido ou expirado.'],
+            ]);
+        }
+
+        $link->forceFill(['used_at' => now()])->save();
+
+        $token = $usuario->createToken('auth')->plainTextToken;
+
+        return ApiResponse::success([
+            'user' => new UsuarioResource($usuario),
+            'token' => $token,
+        ]);
     }
 
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse

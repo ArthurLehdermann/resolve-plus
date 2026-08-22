@@ -4,10 +4,14 @@ namespace Tests\Feature\Auth;
 
 use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
+use App\Auth\Mail\MagicLinkMail;
+use App\Auth\Models\LinkMagico;
 use App\Auth\Models\Usuario;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Str;
 use Laravel\Sanctum\PersonalAccessToken;
 use Tests\TestCase;
 
@@ -151,6 +155,89 @@ class AuthTest extends TestCase
 
         $this->assertSame(0, $usuario->tokens()->count());
         $this->assertNull(PersonalAccessToken::findToken($token));
+    }
+
+    public function test_magic_link_request_sends_email_for_registered_user(): void
+    {
+        Mail::fake();
+
+        $usuario = Usuario::factory()->create(['email' => 'magiclink@example.com']);
+
+        $this->postJson('/api/v1/auth/magic-link', [
+            'email' => 'magiclink@example.com',
+        ])->assertOk()
+            ->assertJsonPath('success', true);
+
+        Mail::assertSent(MagicLinkMail::class, function (MagicLinkMail $mail) use ($usuario) {
+            return $mail->hasTo($usuario->email);
+        });
+
+        $this->assertSame(1, LinkMagico::query()->where('usuario_id', $usuario->id)->count());
+    }
+
+    public function test_magic_link_request_does_not_reveal_unregistered_email(): void
+    {
+        Mail::fake();
+
+        $this->postJson('/api/v1/auth/magic-link', [
+            'email' => 'inexistente@example.com',
+        ])->assertOk()
+            ->assertJsonPath('success', true);
+
+        Mail::assertNothingSent();
+    }
+
+    public function test_magic_link_verify_authenticates_and_consumes_token(): void
+    {
+        $usuario = Usuario::factory()->create(['email' => 'verificar@example.com']);
+        $plainToken = Str::random(64);
+
+        LinkMagico::query()->create([
+            'usuario_id' => $usuario->id,
+            'token_hash' => hash('sha256', $plainToken),
+            'expires_at' => now()->addMinutes(15),
+            'created_at' => now(),
+        ]);
+
+        $response = $this->postJson('/api/v1/auth/magic-link/verify', [
+            'email' => 'verificar@example.com',
+            'token' => $plainToken,
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.user.id', $usuario->id)
+            ->assertJsonStructure(['data' => ['token']]);
+
+        $this->postJson('/api/v1/auth/magic-link/verify', [
+            'email' => 'verificar@example.com',
+            'token' => $plainToken,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['token']);
+    }
+
+    public function test_magic_link_verify_rejects_expired_or_invalid_token(): void
+    {
+        $usuario = Usuario::factory()->create(['email' => 'expirado@example.com']);
+        $plainToken = Str::random(64);
+
+        LinkMagico::query()->create([
+            'usuario_id' => $usuario->id,
+            'token_hash' => hash('sha256', $plainToken),
+            'expires_at' => now()->subMinute(),
+            'created_at' => now(),
+        ]);
+
+        $this->postJson('/api/v1/auth/magic-link/verify', [
+            'email' => 'expirado@example.com',
+            'token' => $plainToken,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['token']);
+
+        $this->postJson('/api/v1/auth/magic-link/verify', [
+            'email' => 'expirado@example.com',
+            'token' => 'token-invalido',
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['token']);
     }
 
     public function test_forgot_password_accepts_registered_email(): void
