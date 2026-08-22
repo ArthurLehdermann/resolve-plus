@@ -17,13 +17,13 @@ jobs:
       postgres:
         image: postgres:17-alpine
         env:
-          POSTGRES_DB: resolve_plus
+          POSTGRES_DB: resolve_plus_test
           POSTGRES_USER: resolve_plus
           POSTGRES_PASSWORD: resolve_plus
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U resolve_plus -d resolve_plus"
+          --health-cmd "pg_isready -U resolve_plus -d resolve_plus_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
@@ -32,7 +32,7 @@ jobs:
       DB_CONNECTION: pgsql
       DB_HOST: 127.0.0.1
       DB_PORT: 5432
-      DB_DATABASE: resolve_plus
+      DB_DATABASE: resolve_plus_test
       DB_USERNAME: resolve_plus
       DB_PASSWORD: resolve_plus
 

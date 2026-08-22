@@ -36,6 +36,7 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:?obrigatório}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-test-db.sh:/docker-entrypoint-initdb.d/init-test-db.sh:ro
     networks:
       - resolve_plus_internal
     healthcheck:

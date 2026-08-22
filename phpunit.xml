@@ -25,11 +25,25 @@
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
         <!--
-            Sem DB_CONNECTION/DB_DATABASE aqui: o app usa jsonb e índices
-            parciais via DB::statement, que não existem em SQLite. A suíte
-            precisa de um Postgres de verdade - vem do ambiente (docker-compose
+            Sem DB_CONNECTION aqui: o app usa jsonb e índices parciais via
+            DB::statement, que não existem em SQLite. A suíte precisa de um
+            Postgres de verdade - o servidor vem do ambiente (docker-compose
             em stage, serviço postgres no CI), nunca é forçada pra sqlite.
+
+            O banco, esse sim, é forçado: a suíte usa RefreshDatabase e
+            truncaria o banco da aplicação se herdasse DB_DATABASE do
+            ambiente. Foi o que aconteceu na Stage em 2026-08-22 (categorias,
+            tabela de preço e usuários zerados por um `artisan test`). Criar o
+            banco antes de rodar: `docker/init-test-db.sh` cuida disso em
+            ambiente novo, o CI sobe o serviço já com esse nome.
         -->
+        <!--
+            <env> e <server>: o config do Laravel lê $_SERVER, então só o <env>
+            não segura quando a variável já vem do ambiente do container (mesmo
+            motivo do MAIL_MAILER logo abaixo).
+        -->
+        <env name="DB_DATABASE" value="resolve_plus_test" force="true"/>
+        <server name="DB_DATABASE" value="resolve_plus_test" force="true"/>
         <env name="MAIL_MAILER" value="array" force="true"/>
         <server name="MAIL_MAILER" value="array" force="true"/>
         <env name="QUEUE_CONNECTION" value="sync"/>
