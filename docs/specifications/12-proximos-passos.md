@@ -10,30 +10,28 @@
 | App Flutter (`resolve-plus-app`) | F1-F9 no ar em Stage: auth, documentos, imóveis, solicitação, propostas, execução do serviço, garantia, avaliação e prontuário. |
 | Painel Admin (`resolve-plus-admin`) | Dashboard, categorias, usuários, serviços, pagamentos, documentos. No ar em `admin.resolveplus.staging.bigworks.com.br`. |
 
-A jornada do MVP está inteira visível no app: cadastro, solicitação, propostas, contratação, execução, aprovação com liberação de pagamento, garantia acionável, avaliação e prontuário do imóvel (F5, F6, F8 e F9 entregues em 2026-08-22). O que sobra são bordas de fluxo, o painel operável e o dinheiro real.
+A jornada do MVP está inteira visível no app: cadastro, solicitação, propostas, contratação, execução, aprovação com liberação de pagamento, garantia acionável, avaliação, prontuário do imóvel e extrato financeiro (F5, F6, F8 e F9 entregues em 2026-08-22). O que sobra são bordas de fluxo, o painel operável e o dinheiro real.
+
+O item P0 restante é o painel admin: sem tabela de preço configurável, abrir cidade nova depende de `db:seed`.
 
 ## Sequência
 
-### 1. Histórico de pagamento (P1, resto de F8)
-
-- Histórico de pagamentos e extrato de eventos (`GET /payments`, `/payments/{id}/events`). Hoje o serviço mostra o status do pagamento vigente, que resolve o essencial; o extrato é a parte que falta.
-
-### 2. Agenda e evidências de conclusão (P1, resto de F6)
+### 1. Agenda e evidências de conclusão (P1, resto de F6)
 
 - Reagendar pela tela (`POST/PUT /schedule`): hoje a agenda é só leitura no detalhe do serviço.
 - Fotos na conclusão: `POST /services/{id}/finish` aceita `photos`, mas não existe endpoint de upload para serviço (o de solicitação é outro), então a tela só manda o relato escrito.
 
-### 3. Painel Admin operável (P0)
+### 2. Painel Admin operável (P0)
 
 - Tela de tabelas de preço (`/admin/price-tables` já existe na API): sem ela, ninguém configura preço de cidade nova sem `db:seed`.
 - Disputas: **bloqueado por backend**, falta listagem admin (só existe `PUT /disputes/{id}/resolve`).
 
-### 4. Pagamento com cartão de ponta a ponta (P1)
+### 3. Pagamento com cartão de ponta a ponta (P1)
 
 - O aceite com cartão exige `credit_card_token`; o app não tokeniza e a tela mostra a opção desabilitada. Decidir onde a tokenização acontece (SDK no cliente ou endpoint próprio na API) antes de prometer cartão a alguém.
 - A Stage roda com `PAYMENT_GATEWAY=fake`: o caminho real do Asaas nunca foi exercitado fora dos testes.
 
-### 5. Lacunas de backend que travam frontend
+### 4. Lacunas de backend que travam frontend
 
 | Lacuna | Trava |
 |---|---|
@@ -44,7 +42,7 @@ A jornada do MVP está inteira visível no app: cadastro, solicitação, propost
 | Registro `MANUAL` no prontuário | Prontuário só cresce por serviço aprovado; entrada manual depende de B004 fechar |
 | RF010 proximidade geográfica | Feed de oportunidades filtra só por categoria, sem distância |
 
-### 6. Infra e produção
+### 5. Infra e produção
 
 - Object storage real: upload de foto caiu para disco local por falta de pacote/credencial S3.
 - Asaas: sair do sandbox (conta, MCC, webhook de produção) antes de qualquer piloto com dinheiro real.
@@ -62,3 +60,4 @@ Pareceres definitivos de B001 e B005, validação de B004, identidade visual/pro
 | 2026-08-22 | F6 entregue (lista, detalhe, ações de estado e chat). Sobra dele agenda e fotos de conclusão, que viram item P1 separado. Garantia/avaliação/prontuário assumem o topo. |
 | 2026-08-22 | F8 entregue (garantia com acionamento por evidência e avaliação). O upload de evidência de garantia foi criado no backend para destravar isso. Prontuário assume o topo. |
 | 2026-08-22 | F9 entregue (timeline do prontuário com selo de origem, leitura pelo card do imóvel). Sem entrada manual, que segue barrada por B004. Histórico de pagamento assume o topo. |
+| 2026-08-22 | Resto de F8 entregue (histórico paginado e extrato de eventos com split). Fecha o épico. Sobram agenda/fotos de F6 e o painel admin, agora o único P0. |
