@@ -5,6 +5,7 @@ namespace App\Auth\Http\Resources;
 use App\Auth\Models\Usuario;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use Illuminate\Support\Facades\Storage;
 
 /** @mixin Usuario */
 class UsuarioResource extends JsonResource
@@ -20,7 +21,9 @@ class UsuarioResource extends JsonResource
             'nome' => $this->nome,
             'email' => $this->email,
             'telefone' => $this->telefone,
-            'foto' => $this->foto,
+            'foto' => $this->foto === null
+                ? null
+                : Storage::disk((string) config('filesystems.object_disk', 's3'))->url($this->foto),
             'status' => $this->status->value,
             'criado_em' => $this->created_at?->toIso8601String(),
         ];

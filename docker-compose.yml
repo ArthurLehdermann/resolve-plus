@@ -82,6 +82,7 @@ services:
         composer install --no-dev --optimize-autoloader --no-interaction &&
         chown -R www-data:www-data storage bootstrap/cache &&
         php artisan migrate --force &&
+        php artisan storage:link &&
         exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
       "
     environment:
@@ -89,6 +90,11 @@ services:
       - APP_DEBUG=${APP_DEBUG:-false}
       - APP_NAME=Resolve+
       - APP_URL=${APP_URL:-https://resolveplus.staging.bigworks.com.br}
+      # Sem infra S3 provisionada em staging ainda; avatar cai no disco local
+      # (servido por /storage). Troca pra 's3' quando o Object Storage
+      # existir de verdade (é aí que entra league/flysystem-aws-s3-v3, que
+      # falta no composer.json hoje).
+      - OBJECT_STORAGE_DISK=${OBJECT_STORAGE_DISK:-public}
       - APP_KEY=${APP_KEY:?obrigatório}
       - APP_LOCALE=pt_BR
       - APP_FALLBACK_LOCALE=pt_BR
@@ -175,6 +181,8 @@ services:
     environment:
       - APP_ENV=${APP_ENV:-staging}
       - APP_KEY=${APP_KEY:?obrigatório}
+      - APP_URL=${APP_URL:-https://resolveplus.staging.bigworks.com.br}
+      - OBJECT_STORAGE_DISK=${OBJECT_STORAGE_DISK:-public}
       - DB_CONNECTION=pgsql
       - DB_HOST=db
       - DB_PORT=5432
