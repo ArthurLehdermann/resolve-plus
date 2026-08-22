@@ -30,9 +30,11 @@ class ProposalResource extends JsonResource
             'professional' => [
                 'id' => $this->profissional?->id,
                 'nome' => $this->profissional?->nome,
-                // PerfilProfissional ainda não está persistido neste recorte.
-                'trust_level' => null,
-                'average_rating' => null,
+                // RN026: o cliente compara propostas por reputação, não só por
+                // preço. Sai null enquanto o profissional não tem perfil de
+                // confiança calculado (conta nova), e a tela trata isso.
+                'trust_level' => $this->profissional?->perfilProfissional?->nivel_confianca?->value,
+                'average_rating' => $this->profissional?->perfilProfissional?->notaMedia(),
             ],
             'service' => $this->when(
                 $this->relationLoaded('servico') && $this->servico instanceof Servico,

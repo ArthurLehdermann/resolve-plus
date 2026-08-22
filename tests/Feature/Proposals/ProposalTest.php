@@ -21,6 +21,8 @@ use App\Requests\Solicitacao;
 use App\Requests\StatusSolicitacao;
 use App\Services\Servico;
 use App\Services\StatusServico;
+use App\Users\NivelConfianca;
+use App\Users\PerfilProfissional;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -123,6 +125,30 @@ class ProposalTest extends TestCase
             ->assertJsonPath('data.0.professional.trust_level', null)
             ->assertJsonPath('data.0.professional.average_rating', null)
             ->assertJsonPath('pagination.total', 1);
+    }
+
+    public function test_lista_propostas_traz_nivel_e_nota_quando_profissional_tem_perfil(): void
+    {
+        $cliente = Usuario::factory()->create();
+        $solicitacao = Solicitacao::factory()->recebendoPropostas()->create([
+            'cliente_id' => $cliente->id,
+        ]);
+        $profissional = $this->profissionalAtivo();
+        PerfilProfissional::factory()->create([
+            'usuario_id' => $profissional->id,
+            'nivel_confianca' => NivelConfianca::Ouro,
+            'nota_media_dez' => 47,
+        ]);
+        Proposta::factory()->create([
+            'solicitacao_id' => $solicitacao->id,
+            'profissional_id' => $profissional->id,
+        ]);
+
+        $this->withToken($this->token($cliente))
+            ->getJson("/api/v1/requests/{$solicitacao->id}/proposals")
+            ->assertOk()
+            ->assertJsonPath('data.0.professional.trust_level', NivelConfianca::Ouro->value)
+            ->assertJsonPath('data.0.professional.average_rating', 4.7);
     }
 
     public function test_accept_cria_servico_e_recusa_demais_inv_011(): void

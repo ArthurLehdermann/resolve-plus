@@ -26,6 +26,6 @@ class WithdrawProposal
         $proposta->status = StatusProposta::Retirada;
         $proposta->save();
 
-        return $proposta->load('profissional');
+        return $proposta->load('profissional.perfilProfissional');
     }
 }

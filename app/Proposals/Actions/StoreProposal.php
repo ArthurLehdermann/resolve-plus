@@ -81,7 +81,7 @@ class StoreProposal
 
             ProposalCreated::dispatch($proposta);
 
-            return $proposta->load('profissional');
+            return $proposta->load('profissional.perfilProfissional');
         });
     }
 

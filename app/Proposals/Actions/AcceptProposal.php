@@ -73,7 +73,7 @@ class AcceptProposal
                     }
 
                     return [
-                        'proposta' => $proposta->load('profissional'),
+                        'proposta' => $proposta->load('profissional.perfilProfissional'),
                         'servico' => $servico,
                     ];
                 }
@@ -117,7 +117,7 @@ class AcceptProposal
                 ProposalAccepted::dispatch($proposta, $servico);
 
                 return [
-                    'proposta' => $proposta->load('profissional'),
+                    'proposta' => $proposta->load('profissional.perfilProfissional'),
                     'servico' => $servico,
                 ];
             });

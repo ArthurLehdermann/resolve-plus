@@ -39,7 +39,7 @@ class ProposalController extends Controller
         $perPage = min(100, max(1, (int) $request->query('per_page', 20)));
 
         $paginator = $solicitacao->propostas()
-            ->with('profissional')
+            ->with('profissional.perfilProfissional')
             ->orderBy('created_at')
             ->paginate($perPage, ['*'], 'page', $page);
 
@@ -74,7 +74,7 @@ class ProposalController extends Controller
     {
         $this->assertIdempotencyKey($request);
 
-        $proposta = Proposta::query()->with(['solicitacao', 'profissional', 'servico'])->findOrFail($id);
+        $proposta = Proposta::query()->with(['solicitacao', 'profissional.perfilProfissional', 'servico'])->findOrFail($id);
 
         try {
             $result = $action(
@@ -96,7 +96,7 @@ class ProposalController extends Controller
 
     public function withdraw(Request $request, string $id, WithdrawProposal $action): JsonResponse
     {
-        $proposta = Proposta::query()->with('profissional')->findOrFail($id);
+        $proposta = Proposta::query()->with('profissional.perfilProfissional')->findOrFail($id);
         $proposta = $action($proposta, $this->usuario($request));
 
         return ApiResponse::success(new ProposalResource($proposta));
