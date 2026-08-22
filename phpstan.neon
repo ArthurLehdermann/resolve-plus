@@ -19,3 +19,12 @@ parameters:
     # buscando Usuario por e-mail). Sem essa flag, "fixar" o apontamento
     # (remover o `?->`) teria introduzido um null pointer real.
     treatPhpDocTypesAsCertain: false
+
+    ignoreErrors:
+        # Mesma raiz do comentário acima, num caminho que treatPhpDocTypesAsCertain
+        # não cobre: a regra olha o tipo inferido pelo Larastan (não o phpdoc) e
+        # trata `Model::query()->...->first()` como não-null, então acusa o `?->`
+        # de supérfluo. Ele não é: o lookup devolve null quando não há registro
+        # (perfil profissional ainda não criado, por exemplo) e tirar o nullsafe
+        # troca um `[]` correto por um fatal error em produção.
+        - identifier: nullsafe.neverNull
