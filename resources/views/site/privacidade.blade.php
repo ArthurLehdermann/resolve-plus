@@ -3,13 +3,14 @@
 
     O texto descreve o que o sistema faz de verdade — cada dado listado existe
     numa tabela do banco ou numa integração ativa (pagamento, login Google,
-    armazenamento de arquivos). Antes de acrescentar promessa aqui, confira se
-    o código já cumpre; e quando o tratamento mudar, esta página muda junto.
+    armazenamento de arquivos, e-mail). Antes de acrescentar promessa aqui,
+    confira se o código já cumpre; e quando o tratamento mudar, esta página
+    muda junto.
 --}}
 @extends('site.layout')
 
 @section('titulo', 'Política de Privacidade — Resolve+')
-@section('descricao', 'Como o Resolve+ trata os dados de clientes e profissionais: o que coletamos, por quê, com quem compartilhamos e como exercer seus direitos de titular.')
+@section('descricao', 'Como o Resolve+ trata os dados de clientes e profissionais: o que coletamos, por quê, com quem compartilhamos, por quanto tempo guardamos e como exercer seus direitos de titular.')
 
 @section('conteudo')
 
@@ -36,7 +37,7 @@
             <ul>
                 <li><strong>Cadastro:</strong> nome, e-mail, telefone, foto de perfil e o tipo de conta (cliente ou profissional).</li>
                 <li><strong>Entrada na conta:</strong> a entrada é sem senha. Enviamos um código/link de uso único para o seu e-mail ou, se você escolher o Google, recebemos daquele login apenas nome, e-mail e foto.</li>
-                <li><strong>Imóvel:</strong> CEP, logradouro, número, complemento, bairro, cidade, estado e o apelido que você dá ao lugar.</li>
+                <li><strong>Imóvel:</strong> CEP, logradouro, número, complemento, bairro, cidade, estado, coordenadas aproximadas do endereço e o apelido que você dá ao lugar.</li>
                 <li><strong>Solicitação de serviço:</strong> a descrição do problema, as fotos que você anexa, a categoria e o imóvel a que se refere.</li>
                 <li><strong>Profissional:</strong> documentos enviados para verificação (identificação, comprovantes e, quando houver, apólice e vigência), categorias atendidas e região de atuação.</li>
                 <li><strong>Execução:</strong> propostas, mensagens trocadas dentro da plataforma, agendamentos, registro de conclusão, fotos de antes e depois e os dados da garantia.</li>
@@ -51,8 +52,9 @@
                 propostas e das mensagens passa por um filtro que oculta telefones, e-mails e
                 perfis de redes sociais antes de entregar ao destinatário. O texto original
                 fica registrado apenas para auditoria interna e apuração de abuso, com acesso
-                restrito à nossa equipe. Não usamos esse conteúdo para publicidade nem o
-                entregamos a terceiros para análise comercial.
+                restrito à nossa equipe, e é apagado quando você exclui a sua conta. Não
+                usamos esse conteúdo para publicidade nem o entregamos a terceiros para
+                análise comercial.
             </p>
 
             <h2>4. Para que usamos</h2>
@@ -63,7 +65,7 @@
                 <li>Verificar documentos de profissionais antes de liberar o acesso às solicitações.</li>
                 <li>Calcular reputação e nível de confiança.</li>
                 <li>Prevenir fraude, abuso e tentativa de levar o combinado para fora da plataforma.</li>
-                <li>Cumprir obrigações legais, fiscais e responder a autoridades quando exigido.</li>
+                <li>Cumprir obrigações legais e fiscais e responder a autoridades quando exigido.</li>
             </ul>
 
             <h2>5. Bases legais</h2>
@@ -85,29 +87,57 @@
                 <li><strong>Autoridades:</strong> mediante requisição legal.</li>
             </ul>
 
-            <h2>7. Por quanto tempo guardamos</h2>
+            <h2>7. Onde os dados ficam</h2>
             <p>
-                Enquanto a sua conta existir. Ao excluir a conta, apagamos ou anonimizamos os
-                seus dados de identificação e mantemos apenas o que a lei exige ou o que
-                sustenta direito de terceiro: registros de serviço, pagamento e garantia
-                seguem guardados pelos prazos legais, sem identificar você além do necessário.
-                O histórico do imóvel permanece de forma despersonalizada, ligado ao imóvel e
-                não à pessoa. Cópias de segurança são rotacionadas periodicamente.
+                Os arquivos enviados (fotos e documentos) ficam em armazenamento em nuvem na
+                região do Brasil. Parte da infraestrutura de servidores e dos provedores de
+                e-mail e pagamento pode operar fora do país; nesses casos a transferência
+                internacional segue o art. 33 da LGPD, com cláusulas contratuais que garantem
+                nível de proteção equivalente.
             </p>
 
-            <h2>8. Seus direitos e como exercer</h2>
+            <h2>8. Decisões automatizadas</h2>
+            <p>
+                Dois pontos do produto funcionam de forma automática: o <strong>nível de
+                confiança</strong> do profissional, calculado a partir de serviços aprovados,
+                avaliações, cancelamentos e reclamações — e que influencia quais solicitações
+                ele enxerga —, e o <strong>filtro de contatos</strong> descrito no item 3.
+                Nenhum dos dois decide sozinho sobre exclusão de conta ou retenção de
+                dinheiro: suspensão e mediação passam por análise humana da nossa equipe, e
+                você pode pedir revisão dessas decisões pelo e-mail do encarregado
+                (art. 20 da LGPD).
+            </p>
+
+            <h2>9. Por quanto tempo guardamos</h2>
+            <p>
+                Enquanto a sua conta existir. Ao excluir a conta, apagamos ou anonimizamos os
+                seus dados de identificação — nome, e-mail, telefone, foto, documentos
+                enviados e sessões abertas — e mantemos apenas o que a lei exige ou o que
+                sustenta direito de terceiro: registros de serviço, pagamento e garantia
+                seguem guardados pelos prazos legais aplicáveis (em regra, cinco anos para
+                registros fiscais e financeiros), já sem identificar você. O histórico
+                permanece ligado ao imóvel, não à pessoa.
+            </p>
+            <p>
+                Dado transitório sai antes disso, por rotina diária: códigos de entrada
+                vencidos, tokens expirados, chaves de idempotência e os payloads brutos
+                recebidos do provedor de pagamento.
+            </p>
+
+            <h2>10. Seus direitos e como exercer</h2>
             <p>Como titular, você pode pedir confirmação e acesso, correção, anonimização, portabilidade, eliminação e informação sobre compartilhamentos, além de revogar consentimento.</p>
             <ul>
-                <li><strong>No aplicativo:</strong> em <em>Perfil &rsaquo; Privacidade</em> você baixa uma cópia dos seus dados e pode excluir a sua conta.</li>
-                <li><strong>Por e-mail:</strong> <a href="mailto:{{ $emailEncarregado }}">{{ $emailEncarregado }}</a>.</li>
+                <li><strong>No aplicativo:</strong> em <em>Perfil &rsaquo; Privacidade</em> você baixa uma cópia dos seus dados e pode excluir a sua conta, sem precisar falar com ninguém.</li>
+                <li><strong>Por e-mail:</strong> <a href="mailto:{{ $emailEncarregado }}">{{ $emailEncarregado }}</a> — atendemos o pedido com o mesmo alcance da opção do app.</li>
             </ul>
             <p>
                 Respondemos em até 15 dias. Se houver serviço em andamento ou pagamento em
-                aberto, concluímos ou cancelamos essa etapa antes de excluir a conta — e
-                avisamos você quando for o caso.
+                aberto, é preciso concluir ou cancelar essa etapa antes de excluir a conta — o
+                app avisa quando for o caso. Você também pode reclamar à ANPD (Autoridade
+                Nacional de Proteção de Dados).
             </p>
 
-            <h2>9. Segurança</h2>
+            <h2>11. Segurança</h2>
             <p>
                 Tráfego criptografado (HTTPS), senha substituída por código de uso único,
                 acesso por token com expiração, permissões por perfil, arquivos em
@@ -115,17 +145,17 @@
                 sensíveis.
             </p>
 
-            <h2>10. Cookies e armazenamento local</h2>
+            <h2>12. Cookies e armazenamento local</h2>
             <p>
                 O site não usa cookie de publicidade nem rastreador de terceiros. Guardamos no
                 seu navegador apenas a preferência de tema (claro/escuro) e, quando você entra
                 na conta, os cookies e o token necessários para manter a sessão.
             </p>
 
-            <h2>11. Menores de idade</h2>
+            <h2>13. Menores de idade</h2>
             <p>O Resolve+ é para maiores de 18 anos. Não coletamos dados de crianças e adolescentes de forma intencional.</p>
 
-            <h2>12. Mudanças nesta política</h2>
+            <h2>14. Mudanças nesta política</h2>
             <p>Se o tratamento mudar, atualizamos esta página e a data no topo. Mudança relevante é avisada no aplicativo.</p>
         </div>
     </section>

@@ -10,6 +10,7 @@ use App\Notifications\Http\NotificationController;
 use App\Payments\Http\AsaasWebhookController;
 use App\Payments\Http\DisputeController;
 use App\Payments\Http\PaymentController;
+use App\Privacy\Http\Controllers\AdminPrivacyController;
 use App\Privacy\Http\Controllers\PrivacyController;
 use App\Professionals\Http\Controllers\ProfissionalDocumentoController;
 use App\PropertyHistory\Http\Controllers\PropertyController;
@@ -199,5 +200,10 @@ Route::prefix('v1')->group(function (): void {
         Route::get('/services', [AdminPanelController::class, 'services']);
         Route::get('/payments', [AdminPanelController::class, 'payments']);
         Route::get('/dashboard', [AdminPanelController::class, 'dashboard']);
+
+        // Atendimento de pedido de titular recebido pelo e-mail do encarregado.
+        Route::get('/privacy/subject', [AdminPrivacyController::class, 'search']);
+        Route::get('/privacy/subject/export', [AdminPrivacyController::class, 'export']);
+        Route::delete('/privacy/subject', [AdminPrivacyController::class, 'destroyAccount']);
     });
 });
