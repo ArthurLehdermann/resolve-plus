@@ -176,6 +176,7 @@ Route::prefix('v1')->group(function (): void {
             ->whereUuid('documento');
         Route::patch('/professionals/documents/{documento}/review', [AdminDocumentoProfissionalController::class, 'review'])
             ->whereUuid('documento');
+        Route::get('/disputes', [AdminPanelController::class, 'disputes']);
         Route::get('/users', [AdminPanelController::class, 'users']);
         Route::get('/services', [AdminPanelController::class, 'services']);
         Route::get('/payments', [AdminPanelController::class, 'payments']);
