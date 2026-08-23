@@ -69,7 +69,9 @@ class NotificationController extends Controller
 
         // Marcar de novo não move a data: a primeira leitura é a que vale.
         if (! $notificacao->isLida()) {
-            $notificacao->lida_em = now();
+            // Imutável para casar com o cast da coluna: `now()` devolve um
+            // Carbon mutável e o campo é `immutable_datetime`.
+            $notificacao->lida_em = now()->toImmutable();
             $notificacao->save();
         }
 
