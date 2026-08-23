@@ -106,7 +106,7 @@
             <p>
                 Podemos suspender ou encerrar contas que descumpram estes termos, com aviso
                 sempre que possível. Você pode encerrar a sua conta quando quiser, em
-                <em>Perfil &rsaquo; Privacidade</em> no aplicativo — respeitados os serviços em
+                <em>Perfil</em> no aplicativo — respeitados os serviços em
                 andamento e os pagamentos em aberto.
             </p>
 

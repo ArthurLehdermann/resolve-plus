@@ -127,7 +127,7 @@
             <h2>10. Seus direitos e como exercer</h2>
             <p>Como titular, você pode pedir confirmação e acesso, correção, anonimização, portabilidade, eliminação e informação sobre compartilhamentos, além de revogar consentimento.</p>
             <ul>
-                <li><strong>No aplicativo:</strong> em <em>Perfil &rsaquo; Privacidade</em> você baixa uma cópia dos seus dados e pode excluir a sua conta, sem precisar falar com ninguém.</li>
+                <li><strong>No aplicativo:</strong> no fim da tela de <em>Perfil</em> você baixa uma cópia dos seus dados e pode excluir a sua conta, sem precisar falar com ninguém.</li>
                 <li><strong>Por e-mail:</strong> <a href="mailto:{{ $emailEncarregado }}">{{ $emailEncarregado }}</a> — atendemos o pedido com o mesmo alcance da opção do app.</li>
             </ul>
             <p>
