@@ -8,11 +8,11 @@
 |---|---|
 | API (`resolve-plus`) | Domínio do MVP implementado ponta a ponta, suíte verde. É a parte madura. |
 | App Flutter (`resolve-plus-app`) | F1-F9 no ar em Stage: auth, documentos, imóveis, solicitação, propostas, execução do serviço, garantia, avaliação e prontuário. |
-| Painel Admin (`resolve-plus-admin`) | Dashboard, categorias, usuários, serviços, pagamentos, documentos. No ar em `admin.resolveplus.staging.bigworks.com.br`. |
+| Painel Admin (`resolve-plus-admin`) | Dashboard, categorias, tabelas de preço, usuários, serviços, pagamentos, documentos. No ar em `admin.resolveplus.staging.bigworks.com.br`. |
 
 A jornada do MVP está inteira visível no app: cadastro, solicitação, propostas, contratação, execução, aprovação com liberação de pagamento, garantia acionável, avaliação, prontuário do imóvel e extrato financeiro (F5, F6, F8 e F9 entregues em 2026-08-22). O que sobra são bordas de fluxo, o painel operável e o dinheiro real.
 
-O item P0 restante é o painel admin: sem tabela de preço configurável, abrir cidade nova depende de `db:seed`.
+Abrir cidade nova já não depende de `db:seed`: a tela de tabelas de preço saiu. O que trava o painel agora é backend, não frontend.
 
 ## Sequência
 
@@ -21,10 +21,10 @@ O item P0 restante é o painel admin: sem tabela de preço configurável, abrir 
 - Reagendar pela tela (`POST/PUT /schedule`): hoje a agenda é só leitura no detalhe do serviço.
 - Fotos na conclusão: `POST /services/{id}/finish` aceita `photos`, mas não existe endpoint de upload para serviço (o de solicitação é outro), então a tela só manda o relato escrito.
 
-### 2. Painel Admin operável (P0)
+### 2. Painel Admin: o que falta (P1)
 
-- Tela de tabelas de preço (`/admin/price-tables` já existe na API): sem ela, ninguém configura preço de cidade nova sem `db:seed`.
 - Disputas: **bloqueado por backend**, falta listagem admin (só existe `PUT /disputes/{id}/resolve`).
+- Liberação manual de pagamento (`POST /payments/{id}/release`): INV-041 pede justificativa e tratamento de exceção administrativa na tela.
 
 ### 3. Pagamento com cartão de ponta a ponta (P1)
 
@@ -61,3 +61,4 @@ Pareceres definitivos de B001 e B005, validação de B004, identidade visual/pro
 | 2026-08-22 | F8 entregue (garantia com acionamento por evidência e avaliação). O upload de evidência de garantia foi criado no backend para destravar isso. Prontuário assume o topo. |
 | 2026-08-22 | F9 entregue (timeline do prontuário com selo de origem, leitura pelo card do imóvel). Sem entrada manual, que segue barrada por B004. Histórico de pagamento assume o topo. |
 | 2026-08-22 | Resto de F8 entregue (histórico paginado e extrato de eventos com split). Fecha o épico. Sobram agenda/fotos de F6 e o painel admin, agora o único P0. |
+| 2026-08-22 | Tabelas de preço no painel: abrir cidade nova deixa de exigir `db:seed`. Não sobrou P0 na fila; o que trava o painel agora é backend (listagem de disputas). |
