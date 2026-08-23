@@ -30,7 +30,6 @@ class AuthTest extends TestCase
             'nome' => 'Maria Cliente',
             'email' => 'maria@example.com',
             'telefone' => '11999990000',
-            'senha' => self::senhaValida(),
         ]);
 
         $response->assertCreated()
@@ -43,7 +42,8 @@ class AuthTest extends TestCase
         $this->assertNotNull($usuario);
         $this->assertSame(TipoUsuario::Cliente, $usuario->tipo);
         $this->assertSame(StatusConta::Ativa, $usuario->status);
-        $this->assertTrue(str_starts_with($usuario->senha_hash, '$argon2id$'));
+        // Cadastro não cria senha: o acesso é por código de e-mail ou Google.
+        $this->assertNull($usuario->senha_hash);
     }
 
     public function test_register_creates_profissional_with_status_pendente_verificacao(): void
@@ -53,7 +53,6 @@ class AuthTest extends TestCase
             'nome' => 'João Profissional',
             'email' => 'joao@example.com',
             'telefone' => '11988880000',
-            'senha' => self::senhaValida(),
         ]);
 
         $response->assertCreated()
@@ -70,7 +69,6 @@ class AuthTest extends TestCase
             'nome' => 'Admin',
             'email' => 'admin@example.com',
             'telefone' => '11977770000',
-            'senha' => self::senhaValida(),
         ])->assertUnprocessable()
             ->assertJsonValidationErrors(['tipo']);
 
@@ -79,7 +77,6 @@ class AuthTest extends TestCase
             'nome' => 'Outro Usuário',
             'email' => 'duplicado@example.com',
             'telefone' => '11966660000',
-            'senha' => self::senhaValida(),
         ])->assertUnprocessable()
             ->assertJsonValidationErrors(['email']);
     }
@@ -91,7 +88,6 @@ class AuthTest extends TestCase
             'nome' => 'Conta Cliente',
             'email' => 'cliente-fixo@example.com',
             'telefone' => '11955550000',
-            'senha' => self::senhaValida(),
         ])->assertCreated();
 
         $cliente = Usuario::query()->where('email', 'cliente-fixo@example.com')->firstOrFail();
@@ -102,7 +98,6 @@ class AuthTest extends TestCase
             'nome' => 'Conta Profissional',
             'email' => 'profissional-fixo@example.com',
             'telefone' => '11944440000',
-            'senha' => self::senhaValida(),
         ])->assertCreated();
 
         $profissional = Usuario::query()->where('email', 'profissional-fixo@example.com')->firstOrFail();
@@ -113,7 +108,7 @@ class AuthTest extends TestCase
     public function test_login_returns_token_for_valid_credentials(): void
     {
         $senha = self::senhaValida();
-        $usuario = Usuario::factory()->create([
+        $usuario = Usuario::factory()->admin()->create([
             'email' => 'login@example.com',
             'senha_hash' => $senha,
         ]);
@@ -131,7 +126,7 @@ class AuthTest extends TestCase
     public function test_login_ignora_caixa_do_email(): void
     {
         $senha = self::senhaValida();
-        $usuario = Usuario::factory()->create([
+        $usuario = Usuario::factory()->admin()->create([
             'email' => 'arthur@example.com',
             'senha_hash' => $senha,
         ]);
@@ -153,7 +148,6 @@ class AuthTest extends TestCase
             'nome' => 'Arthur',
             'email' => 'Novo.Cliente@Example.com',
             'telefone' => '51999990000',
-            'senha' => self::senhaValida(),
         ];
 
         $this->postJson('/api/v1/auth/register', $payload)
@@ -166,7 +160,7 @@ class AuthTest extends TestCase
 
     public function test_login_rejects_invalid_credentials(): void
     {
-        Usuario::factory()->create([
+        Usuario::factory()->admin()->create([
             'email' => 'login@example.com',
             'senha_hash' => self::senhaValida(),
         ]);
@@ -176,6 +170,36 @@ class AuthTest extends TestCase
             'senha' => self::senhaValida('errada'),
         ])->assertUnprocessable()
             ->assertJsonValidationErrors(['email']);
+    }
+
+    public function test_login_por_senha_nao_vale_para_cliente_ou_profissional(): void
+    {
+        $senha = self::senhaValida();
+        Usuario::factory()->create([
+            'email' => 'cliente-com-senha@example.com',
+            'senha_hash' => $senha,
+        ]);
+
+        // Mesmo com hash antigo no banco, conta de app só entra por código ou
+        // Google — senha é caminho exclusivo do painel administrativo.
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'cliente-com-senha@example.com',
+            'senha' => $senha,
+        ])->assertUnprocessable()
+            ->assertJsonValidationErrors(['email']);
+    }
+
+    public function test_forgot_password_nao_envia_para_conta_de_app(): void
+    {
+        Mail::fake();
+        Usuario::factory()->create(['email' => 'cliente-recuperar@example.com']);
+
+        $this->postJson('/api/v1/auth/forgot-password', [
+            'email' => 'cliente-recuperar@example.com',
+        ])->assertOk()
+            ->assertJsonPath('success', true);
+
+        Mail::assertNothingSent();
     }
 
     public function test_logout_invalidates_current_token(): void
@@ -277,7 +301,7 @@ class AuthTest extends TestCase
 
     public function test_forgot_password_accepts_registered_email(): void
     {
-        Usuario::factory()->create(['email' => 'recuperar@example.com']);
+        Usuario::factory()->admin()->create(['email' => 'recuperar@example.com']);
 
         $this->postJson('/api/v1/auth/forgot-password', [
             'email' => 'recuperar@example.com',
@@ -289,7 +313,7 @@ class AuthTest extends TestCase
     {
         $senhaAntiga = self::senhaValida('antiga');
         $senhaNova = self::senhaValida('nova');
-        $usuario = Usuario::factory()->create([
+        $usuario = Usuario::factory()->admin()->create([
             'email' => 'reset@example.com',
             'senha_hash' => $senhaAntiga,
         ]);

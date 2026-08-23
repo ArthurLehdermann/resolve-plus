@@ -55,6 +55,12 @@ return [
     'url' => env('APP_URL', 'http://localhost'),
 
     /*
+     * Onde vive o app do cliente/profissional (Flutter web). O callback do
+     * Google devolve o usuário para cá — a API não tem tela para mostrar.
+     */
+    'frontend_url' => env('APP_FRONTEND_URL', 'http://localhost:3000'),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------

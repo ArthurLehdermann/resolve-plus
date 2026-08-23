@@ -3,6 +3,7 @@
 use App\Admin\Http\Controllers\AdminDocumentoProfissionalController;
 use App\Admin\Http\Controllers\AdminPanelController;
 use App\Auth\Http\Controllers\AuthController;
+use App\Auth\Http\Controllers\GoogleAuthController;
 use App\Categories\Http\Controllers\AdminCategoryController;
 use App\Categories\Http\Controllers\CategoryController;
 use App\Notifications\Http\NotificationController;
@@ -42,6 +43,16 @@ Route::prefix('v1')->group(function (): void {
             ->middleware('throttle:auth-login');
 
         Route::post('/reset-password', [AuthController::class, 'resetPassword'])
+            ->middleware('throttle:auth-login');
+
+        Route::get('/google/redirect', [GoogleAuthController::class, 'redirect'])
+            ->middleware('throttle:auth-login');
+
+        // Quem chama é o Google, no navegador do usuário: sem Sanctum e sem
+        // corpo JSON, a autenticação é o `state` emitido no redirect.
+        Route::get('/google/callback', [GoogleAuthController::class, 'callback']);
+
+        Route::post('/google/exchange', [GoogleAuthController::class, 'exchange'])
             ->middleware('throttle:auth-login');
 
         Route::post('/logout', [AuthController::class, 'logout'])

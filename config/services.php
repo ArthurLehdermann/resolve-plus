@@ -35,6 +35,17 @@ return [
         ],
     ],
 
+    /*
+     * Login com Google (OAuth 2.0, client do tipo "Aplicativo da Web"). O
+     * redirect_uri aqui precisa ser idêntico ao cadastrado no Google Cloud
+     * Console — o Google recusa a troca de code se divergir um caractere.
+     */
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI', env('APP_URL').'/api/v1/auth/google/callback'),
+    ],
+
     'asaas' => [
         'api_key' => env('ASAAS_API_KEY'),
         'base_url' => env('ASAAS_BASE_URL', 'https://api-sandbox.asaas.com'),

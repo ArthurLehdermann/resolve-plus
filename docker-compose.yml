@@ -95,6 +95,12 @@ services:
       - APP_DEBUG=${APP_DEBUG:-false}
       - APP_NAME=Resolve+
       - APP_URL=${APP_URL:-https://resolveplus.staging.bigworks.com.br}
+      - APP_FRONTEND_URL=${APP_FRONTEND_URL:-https://app.resolveplus.staging.bigworks.com.br}
+      # Login com Google: client "Aplicativo da Web" no Google Cloud Console.
+      # Sem as duas chaves o endpoint responde 503 e o app esconde o botão.
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-https://resolveplus.staging.bigworks.com.br/api/v1/auth/google/callback}
       # Sem infra S3 provisionada em staging ainda; avatar cai no disco local
       # (servido por /storage). Troca pra 's3' quando o Object Storage
       # existir de verdade (é aí que entra league/flysystem-aws-s3-v3, que
@@ -187,6 +193,12 @@ services:
       - APP_ENV=${APP_ENV:-staging}
       - APP_KEY=${APP_KEY:?obrigatório}
       - APP_URL=${APP_URL:-https://resolveplus.staging.bigworks.com.br}
+      - APP_FRONTEND_URL=${APP_FRONTEND_URL:-https://app.resolveplus.staging.bigworks.com.br}
+      # Login com Google: client "Aplicativo da Web" no Google Cloud Console.
+      # Sem as duas chaves o endpoint responde 503 e o app esconde o botão.
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
+      - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-https://resolveplus.staging.bigworks.com.br/api/v1/auth/google/callback}
       - OBJECT_STORAGE_DISK=${OBJECT_STORAGE_DISK:-public}
       - DB_CONNECTION=pgsql
       - DB_HOST=db

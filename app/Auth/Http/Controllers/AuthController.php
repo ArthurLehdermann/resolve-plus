@@ -39,7 +39,7 @@ class AuthController extends Controller
             'nome' => $request->string('nome')->toString(),
             'email' => $request->string('email')->toString(),
             'telefone' => $request->string('telefone')->toString(),
-            'senha_hash' => $request->string('senha')->toString(),
+            'senha_hash' => null,
             'status' => $status,
         ]);
 
@@ -51,11 +51,26 @@ class AuthController extends Controller
         ], 201);
     }
 
+    /**
+     * Senha só existe para o painel administrativo. Cliente e profissional
+     * entram por código de e-mail (magic link) ou Google — conta desses tipos
+     * nem chega a ter hash gravado.
+     */
     public function login(LoginRequest $request): JsonResponse
     {
         $usuario = Usuario::query()->comEmail($request->string('email')->toString())->first();
 
-        if ($usuario === null || ! Hash::check($request->string('senha')->toString(), $usuario->senha_hash)) {
+        if ($usuario !== null && $usuario->tipo !== TipoUsuario::Admin) {
+            throw ValidationException::withMessages([
+                'email' => ['Esta conta entra por código de e-mail ou pelo Google, sem senha.'],
+            ]);
+        }
+
+        if (
+            $usuario === null
+            || $usuario->senha_hash === null
+            || ! Hash::check($request->string('senha')->toString(), $usuario->senha_hash)
+        ) {
             throw ValidationException::withMessages([
                 'email' => ['Credenciais inválidas.'],
             ]);
@@ -143,11 +158,19 @@ class AuthController extends Controller
         ]);
     }
 
+    /**
+     * Redefinição de senha existe só para o painel: mandar o e-mail para
+     * cliente/profissional daria a eles um caminho de senha que o app não tem
+     * mais. A resposta segue genérica para não revelar quem é admin.
+     */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
-        Password::sendResetLink([
-            'email' => $request->string('email')->toString(),
-        ]);
+        $email = $request->string('email')->toString();
+        $usuario = Usuario::query()->comEmail($email)->first();
+
+        if ($usuario?->tipo === TipoUsuario::Admin) {
+            Password::sendResetLink(['email' => $email]);
+        }
 
         return ApiResponse::success([
             'message' => 'Se o e-mail estiver cadastrado, enviaremos instruções de redefinição.',
@@ -156,6 +179,14 @@ class AuthController extends Controller
 
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
+        $usuario = Usuario::query()->comEmail($request->string('email')->toString())->first();
+
+        if ($usuario !== null && $usuario->tipo !== TipoUsuario::Admin) {
+            throw ValidationException::withMessages([
+                'email' => ['Esta conta entra por código de e-mail ou pelo Google, sem senha.'],
+            ]);
+        }
+
         $status = Password::reset(
             [
                 'email' => $request->string('email')->toString(),

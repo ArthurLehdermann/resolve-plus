@@ -28,7 +28,7 @@ class RegisterRequest extends FormRequest
             'nome' => ['required', 'string', 'max:150'],
             'email' => ['required', 'email', 'max:150', 'unique:usuarios,email'],
             'telefone' => ['required', 'string', 'max:20'],
-            'senha' => ['required', 'string', 'min:8'],
+            // Sem senha: quem se cadastra entra por código de e-mail ou Google.
         ];
     }
 }

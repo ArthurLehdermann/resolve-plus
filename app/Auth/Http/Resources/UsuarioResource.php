@@ -21,9 +21,13 @@ class UsuarioResource extends JsonResource
             'nome' => $this->nome,
             'email' => $this->email,
             'telefone' => $this->telefone,
+            // Avatar vindo do Google já é URL pronta; o que o usuário sobe é
+            // caminho no disco e precisa passar pelo Storage.
             'foto' => $this->foto === null
                 ? null
-                : Storage::disk((string) config('filesystems.object_disk', 's3'))->url($this->foto),
+                : (str_starts_with($this->foto, 'http')
+                    ? $this->foto
+                    : Storage::disk((string) config('filesystems.object_disk', 's3'))->url($this->foto)),
             'status' => $this->status->value,
             'criado_em' => $this->created_at?->toIso8601String(),
         ];

@@ -47,7 +47,6 @@ class FullJourneyTest extends TestCase
             'nome' => 'Cliente Jornada',
             'email' => 'cliente-jornada@teste.com',
             'telefone' => '11999990000',
-            'senha' => 'Senha@123',
             'tipo' => 'CLIENTE',
         ])->assertCreated()->json('data');
         $clienteToken = $clienteData['token'];
@@ -56,7 +55,6 @@ class FullJourneyTest extends TestCase
             'nome' => 'Profissional Jornada',
             'email' => 'profissional-jornada@teste.com',
             'telefone' => '11988880000',
-            'senha' => 'Senha@123',
             'tipo' => 'PROFISSIONAL',
         ])->assertCreated()->json('data');
         $profissionalToken = $profissionalData['token'];
