@@ -4,6 +4,7 @@ namespace Tests\Feature\Users;
 
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
+use App\Categories\Models\Categoria;
 use App\Users\Jobs\ProcessUserAvatarJob;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -83,6 +84,45 @@ class UserProfileTest extends TestCase
         $this->assertSame('novo@example.com', $usuario->email);
         $this->assertSame('11911112222', $usuario->telefone);
         $this->assertSame(TipoUsuario::Cliente, $usuario->tipo);
+    }
+
+    /**
+     * A tela de verificação monta as opções com GET /categorias, então tudo
+     * que estiver ativo no banco precisa ser salvável. Quando a validação
+     * olhava só para o seed do MVP, o profissional marcava uma categoria que o
+     * próprio app tinha acabado de listar e levava "inválido" na cara.
+     */
+    public function test_put_users_me_accepts_active_category_created_after_the_mvp_seed(): void
+    {
+        Categoria::factory()->create(['codigo' => 'telhado', 'ativo' => true]);
+
+        $usuario = Usuario::factory()->create(['tipo' => TipoUsuario::Profissional]);
+        $token = $usuario->createToken('auth')->plainTextToken;
+
+        $this->withToken($token)
+            ->putJson('/api/v1/users/me', [
+                'categorias_atendidas' => ['telhado'],
+            ])
+            ->assertOk()
+            ->assertJsonPath('data.categorias_atendidas', ['telhado']);
+    }
+
+    public function test_put_users_me_rejects_unknown_or_inactive_category(): void
+    {
+        Categoria::factory()->inativa()->create(['codigo' => 'desativada']);
+
+        $usuario = Usuario::factory()->create(['tipo' => TipoUsuario::Profissional]);
+        $token = $usuario->createToken('auth')->plainTextToken;
+
+        $this->withToken($token)
+            ->putJson('/api/v1/users/me', ['categorias_atendidas' => ['nao_existe']])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['categorias_atendidas.0']);
+
+        $this->withToken($token)
+            ->putJson('/api/v1/users/me', ['categorias_atendidas' => ['desativada']])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['categorias_atendidas.0']);
     }
 
     public function test_put_users_me_rejects_duplicate_email(): void
