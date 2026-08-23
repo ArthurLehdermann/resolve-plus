@@ -201,13 +201,7 @@ class ServiceController extends Controller
      */
     private function doUsuario(Builder $builder, Usuario $usuario): void
     {
-        $participante = fn ($proposta) => $proposta
-            ->where('profissional_id', $usuario->id)
-            ->orWhereHas('solicitacao', fn ($solicitacao) => $solicitacao->where('cliente_id', $usuario->id));
-
-        $builder
-            ->whereHas('proposta', $participante)
-            ->orWhereHas('garantiaOrigem.servico.proposta', $participante);
+        $builder->doParticipante($usuario->id);
     }
 
     private function usuario(Request $request): Usuario

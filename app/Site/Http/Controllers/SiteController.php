@@ -24,8 +24,34 @@ class SiteController extends Controller
 
         return view('site.home', [
             'categorias' => $categorias,
+            ...$this->dadosDoLayout(),
+        ]);
+    }
+
+    public function privacidade(): View
+    {
+        return view('site.privacidade', $this->dadosDoLayout());
+    }
+
+    public function termos(): View
+    {
+        return view('site.termos', $this->dadosDoLayout());
+    }
+
+    /**
+     * O layout do site (cabeçalho e rodapé) precisa destes três em qualquer
+     * página. Passar aqui, e não por composer global, mantém explícito de onde
+     * a view tira cada endereço.
+     *
+     * @return array{appUrl: string, emailContato: string, emailEncarregado: string, controlador: string}
+     */
+    private function dadosDoLayout(): array
+    {
+        return [
             'appUrl' => config('site.app_url'),
             'emailContato' => config('site.email_contato'),
-        ]);
+            'emailEncarregado' => config('site.email_encarregado'),
+            'controlador' => config('site.controlador'),
+        ];
     }
 }

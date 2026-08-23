@@ -10,6 +10,7 @@ use App\Notifications\Http\NotificationController;
 use App\Payments\Http\AsaasWebhookController;
 use App\Payments\Http\DisputeController;
 use App\Payments\Http\PaymentController;
+use App\Privacy\Http\Controllers\PrivacyController;
 use App\Professionals\Http\Controllers\ProfissionalDocumentoController;
 use App\PropertyHistory\Http\Controllers\PropertyController;
 use App\PropertyHistory\Http\Controllers\PropertyTransferController;
@@ -64,6 +65,12 @@ Route::prefix('v1')->group(function (): void {
         Route::put('/users/me', [UserProfileController::class, 'update']);
         Route::post('/users/photo', [UserProfileController::class, 'uploadPhoto'])
             ->middleware('throttle:upload');
+        // Direitos do titular (LGPD, art. 18) — o app expõe os dois em
+        // Perfil > Privacidade, e a Política de Privacidade aponta para lá.
+        Route::get('/privacy/data-export', [PrivacyController::class, 'export'])
+            ->middleware('throttle:6,1');
+        Route::delete('/privacy/account', [PrivacyController::class, 'destroyAccount']);
+
         Route::get('/professionals/documents', [ProfissionalDocumentoController::class, 'index']);
         Route::post('/professionals/documents', [ProfissionalDocumentoController::class, 'store'])
             ->middleware('throttle:upload');

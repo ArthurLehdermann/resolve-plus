@@ -1,5 +1,7 @@
 <?php
 
+use App\Privacy\Console\DataSubjectCommand;
+use App\Privacy\Console\PurgeExpiredDataCommand;
 use App\Services\Console\AutoApproveServicesCommand;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -15,6 +17,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withCommands([
         AutoApproveServicesCommand::class,
+        DataSubjectCommand::class,
+        PurgeExpiredDataCommand::class,
     ])
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->redirectGuestsTo(fn () => null);

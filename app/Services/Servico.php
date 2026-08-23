@@ -9,6 +9,7 @@ use App\Proposals\Proposta;
 use App\Ratings\Avaliacao;
 use App\Warranty\Garantia;
 use Database\Factories\Services\ServicoFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -100,6 +101,29 @@ class Servico extends Model
     public function isRevisitaGarantia(): bool
     {
         return $this->garantia_origem_id !== null;
+    }
+
+    /**
+     * Serviços em que o usuário é uma das partes.
+     *
+     * As colunas `cliente_id` e `profissional_id` da tabela não servem para
+     * esse filtro — quem manda é a proposta (e, na revisita de garantia, a
+     * proposta do serviço de origem). Como listagem, exportação de dados e
+     * exclusão de conta precisam exatamente da mesma resposta, a regra mora
+     * aqui e não em cada consulta.
+     *
+     * @param  Builder<Servico>  $query
+     * @return Builder<Servico>
+     */
+    public function scopeDoParticipante(Builder $query, string $usuarioId): Builder
+    {
+        $participante = fn ($proposta) => $proposta
+            ->where('profissional_id', $usuarioId)
+            ->orWhereHas('solicitacao', fn ($solicitacao) => $solicitacao->where('cliente_id', $usuarioId));
+
+        return $query->where(fn (Builder $inner) => $inner
+            ->whereHas('proposta', $participante)
+            ->orWhereHas('garantiaOrigem.servico.proposta', $participante));
     }
 
     public function profissionalId(): string

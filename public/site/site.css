@@ -60,6 +60,9 @@ html[data-tema="escuro"] {
 
 html {
     scroll-behavior: smooth;
+    /* O cabeçalho é fixo: sem isto o link de âncora para a seção logo abaixo
+       dele e o título fica escondido atrás da barra. */
+    scroll-padding-top: 88px;
 }
 
 body {
@@ -216,14 +219,24 @@ p {
 
 /* -------------------------------------------------------------- cabeçalho */
 
+/* Opaco por padrão: o Safari só desfoca o fundo com o prefixo `-webkit-`, e
+   sem o blur a barra semitransparente deixava o texto da página passar por
+   trás dela — no iPhone parecia tema quebrado. O translúcido só entra onde o
+   desfoque existe de verdade. */
 .cabecalho {
     position: sticky;
     top: 0;
     z-index: 50;
-    background-color: color-mix(in srgb, var(--bg) 85%, transparent);
-    backdrop-filter: saturate(180%) blur(12px);
-    border-bottom: 1px solid transparent;
-    transition: border-color 0.2s ease;
+    background-color: var(--bg);
+    border-bottom: 1px solid var(--border);
+}
+
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .cabecalho {
+        background-color: color-mix(in srgb, var(--bg) 88%, transparent);
+        -webkit-backdrop-filter: saturate(180%) blur(12px);
+        backdrop-filter: saturate(180%) blur(12px);
+    }
 }
 
 .cabecalho-conteudo {
@@ -589,17 +602,25 @@ html[data-tema="escuro"] .botao-tema .icone-lua {
     font-size: 15px;
 }
 
+/* Passo em duas colunas: o número ocupa a primeira, centrado nos dois eixos
+   em relação ao bloco de texto, e título e parágrafo ficam na segunda. */
+.cartao-passo {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 18px;
+    align-items: center;
+}
+
 .passo-numero {
     display: grid;
     place-items: center;
-    width: 34px;
-    height: 34px;
+    width: 38px;
+    height: 38px;
     border-radius: 10px;
     background-color: color-mix(in srgb, var(--accent) 12%, transparent);
     color: var(--accent);
-    font-size: 15px;
+    font-size: 16px;
     font-weight: 800;
-    margin-bottom: 16px;
 }
 
 /* ----------------------------------------------------------- categorias -- */
@@ -712,6 +733,53 @@ html[data-tema="escuro"] .botao-tema .icone-lua {
     flex-wrap: wrap;
     gap: 12px;
     justify-content: center;
+}
+
+/* ------------------------------------------------- documentos (legal) -- */
+
+/* Página de texto corrido — privacidade e termos. Coluna estreita, hierarquia
+   por espaçamento, sem cartão: é documento para ler, não vitrine. */
+.documento-conteudo {
+    max-width: 46em;
+}
+
+.documento h1 {
+    font-size: clamp(28px, 3.6vw, 38px);
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.documento h2 {
+    font-size: 19px;
+    font-weight: 700;
+    margin: 36px 0 12px;
+}
+
+.documento p,
+.documento li {
+    color: var(--muted);
+    font-size: 16px;
+}
+
+.documento p + p {
+    margin-top: 12px;
+}
+
+.documento strong {
+    color: var(--text);
+}
+
+.documento-data {
+    color: var(--faint);
+    font-size: 14px;
+    margin-bottom: 28px;
+}
+
+.documento ul {
+    margin: 0;
+    padding-left: 22px;
+    display: grid;
+    gap: 8px;
 }
 
 /* --------------------------------------------------------------- rodapé -- */

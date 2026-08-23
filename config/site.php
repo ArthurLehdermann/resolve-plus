@@ -28,4 +28,20 @@ return [
 
     'email_contato' => env('SITE_EMAIL_CONTATO', 'resolveplus@bigworks.com.br'),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Proteção de dados
+    |--------------------------------------------------------------------------
+    |
+    | Quem responde pelos pedidos de titular (LGPD, art. 18) e o nome do
+    | controlador que aparece na Política de Privacidade. O padrão do
+    | encarregado é a mesma caixa de contato — trocar por um endereço
+    | dedicado é só definir LGPD_DPO_EMAIL.
+    |
+    */
+
+    'email_encarregado' => env('LGPD_DPO_EMAIL', env('SITE_EMAIL_CONTATO', 'resolveplus@bigworks.com.br')),
+
+    'controlador' => env('LGPD_CONTROLADOR', 'BigWorks'),
+
 ];

@@ -31,3 +31,7 @@ Schedule::job(new ReleaseApprovedPaymentsJob)->hourly()->withoutOverlapping();
 // (foundation/03-cancellation-rules.md, "Prazo e timeout") - não há
 // ganho em checar a cada hora se uma disputa passou de 7 dias.
 Schedule::job(new ResolveExpiredDisputesJob)->daily()->withoutOverlapping();
+
+// Expurgo de dado transitório vencido (LGPD, art. 6º, III). De madrugada e
+// diário: é varredura, não tem prazo apertado para cumprir.
+Schedule::command('privacy:purge')->dailyAt('03:20')->withoutOverlapping();
