@@ -234,6 +234,26 @@ class AuthTest extends TestCase
         $this->assertSame(1, LinkMagico::query()->where('usuario_id', $usuario->id)->count());
     }
 
+    /**
+     * O e-mail do código é a única peça do produto que roda fora do nosso
+     * controle (cada cliente renderiza como quer), então o mínimo garantido
+     * aqui é: as duas versões saem, e o código aparece nas duas. Sem a de
+     * texto, leitor de tela e filtro de spam ficam só com a marcação.
+     */
+    public function test_magic_link_email_renders_html_and_text_with_the_code(): void
+    {
+        $mail = new MagicLinkMail(nome: 'Arthur Lehdermann', codigo: '330829', expiraEmMinutos: 15);
+
+        $mail->assertHasSubject('330829 é o seu código de acesso ao Resolve+');
+        $mail->assertSeeInHtml('330829', false);
+        $mail->assertSeeInHtml('Resolve+', false);
+        $mail->assertSeeInText('330829');
+
+        // Trata o nome como nome de gente, não como campo de cadastro.
+        $mail->assertSeeInHtml('Olá, Arthur.', false);
+        $mail->assertDontSeeInHtml('Lehdermann', false);
+    }
+
     public function test_magic_link_request_does_not_reveal_unregistered_email(): void
     {
         Mail::fake();
