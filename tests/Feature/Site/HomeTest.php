@@ -35,14 +35,16 @@ class HomeTest extends TestCase
     }
 
     /**
-     * Fora de produção o site não pode ser indexado: homologação e produção
-     * servem o mesmo conteúdo e disputariam a mesma busca.
+     * O site é o oficial em qualquer ambiente: nada de bloquear buscador nem
+     * de carimbar aviso de homologação na página. Decisão do PO em 23/08/2026,
+     * antes de apontar o domínio definitivo.
      */
-    public function test_home_is_noindex_outside_production(): void
+    public function test_home_is_indexable_and_has_no_environment_banner(): void
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('noindex', false);
+            ->assertDontSee('noindex', false)
+            ->assertDontSee('homologação', false);
     }
 
     /**

@@ -698,14 +698,3 @@ p {
 .rodape-links a {
     color: var(--muted);
 }
-
-/* ----------------------------------------------------- aviso de ambiente */
-
-.faixa-ambiente {
-    background-color: #7c2d12;
-    color: #ffedd5;
-    font-size: 13px;
-    font-weight: 600;
-    text-align: center;
-    padding: 8px 16px;
-}

@@ -7,7 +7,6 @@
     promete recurso que o app ainda não faz.
 --}}
 @php
-    $ehProducao = app()->environment('production');
     $versaoCss = @filemtime(public_path('site/site.css')) ?: 1;
 @endphp
 <!DOCTYPE html>
@@ -18,12 +17,6 @@
     <title>Resolve+ — serviços para a sua casa, com preço, profissional e garantia no mesmo lugar</title>
     <meta name="description" content="Descreva o problema, receba propostas comparáveis de profissionais verificados, pague com o valor protegido até a conclusão e guarde a garantia do serviço no histórico do seu imóvel.">
     <meta name="theme-color" content="#0F766E">
-
-    {{-- Homologação não entra em buscador: o mesmo conteúdo em dois domínios
-         concorreria com o site de produção. --}}
-    @unless ($ehProducao)
-        <meta name="robots" content="noindex, nofollow">
-    @endunless
 
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="Resolve+">
@@ -38,10 +31,6 @@
 <body>
 
 <a class="pular-para-conteudo" href="#conteudo">Pular para o conteúdo</a>
-
-@unless ($ehProducao)
-    <div class="faixa-ambiente">Ambiente de homologação — dados e serviços aqui são de teste.</div>
-@endunless
 
 <header class="cabecalho">
     <div class="container cabecalho-conteudo">
