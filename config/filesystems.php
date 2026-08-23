@@ -59,6 +59,13 @@ return [
             'report' => false,
         ],
 
+        // O bucket tem ACLs desabilitadas (ObjectOwnership=BucketOwnerEnforced,
+        // o padrão da AWS e o mesmo do ielos): PutObject com ACL public-read é
+        // recusado com AccessControlListNotSupported. Por isso nenhum upload
+        // manda `visibility` — quem publica é a bucket policy, e ela libera
+        // s3:GetObject só em avatars/*, requests/* e warranties/*.
+        // documentos-profissional/* fica de fora de propósito: documento de
+        // identidade só sai pelo backend autenticado.
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

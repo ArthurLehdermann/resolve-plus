@@ -70,7 +70,6 @@ class WarrantyController extends Controller
         $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'jpg');
         $path = $file->storeAs('warranties/'.$garantia->id, Str::uuid()->toString().'.'.$extension, [
             'disk' => $disk,
-            'visibility' => 'public',
         ]);
 
         if ($path === false) {

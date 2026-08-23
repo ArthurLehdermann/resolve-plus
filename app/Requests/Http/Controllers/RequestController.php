@@ -322,7 +322,6 @@ class RequestController extends Controller
 
         $path = $file->storeAs($directory, $filename, [
             'disk' => $disk,
-            'visibility' => 'public',
         ]);
 
         if ($path === false) {

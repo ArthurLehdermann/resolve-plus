@@ -39,7 +39,7 @@ class ProcessSolicitacaoPhotoJob implements ShouldQueue
         $thumbnail = $this->makeThumbnail($contents);
         $thumbPath = $this->thumbnailPath($this->originalPath);
 
-        Storage::disk($disk)->put($thumbPath, $thumbnail, 'public');
+        Storage::disk($disk)->put($thumbPath, $thumbnail);
 
         $foto->forceFill([
             'url' => $thumbPath,

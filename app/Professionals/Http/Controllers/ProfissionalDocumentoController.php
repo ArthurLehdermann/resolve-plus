@@ -81,9 +81,11 @@ class ProfissionalDocumentoController extends Controller
         $disk = (string) config('filesystems.object_disk', 's3');
         $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'pdf');
         $filename = Str::uuid()->toString().'.'.$extension;
+        // Sem `visibility`: o bucket não aceita ACL. O sigilo do documento vem
+        // de o prefixo documentos-profissional/ estar fora da bucket policy de
+        // leitura pública — ele só é servido pelo admin, autenticado.
         $path = $file->storeAs('documentos-profissional/'.$usuario->id, $filename, [
             'disk' => $disk,
-            'visibility' => 'private',
         ]);
 
         if ($path === false) {

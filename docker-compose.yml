@@ -101,11 +101,16 @@ services:
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-https://resolveplus.staging.bigworks.com.br/api/v1/auth/google/callback}
-      # Sem infra S3 provisionada em staging ainda; avatar cai no disco local
-      # (servido por /storage). Troca pra 's3' quando o Object Storage
-      # existir de verdade (é aí que entra league/flysystem-aws-s3-v3, que
-      # falta no composer.json hoje).
+      # Object Storage em AWS S3 (sa-east-1), bucket bigworks-resolve-plus.
+      # O bucket tem ACLs desabilitadas: quem publica avatar/foto/evidência é a
+      # bucket policy, por prefixo. documentos-profissional/ fica fora dela.
       - OBJECT_STORAGE_DISK=${OBJECT_STORAGE_DISK:-public}
+      - FILESYSTEM_DISK=${FILESYSTEM_DISK:-local}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-sa-east-1}
+      - AWS_BUCKET=${AWS_BUCKET:-}
+      - AWS_URL=${AWS_URL:-}
       - APP_KEY=${APP_KEY:?obrigatório}
       - APP_LOCALE=pt_BR
       - APP_FALLBACK_LOCALE=pt_BR
@@ -200,6 +205,12 @@ services:
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET:-}
       - GOOGLE_REDIRECT_URI=${GOOGLE_REDIRECT_URI:-https://resolveplus.staging.bigworks.com.br/api/v1/auth/google/callback}
       - OBJECT_STORAGE_DISK=${OBJECT_STORAGE_DISK:-public}
+      - FILESYSTEM_DISK=${FILESYSTEM_DISK:-local}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-sa-east-1}
+      - AWS_BUCKET=${AWS_BUCKET:-}
+      - AWS_URL=${AWS_URL:-}
       - DB_CONNECTION=pgsql
       - DB_HOST=db
       - DB_PORT=5432

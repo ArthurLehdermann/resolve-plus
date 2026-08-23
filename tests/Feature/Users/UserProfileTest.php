@@ -138,7 +138,6 @@ class UserProfileTest extends TestCase
         $photo = UploadedFile::fake()->image('avatar.png', 400, 300);
         $originalPath = $photo->storeAs('avatars/'.$usuario->id, 'original.png', [
             'disk' => $disk,
-            'visibility' => 'public',
         ]);
 
         $this->assertNotFalse($originalPath);

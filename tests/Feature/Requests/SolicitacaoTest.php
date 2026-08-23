@@ -337,7 +337,6 @@ class SolicitacaoTest extends TestCase
         $photo = UploadedFile::fake()->image('parede.png', 400, 300);
         $originalPath = $photo->storeAs('requests/'.$solicitacao->id, 'original.png', [
             'disk' => $disk,
-            'visibility' => 'public',
         ]);
 
         $this->assertNotFalse($originalPath);
