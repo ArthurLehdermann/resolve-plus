@@ -1,0 +1,711 @@
+/*
+ * Página pública do Resolve+.
+ *
+ * A paleta é a mesma de `AuthColors` no app (lib/widgets/auth_shell.dart):
+ * quem chega pelo site e abre o app precisa reconhecer o mesmo produto. Toda
+ * cor entra por variável, e o bloco de `prefers-color-scheme` troca só as
+ * variáveis — nenhum componente repete cor literal.
+ *
+ * Sem build: é CSS servido direto de public/. A página é uma só, não paga o
+ * custo de um pipeline de assets para isso.
+ */
+
+:root {
+    --bg: #f3f7f6;
+    --surface: #ffffff;
+    --surface-alt: #f7fafa;
+    --border: #e3eae9;
+    --text: #0c1615;
+    --muted: #5b6b69;
+    --faint: #8b9a98;
+    --accent: #0f766e;
+    --accent-claro: #2dd4bf;
+    --accent-ink: #ffffff;
+    --halo-forte: rgba(45, 212, 191, 0.22);
+    --halo-fraco: rgba(15, 118, 110, 0.12);
+    --sombra: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(12, 22, 21, 0.06);
+    --sombra-alta: 0 2px 4px rgba(0, 0, 0, 0.04), 0 18px 48px rgba(12, 22, 21, 0.12);
+    --raio: 16px;
+    --fonte: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #080c0d;
+        --surface: #11181a;
+        --surface-alt: #0c1213;
+        --border: #1e2729;
+        --text: #f1f5f4;
+        --muted: #8c9b99;
+        --faint: #5f6e6c;
+        /* Teal clareado: o #0F766E do painel some no preto e reprova
+           contraste como cor de texto. Mesma decisão do app. */
+        --accent: #2dd4bf;
+        --accent-ink: #04231f;
+        --halo-forte: rgba(45, 212, 191, 0.16);
+        --halo-fraco: rgba(15, 118, 110, 0.18);
+        --sombra: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
+        --sombra-alta: 0 2px 4px rgba(0, 0, 0, 0.4), 0 18px 48px rgba(0, 0, 0, 0.6);
+    }
+}
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: var(--fonte);
+    font-size: 17px;
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    html {
+        scroll-behavior: auto;
+    }
+
+    * {
+        transition: none !important;
+    }
+}
+
+a {
+    color: var(--accent);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 6px;
+}
+
+h1,
+h2,
+h3 {
+    letter-spacing: -0.03em;
+    line-height: 1.15;
+    margin: 0;
+}
+
+p {
+    margin: 0;
+}
+
+/* Atalho para quem navega por teclado: primeiro tab pula o menu. */
+.pular-para-conteudo {
+    position: absolute;
+    left: -9999px;
+    top: 0;
+    background: var(--accent);
+    color: var(--accent-ink);
+    padding: 12px 18px;
+    border-radius: 0 0 10px 0;
+    z-index: 100;
+}
+
+.pular-para-conteudo:focus {
+    left: 0;
+}
+
+.container {
+    width: 100%;
+    max-width: 1120px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+/* ---------------------------------------------------------------- marca -- */
+
+.marca {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text);
+    font-weight: 700;
+    font-size: 19px;
+    letter-spacing: -0.02em;
+}
+
+.marca:hover {
+    text-decoration: none;
+}
+
+.marca-selo {
+    display: grid;
+    place-items: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background-image: linear-gradient(135deg, #2dd4bf 0%, #0f766e 100%);
+    color: #04231f;
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+}
+
+/* --------------------------------------------------------------- botões -- */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 13px 22px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+
+.btn:hover {
+    text-decoration: none;
+    transform: translateY(-1px);
+}
+
+.btn-primario {
+    background-color: var(--accent);
+    color: var(--accent-ink);
+    box-shadow: var(--sombra);
+}
+
+.btn-primario:hover {
+    box-shadow: var(--sombra-alta);
+}
+
+.btn-secundario {
+    background-color: var(--surface);
+    color: var(--text);
+    border-color: var(--border);
+}
+
+.btn-secundario:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.btn-claro {
+    background-color: rgba(255, 255, 255, 0.12);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.28);
+}
+
+.btn-claro:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* -------------------------------------------------------------- cabeçalho */
+
+.cabecalho {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background-color: color-mix(in srgb, var(--bg) 85%, transparent);
+    backdrop-filter: saturate(180%) blur(12px);
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.cabecalho-conteudo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    height: 72px;
+}
+
+.menu {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+}
+
+.menu a {
+    color: var(--muted);
+    font-size: 15px;
+    font-weight: 500;
+}
+
+.menu a:hover {
+    color: var(--text);
+    text-decoration: none;
+}
+
+@media (max-width: 860px) {
+    .menu {
+        display: none;
+    }
+}
+
+/* ------------------------------------------------------------------ hero */
+
+.hero {
+    position: relative;
+    padding: 88px 0 96px;
+    overflow: hidden;
+}
+
+/* O halo é o mesmo recurso da tela de entrada do app: dois brilhos de teal
+   atrás do conteúdo, para a página não ser um retângulo chapado.
+   Gradiente radial em vez de círculo desfocado: o `blur` desenha um quadrado
+   de fundo que o `overflow: hidden` corta em linha reta, e a emenda aparece. */
+.hero::before,
+.hero::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.hero::before {
+    width: 900px;
+    height: 900px;
+    top: -420px;
+    right: -260px;
+    background: radial-gradient(closest-side, var(--halo-forte), transparent);
+}
+
+.hero::after {
+    width: 760px;
+    height: 760px;
+    bottom: -420px;
+    left: -300px;
+    background: radial-gradient(closest-side, var(--halo-fraco), transparent);
+}
+
+.hero-grade {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 56px;
+    align-items: center;
+}
+
+@media (max-width: 900px) {
+    .hero {
+        padding: 56px 0 64px;
+    }
+
+    .hero-grade {
+        grid-template-columns: 1fr;
+        gap: 44px;
+    }
+}
+
+.selo-topo {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    font-weight: 500;
+    margin-bottom: 24px;
+}
+
+.selo-topo .ponto {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background-color: var(--accent-claro);
+}
+
+.hero h1 {
+    font-size: clamp(34px, 5.2vw, 54px);
+    font-weight: 800;
+    margin-bottom: 20px;
+}
+
+.hero h1 .destaque {
+    color: var(--accent);
+}
+
+.hero-texto {
+    color: var(--muted);
+    font-size: 18px;
+    max-width: 32em;
+    margin-bottom: 32px;
+}
+
+.hero-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.hero-nota {
+    color: var(--faint);
+    font-size: 14px;
+}
+
+/* Cartão que ilustra a proposta — desenhado em CSS, sem imagem: nada para
+   carregar, nada para ficar desatualizado quando a tela do app mudar. */
+.cartao-demo {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    box-shadow: var(--sombra-alta);
+    padding: 22px;
+}
+
+.cartao-demo-topo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding-bottom: 16px;
+    border-bottom: 1px solid var(--border);
+}
+
+.cartao-demo-titulo {
+    font-size: 15px;
+    font-weight: 700;
+}
+
+.cartao-demo-sub {
+    color: var(--faint);
+    font-size: 13px;
+}
+
+.etiqueta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-radius: 999px;
+    background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+}
+
+.proposta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.proposta:last-of-type {
+    border-bottom: 0;
+}
+
+.proposta-quem {
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.proposta-detalhe {
+    color: var(--faint);
+    font-size: 13px;
+}
+
+.proposta-valor {
+    font-size: 17px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.proposta.destacada .proposta-valor {
+    color: var(--accent);
+}
+
+.cartao-demo-rodape {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: 12px;
+    background-color: var(--surface-alt);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+/* --------------------------------------------------------------- seções -- */
+
+.secao {
+    padding: 84px 0;
+}
+
+.secao-alt {
+    background-color: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+}
+
+.secao-cabeca {
+    max-width: 40em;
+    margin-bottom: 48px;
+}
+
+.secao-etiqueta {
+    display: block;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+}
+
+.secao h2 {
+    font-size: clamp(26px, 3.4vw, 36px);
+    font-weight: 800;
+    margin-bottom: 14px;
+}
+
+.secao-cabeca p {
+    color: var(--muted);
+    font-size: 17px;
+}
+
+.grade {
+    display: grid;
+    gap: 20px;
+}
+
+.grade-4 {
+    grid-template-columns: repeat(4, 1fr);
+}
+
+.grade-3 {
+    grid-template-columns: repeat(3, 1fr);
+}
+
+@media (max-width: 980px) {
+    .grade-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .grade-3 {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 560px) {
+    .secao {
+        padding: 56px 0;
+    }
+
+    .grade-4 {
+        grid-template-columns: 1fr;
+    }
+}
+
+.cartao {
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--raio);
+    padding: 26px 24px;
+    height: 100%;
+}
+
+.secao-alt .cartao {
+    background-color: var(--bg);
+}
+
+.cartao h3 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 8px;
+}
+
+.cartao p {
+    color: var(--muted);
+    font-size: 15px;
+}
+
+.passo-numero {
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background-color: color-mix(in srgb, var(--accent) 12%, transparent);
+    color: var(--accent);
+    font-size: 15px;
+    font-weight: 800;
+    margin-bottom: 16px;
+}
+
+/* ----------------------------------------------------------- categorias -- */
+
+.chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 10px 18px;
+    border-radius: 999px;
+    background-color: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.secao-alt .chip {
+    background-color: var(--bg);
+}
+
+/* ------------------------------------------------------ faixa do profissional */
+
+.faixa-pro {
+    background-color: #0b3f3a;
+    background-image: linear-gradient(135deg, #0f766e 0%, #062e2a 100%);
+    color: #ffffff;
+    border-radius: 24px;
+    padding: 56px 48px;
+    display: grid;
+    grid-template-columns: 1.2fr 0.8fr;
+    gap: 40px;
+    align-items: center;
+}
+
+@media (max-width: 900px) {
+    .faixa-pro {
+        grid-template-columns: 1fr;
+        padding: 40px 28px;
+        gap: 28px;
+    }
+}
+
+.faixa-pro h2 {
+    font-size: clamp(24px, 3vw, 32px);
+    font-weight: 800;
+    margin-bottom: 14px;
+}
+
+.faixa-pro p {
+    color: rgba(255, 255, 255, 0.82);
+    font-size: 16px;
+}
+
+.lista-pro {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 12px;
+}
+
+.lista-pro li {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 15px;
+}
+
+.lista-pro .marcador {
+    flex: 0 0 auto;
+    width: 18px;
+    height: 18px;
+    margin-top: 3px;
+    border-radius: 50%;
+    background-color: rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    font-size: 11px;
+    display: grid;
+    place-items: center;
+}
+
+/* ------------------------------------------------------------------ CTA -- */
+
+.cta {
+    text-align: center;
+    padding: 84px 0 96px;
+}
+
+.cta h2 {
+    font-size: clamp(26px, 3.4vw, 36px);
+    font-weight: 800;
+    margin-bottom: 14px;
+}
+
+.cta p {
+    color: var(--muted);
+    max-width: 34em;
+    margin: 0 auto 28px;
+}
+
+.cta-acoes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    justify-content: center;
+}
+
+/* --------------------------------------------------------------- rodapé -- */
+
+.rodape {
+    border-top: 1px solid var(--border);
+    padding: 40px 0;
+    background-color: var(--surface);
+}
+
+.rodape-conteudo {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+}
+
+.rodape-texto {
+    color: var(--faint);
+    font-size: 14px;
+}
+
+.rodape-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    font-size: 14px;
+}
+
+.rodape-links a {
+    color: var(--muted);
+}
+
+/* ----------------------------------------------------- aviso de ambiente */
+
+.faixa-ambiente {
+    background-color: #7c2d12;
+    color: #ffedd5;
+    font-size: 13px;
+    font-weight: 600;
+    text-align: center;
+    padding: 8px 16px;
+}

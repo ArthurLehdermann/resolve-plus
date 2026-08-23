@@ -25,6 +25,8 @@ docker compose exec app php artisan migrate
 
 A API sobe em http://localhost:8080 (`/up` é o health check).
 
+A raiz (`/`) serve a página pública do produto — Blade + CSS em `public/site/`, sem passo de build. O botão "Abrir o app" aponta para `SITE_APP_URL` ou, se ela não existir, para o `APP_URL` com o subdomínio `app.` na frente.
+
 Categorias e tabela de preço do MVP vêm do seeder (sem elas não dá pra criar solicitação nem estimar preço):
 
 ```bash
