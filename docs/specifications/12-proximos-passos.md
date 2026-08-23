@@ -35,12 +35,11 @@ Abrir cidade nova já não depende de `db:seed`: a tela de tabelas de preço sai
 
 | Lacuna | Trava |
 |---|---|
-| `GET /notifications`, `PUT /notifications/{id}/read` | RF011, profissional não fica sabendo de solicitação nova |
 | Listagem admin de disputas | F10, tela hoje é placeholder |
 | `GET /users/{id}` (perfil público) | Ver o profissional por inteiro antes de contratar; o resumo de reputação já vai na proposta (RN026) |
 | `POST /proposals/{id}/reject` | Recusa explícita pelo cliente (hoje só o aceite recusa as outras) |
 | Registro `MANUAL` no prontuário | Prontuário só cresce por serviço aprovado; entrada manual depende de B004 fechar |
-| RF010 proximidade geográfica | Feed de oportunidades filtra só por categoria, sem distância |
+| RF010 proximidade geográfica | Feed de oportunidades e alcance da notificação de solicitação nova filtram só por categoria, sem distância |
 
 ### 5. Infra e produção
 
@@ -62,3 +61,4 @@ Pareceres definitivos de B001 e B005, validação de B004, identidade visual/pro
 | 2026-08-22 | F9 entregue (timeline do prontuário com selo de origem, leitura pelo card do imóvel). Sem entrada manual, que segue barrada por B004. Histórico de pagamento assume o topo. |
 | 2026-08-22 | Resto de F8 entregue (histórico paginado e extrato de eventos com split). Fecha o épico. Sobram agenda/fotos de F6 e o painel admin, agora o único P0. |
 | 2026-08-22 | Tabelas de preço no painel: abrir cidade nova deixa de exigir `db:seed`. Não sobrou P0 na fila; o que trava o painel agora é backend (listagem de disputas). |
+| 2026-08-22 | Notificações (RF011) de ponta a ponta: tabela, `GET /notifications` + marcação de lida, seis listeners nos eventos que já existiam e feed no app com badge. Sem push nem tempo real, que seguem Pós-MVP. O stub que só logava saiu. |

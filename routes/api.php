@@ -5,6 +5,7 @@ use App\Admin\Http\Controllers\AdminPanelController;
 use App\Auth\Http\Controllers\AuthController;
 use App\Categories\Http\Controllers\AdminCategoryController;
 use App\Categories\Http\Controllers\CategoryController;
+use App\Notifications\Http\NotificationController;
 use App\Payments\Http\AsaasWebhookController;
 use App\Payments\Http\DisputeController;
 use App\Payments\Http\PaymentController;
@@ -141,6 +142,11 @@ Route::prefix('v1')->group(function (): void {
             ->whereUuid('id');
 
         Route::get('/properties/{id}/history', [PropertyHistoryController::class, 'show'])
+            ->whereUuid('id');
+
+        Route::get('/notifications', [NotificationController::class, 'index']);
+        Route::put('/notifications/read-all', [NotificationController::class, 'readAll']);
+        Route::put('/notifications/{id}/read', [NotificationController::class, 'read'])
             ->whereUuid('id');
     });
 

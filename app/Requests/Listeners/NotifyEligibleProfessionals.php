@@ -5,32 +5,66 @@ namespace App\Requests\Listeners;
 use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Models\Usuario;
+use App\Notifications\NotifyUser;
+use App\Notifications\TipoNotificacao;
 use App\Requests\Events\SolicitacaoCriada;
+use App\Users\PerfilProfissional;
 use Illuminate\Support\Facades\Log;
 
 /**
- * Stub síncrono do evento P (Notificar profissionais elegíveis).
+ * Evento P do fluxo (RN010/RF011): notificar profissionais elegíveis.
  *
- * A busca geográfica por bounding box (`04-modelo-dados.md` §Busca geográfica)
- * ainda não está pronta (não há Endereco de atuação do profissional persistido).
- * No MVP este listener só registra a intenção e a contagem de profissionais
- * ATIVA (INV-002), sem filtrar por categoria/raio nem enviar push.
+ * Elegível aqui é o profissional ATIVA (INV-002) que atende a categoria da
+ * solicitação — a mesma regra do feed de oportunidades
+ * (`RequestController::available`), para que a notificação não prometa nada que
+ * o feed não vá mostrar.
+ *
+ * Fora do escopo: raio geográfico (RF010). Não existe endereço de atuação
+ * persistido, então o alcance é por categoria e o log registra isso.
  */
 class NotifyEligibleProfessionals
 {
+    public function __construct(private readonly NotifyUser $notify) {}
+
     public function handle(SolicitacaoCriada $event): void
     {
+        $solicitacao = $event->solicitacao;
+        $solicitacao->loadMissing('categoria');
+
+        $codigo = $solicitacao->categoria?->codigo;
+
+        if ($codigo === null) {
+            return;
+        }
+
         $elegiveis = Usuario::query()
             ->where('tipo', TipoUsuario::Profissional)
             ->where('status', StatusConta::Ativa)
-            ->count();
+            ->whereIn(
+                'id',
+                PerfilProfissional::query()
+                    ->whereJsonContains('categorias_atendidas', $codigo)
+                    ->select('usuario_id'),
+            )
+            ->pluck('id');
 
-        Log::info('solicitacao.created.notify_professionals.stub', [
-            'solicitacao_id' => $event->solicitacao->id,
-            'categoria_id' => $event->solicitacao->categoria_id,
-            'property_id' => $event->solicitacao->property_id,
-            'professionals_ativa' => $elegiveis,
-            'limitation' => 'Busca geográfica com bounding box ainda não está pronta; notificação de profissionais na categoria/raio é stub síncrono.',
+        $titulo = 'Nova solicitação em '.($solicitacao->categoria?->nome ?? 'uma categoria sua');
+
+        foreach ($elegiveis as $profissionalId) {
+            ($this->notify)(
+                (string) $profissionalId,
+                TipoNotificacao::SolicitacaoNova,
+                $titulo,
+                'Um cliente abriu uma solicitação que combina com o que você atende. Envie sua proposta.',
+                ['solicitacao_id' => (string) $solicitacao->id],
+            );
+        }
+
+        Log::info('solicitacao.created.notify_professionals', [
+            'solicitacao_id' => $solicitacao->id,
+            'categoria_codigo' => $codigo,
+            'notificados' => $elegiveis->count(),
+            'limitation' => 'Alcance por categoria; raio geográfico (RF010) depende de endereço de atuação, que não existe.',
         ]);
     }
 }
