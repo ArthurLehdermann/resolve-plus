@@ -169,6 +169,8 @@ Route::prefix('v1')->group(function (): void {
         Route::post('/price-tables', [AdminPriceTableController::class, 'store']);
         Route::put('/price-tables/{tabelaPreco}', [AdminPriceTableController::class, 'update'])
             ->whereUuid('tabelaPreco');
+        Route::delete('/price-tables/{tabelaPreco}', [AdminPriceTableController::class, 'destroy'])
+            ->whereUuid('tabelaPreco');
         Route::get('/professionals/documents', [AdminPanelController::class, 'documents']);
         Route::get('/professionals/documents/{documento}/download', [AdminDocumentoProfissionalController::class, 'download'])
             ->whereUuid('documento');

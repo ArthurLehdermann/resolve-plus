@@ -81,6 +81,44 @@ class AdminPriceTableTest extends TestCase
             ->assertJsonValidationErrors(['valor_max']);
     }
 
+    public function test_admin_can_delete_price_table(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+        $token = $admin->createToken('auth')->plainTextToken;
+        $tabela = TabelaPreco::factory()->create();
+
+        $this->withToken($token)
+            ->deleteJson('/api/v1/admin/price-tables/'.$tabela->id)
+            ->assertOk()
+            ->assertJsonPath('success', true);
+
+        $this->assertDatabaseMissing('tabelas_preco', ['id' => $tabela->id]);
+    }
+
+    public function test_deleting_active_row_frees_the_categoria_cidade_pair(): void
+    {
+        $admin = Usuario::factory()->admin()->create();
+        $token = $admin->createToken('auth')->plainTextToken;
+        $categoria = Categoria::factory()->mvp('eletrica')->create();
+        $tabela = TabelaPreco::factory()->create([
+            'categoria_id' => $categoria->id,
+            'cidade' => 'São Paulo',
+        ]);
+
+        $this->withToken($token)
+            ->deleteJson('/api/v1/admin/price-tables/'.$tabela->id)
+            ->assertOk();
+
+        $this->withToken($token)
+            ->postJson('/api/v1/admin/price-tables', [
+                'categoria_id' => $categoria->id,
+                'cidade' => 'São Paulo',
+                'valor_min' => 5000,
+                'valor_max' => 10000,
+            ])
+            ->assertCreated();
+    }
+
     public function test_non_admin_cannot_access_price_tables(): void
     {
         $usuario = Usuario::factory()->create();
@@ -91,6 +129,9 @@ class AdminPriceTableTest extends TestCase
         $this->withToken($token)->postJson('/api/v1/admin/price-tables', [])->assertForbidden();
         $this->withToken($token)
             ->putJson('/api/v1/admin/price-tables/'.$tabela->id, ['valor_min' => 1])
+            ->assertForbidden();
+        $this->withToken($token)
+            ->deleteJson('/api/v1/admin/price-tables/'.$tabela->id)
             ->assertForbidden();
     }
 }

@@ -65,4 +65,17 @@ class AdminPriceTableController extends Controller
 
         return ApiResponse::success((new TabelaPrecoResource($tabelaPreco->refresh()))->resolve());
     }
+
+    /**
+     * Remoção definitiva. Solicitações antigas guardam a faixa aplicada em
+     * faixa_preco_min/max, então o histórico não muda: some só a regra futura.
+     */
+    public function destroy(TabelaPreco $tabelaPreco): JsonResponse
+    {
+        $this->authorize('delete', $tabelaPreco);
+
+        $tabelaPreco->delete();
+
+        return ApiResponse::success();
+    }
 }

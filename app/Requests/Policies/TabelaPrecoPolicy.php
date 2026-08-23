@@ -31,4 +31,9 @@ class TabelaPrecoPolicy
     {
         return false;
     }
+
+    public function delete(Usuario $usuario, TabelaPreco $tabelaPreco): bool
+    {
+        return false;
+    }
 }
