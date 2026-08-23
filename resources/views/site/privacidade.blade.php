@@ -37,9 +37,9 @@
             <ul>
                 <li><strong>Cadastro:</strong> nome, e-mail, telefone, foto de perfil e o tipo de conta (cliente ou profissional).</li>
                 <li><strong>Entrada na conta:</strong> a entrada é sem senha. Enviamos um código/link de uso único para o seu e-mail ou, se você escolher o Google, recebemos daquele login apenas nome, e-mail e foto.</li>
-                <li><strong>Imóvel:</strong> CEP, logradouro, número, complemento, bairro, cidade, estado, coordenadas aproximadas do endereço e o apelido que você dá ao lugar.</li>
+                <li><strong>Imóvel:</strong> CEP, logradouro, número, complemento, bairro, cidade, estado, o apelido que você dá ao lugar e, se você informar, as coordenadas do endereço.</li>
                 <li><strong>Solicitação de serviço:</strong> a descrição do problema, as fotos que você anexa, a categoria e o imóvel a que se refere.</li>
-                <li><strong>Profissional:</strong> documentos enviados para verificação (identificação, comprovantes e, quando houver, apólice e vigência), categorias atendidas e região de atuação.</li>
+                <li><strong>Profissional:</strong> documentos enviados para verificação (identificação, comprovantes e, quando houver, número e vigência de apólice) e as categorias de serviço que ele atende.</li>
                 <li><strong>Execução:</strong> propostas, mensagens trocadas dentro da plataforma, agendamentos, registro de conclusão, fotos de antes e depois e os dados da garantia.</li>
                 <li><strong>Pagamento:</strong> valores, situação da cobrança e os identificadores gerados pelo nosso provedor de pagamento. <strong>Não guardamos número de cartão</strong> — esses dados são tratados diretamente pelo provedor.</li>
                 <li><strong>Reputação:</strong> avaliações, notas e o nível de confiança calculado a partir do histórico.</li>
@@ -60,7 +60,7 @@
             <h2>4. Para que usamos</h2>
             <ul>
                 <li>Criar e manter a sua conta e permitir a entrada sem senha.</li>
-                <li>Publicar a solicitação para profissionais da categoria e região certas e permitir propostas comparáveis.</li>
+                <li>Publicar a solicitação para os profissionais que atendem aquela categoria — o aviso de solicitação nova vai só para os já verificados — e permitir propostas comparáveis.</li>
                 <li>Executar a contratação: agenda, comunicação, conclusão, pagamento e garantia.</li>
                 <li>Verificar documentos de profissionais antes de liberar o acesso às solicitações.</li>
                 <li>Calcular reputação e nível de confiança.</li>
@@ -79,7 +79,7 @@
             <h2>6. Com quem compartilhamos</h2>
             <p>Não vendemos dados pessoais. Compartilhamos o necessário para o serviço acontecer:</p>
             <ul>
-                <li><strong>Entre cliente e profissional:</strong> o profissional vê a descrição, as fotos e a região da solicitação; o endereço completo e o contato só são liberados depois do aceite da proposta.</li>
+                <li><strong>Entre cliente e profissional:</strong> o profissional vê a descrição, o escopo e as fotos da solicitação. <strong>Endereço e telefone do cliente não são entregues a ele</strong> — nem antes, nem depois do aceite: a combinação acontece pelo chat do serviço, dentro da plataforma. O cliente, por sua vez, vê o nome, a nota média e o nível de confiança de quem envia proposta.</li>
                 <li><strong>Provedor de pagamento:</strong> processa a cobrança e o repasse.</li>
                 <li><strong>Provedor de e-mail:</strong> envia códigos de entrada e avisos do serviço.</li>
                 <li><strong>Hospedagem e armazenamento de arquivos:</strong> mantêm o banco de dados e as fotos e documentos enviados.</li>
@@ -97,15 +97,31 @@
             </p>
 
             <h2>8. Decisões automatizadas</h2>
+            <p>Três coisas acontecem sem ninguém da nossa equipe olhar caso a caso:</p>
+            <ul>
+                <li>
+                    <strong>Nível de confiança do profissional</strong>, calculado a partir de
+                    serviços aprovados, avaliações, cancelamentos e reclamações. Ele é exibido
+                    ao cliente junto da proposta; não filtra quais solicitações o profissional
+                    enxerga.
+                </li>
+                <li>
+                    <strong>Filtro de contatos e suspensão por reincidência.</strong> Além de
+                    ocultar o contato (item 3), cada tentativa fica registrada. Cinco
+                    tentativas em 90 dias <strong>suspendem a conta automaticamente</strong>.
+                </li>
+                <li>
+                    <strong>Prazos que se cumprem sozinhos.</strong> Serviço concluído e não
+                    contestado em 72 horas é aprovado e o valor repassado; contestação sem
+                    decisão nossa em 7 dias se encerra pelo desfecho padrão descrito nos
+                    Termos de Uso. Nesses casos o dinheiro se move sem análise humana, porque
+                    o prazo venceu.
+                </li>
+            </ul>
             <p>
-                Dois pontos do produto funcionam de forma automática: o <strong>nível de
-                confiança</strong> do profissional, calculado a partir de serviços aprovados,
-                avaliações, cancelamentos e reclamações — e que influencia quais solicitações
-                ele enxerga —, e o <strong>filtro de contatos</strong> descrito no item 3.
-                Nenhum dos dois decide sozinho sobre exclusão de conta ou retenção de
-                dinheiro: suspensão e mediação passam por análise humana da nossa equipe, e
-                você pode pedir revisão dessas decisões pelo e-mail do encarregado
-                (art. 20 da LGPD).
+                Exclusão de conta por nossa iniciativa e decisão de mediação dentro do prazo
+                são sempre humanas. Em qualquer das situações acima você pode pedir revisão
+                pelo e-mail do encarregado (art. 20 da LGPD), e um analista reexamina o caso.
             </p>
 
             <h2>9. Por quanto tempo guardamos</h2>
@@ -140,16 +156,27 @@
             <h2>11. Segurança</h2>
             <p>
                 Tráfego criptografado (HTTPS), senha substituída por código de uso único,
-                acesso por token com expiração, permissões por perfil, arquivos em
-                armazenamento com acesso restrito e registro de auditoria das ações
-                sensíveis.
+                acesso por token com expiração, permissões por perfil e registro de auditoria
+                das ações sensíveis.
+            </p>
+            <p>
+                Sobre os arquivos, vale a distinção: <strong>documento de profissional só sai
+                pelo backend autenticado</strong>, nunca por link direto. Já as fotos de
+                solicitação e de garantia e a foto de perfil ficam em endereços de leitura
+                pública, com nome sorteado e não divulgado — quem tiver o link abre o arquivo.
+                Não publique nas fotos documento, tela de aplicativo bancário ou qualquer
+                coisa que você não mostraria a um desconhecido.
             </p>
 
             <h2>12. Cookies e armazenamento local</h2>
             <p>
-                O site não usa cookie de publicidade nem rastreador de terceiros. Guardamos no
-                seu navegador apenas a preferência de tema (claro/escuro) e, quando você entra
-                na conta, os cookies e o token necessários para manter a sessão.
+                O site não usa cookie de publicidade nem rastreador de terceiros. Em qualquer
+                visita ele grava dois cookies técnicos, necessários para o funcionamento da
+                página: o identificador de sessão e o token que protege formulários contra
+                falsificação de requisição. Guarda também, no armazenamento local do
+                navegador, a sua preferência de tema (claro ou escuro). O aplicativo não usa
+                cookie: o token de acesso fica guardado no próprio aparelho e some quando você
+                sai da conta.
             </p>
 
             <h2>13. Menores de idade</h2>

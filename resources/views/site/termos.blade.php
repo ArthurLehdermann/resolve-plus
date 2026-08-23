@@ -6,7 +6,9 @@
     multa de cancelamento 10/25/50% e mediação em 7 dias
     (foundation/03-cancellation-rules.md), comissão de 10% (COMISSAO_PERCENT),
     garantia no modelo B — profissional responde primeiro e a plataforma media
-    (ADR-003) — e o mecanismo antidesintermediação (specifications/09).
+    (ADR-003) — e o mecanismo antidesintermediação (specifications/09), com a
+    suspensão automática em 5 tentativas por 90 dias (ContactLeakEnforcer) e o
+    desfecho padrão da disputa que estoura o prazo (ResolveExpiredDisputes).
 
     Mudou a configuração, muda este texto. Número aqui é promessa ao usuário,
     não ilustração.
@@ -43,14 +45,14 @@
             <ul>
                 <li>É preciso ter 18 anos ou mais e informar dados verdadeiros.</li>
                 <li>A entrada é sem senha, por código enviado ao seu e-mail ou por conta Google. O código é pessoal e intransferível.</li>
-                <li>O profissional só recebe solicitações depois que os documentos enviados forem verificados pela nossa equipe.</li>
+                <li>O profissional escolhe as categorias que atende e já consegue ver as solicitações abertas nelas. <strong>Enviar proposta e receber o aviso de solicitação nova, só depois que os documentos forem verificados</strong> pela nossa equipe.</li>
             </ul>
 
             <h2>3. Solicitação, propostas e contratação</h2>
             <ul>
                 <li>O cliente descreve o problema e a plataforma mostra uma faixa de preço estimada — referência para orientar a conversa, não proposta nem compromisso de valor.</li>
-                <li>Profissionais da categoria e da região respondem sobre o mesmo escopo. A escolha é do cliente.</li>
-                <li>O aceite da proposta cria o serviço, libera o contato entre as partes e inicia o pagamento.</li>
+                <li>Os profissionais verificados que atendem aquela categoria respondem sobre o mesmo escopo. A escolha é do cliente.</li>
+                <li>O aceite da proposta cria o serviço, abre o chat entre as duas partes e inicia o pagamento. Endereço e telefone não são repassados ao profissional: o combinado — inclusive como chegar ao imóvel — passa pelo chat do serviço.</li>
             </ul>
 
             <h2>4. Pagamento, comissão e repasse</h2>
@@ -64,8 +66,8 @@
             <h2>5. Cancelamento</h2>
             <ul>
                 <li><strong>Antes de aceitar uma proposta:</strong> o cliente cancela a solicitação livremente, sem custo — nenhum pagamento foi iniciado.</li>
-                <li><strong>Depois do aceite e antes de o serviço começar:</strong> o cliente pode cancelar pagando multa proporcional à antecedência, calculada sobre o valor da proposta: <strong>10%</strong> com 48 horas ou mais de antecedência, <strong>25%</strong> entre 24 e 48 horas e <strong>50%</strong> com menos de 24 horas. Só a multa é cobrada; o restante é liberado.</li>
-                <li><strong>Com o serviço em andamento:</strong> não há cancelamento direto. Qualquer das partes abre uma contestação e o caso vai para mediação.</li>
+                <li><strong>Depois do aceite e antes de o serviço começar:</strong> o cancelamento é do cliente, com multa proporcional à antecedência em relação à data agendada, calculada sobre o valor da proposta: <strong>10%</strong> com 48 horas ou mais de antecedência, <strong>25%</strong> entre 24 e 48 horas e <strong>50%</strong> com menos de 24 horas. Só a multa é cobrada; o restante é liberado. <strong>Enquanto não houver data marcada não há multa</strong> — sem calendário não há antecedência a medir.</li>
+                <li><strong>Com o serviço em andamento:</strong> não há cancelamento direto, para nenhuma das partes. Quem quiser encerrar abre uma contestação e o caso vai para mediação.</li>
                 <li><strong>Depois da conclusão aprovada:</strong> não existe cancelamento; o que existe é contestação e garantia.</li>
             </ul>
 
@@ -76,6 +78,15 @@
                 registrado no serviço (escopo, mensagens, fotos e agenda). A decisão pode
                 liberar o valor ao profissional, devolvê-lo ao cliente ou dividi-lo. Nenhum
                 repasse acontece enquanto a contestação estiver aberta.
+            </p>
+            <p>
+                <strong>Se esse prazo passar sem decisão nossa, o caso se encerra sozinho</strong>,
+                pelo desfecho que menos surpreende quem estava esperando: contestação de um
+                serviço concluído é <em>aprovada</em> e o valor vai para o profissional;
+                pedido de cancelamento durante a execução é <em>aceito</em> e a cobrança é
+                liberada sem custo para o cliente. Foi a plataforma que perdeu o prazo, e
+                nenhuma das partes fica com o dinheiro travado por causa disso. Você pode
+                pedir revisão pelo suporte.
             </p>
 
             <h2>7. Garantia</h2>
@@ -94,12 +105,18 @@
                 isso o texto de propostas e mensagens passa por um filtro automático que
                 oculta telefones, e-mails e perfis de redes sociais.
             </p>
+            <p>
+                Cada tentativa fica registrada, e a régua é esta:
+                <strong>cinco tentativas em 90 dias suspendem a conta automaticamente</strong>,
+                sem análise prévia. A suspensão pode ser revista — escreva para o suporte e
+                uma pessoa reexamina o caso.
+            </p>
 
             <h2>9. Conduta e avaliações</h2>
             <ul>
                 <li>Não publicar conteúdo ilegal, ofensivo ou de terceiro sem autorização.</li>
                 <li>Não usar a plataforma para fraude, cobrança indevida ou avaliação falsa.</li>
-                <li>Avaliações devem refletir a experiência real com o serviço. O histórico de serviços aprovados, avaliações e cancelamentos alimenta o nível de confiança do profissional, que influencia a visibilidade das solicitações que ele recebe.</li>
+                <li>Avaliações devem refletir a experiência real com o serviço. O histórico de serviços aprovados, avaliações, cancelamentos e reclamações alimenta o nível de confiança do profissional, que aparece para o cliente junto de cada proposta.</li>
             </ul>
 
             <h2>10. Suspensão e encerramento</h2>

@@ -42,6 +42,7 @@ final class ExcluirConta
         }
 
         $this->apagarDocumentos($usuario);
+        $this->apagarAvatar($usuario);
 
         DB::transaction(function () use ($usuario): void {
             DB::table('links_magicos')->where('usuario_id', $usuario->id)->delete();
@@ -54,6 +55,13 @@ final class ExcluirConta
             // desintermediação e é justamente onde sobra o contato pessoal.
             DB::table('mensagens')->where('remetente_id', $usuario->id)->update(['texto_original' => null]);
             DB::table('propostas')->where('profissional_id', $usuario->id)->update(['observacoes_original' => null]);
+
+            // Mesma cópia pré-filtro, guardada de novo no registro da
+            // tentativa de vazamento. A linha fica (padrão, origem e data
+            // sustentam a contagem de reincidência); o texto sai.
+            DB::table('contact_leak_attempts')
+                ->where('usuario_id', $usuario->id)
+                ->update(['texto_original' => null, 'texto_filtrado' => null]);
 
             $usuario->forceFill([
                 'nome' => 'Conta removida',
@@ -96,5 +104,17 @@ final class ExcluirConta
 
                 $documento->delete();
             });
+    }
+
+    /**
+     * A coluna `foto` guarda um caminho no bucket, e o upload deixa dois
+     * arquivos na pasta do usuário (original e miniatura). Zerar só a coluna
+     * deixaria o rosto do titular acessível por URL — os avatares ficam em
+     * prefixo de leitura pública. Some a pasta inteira.
+     */
+    private function apagarAvatar(Usuario $usuario): void
+    {
+        Storage::disk((string) config('filesystems.object_disk', 's3'))
+            ->deleteDirectory('avatars/'.$usuario->id);
     }
 }

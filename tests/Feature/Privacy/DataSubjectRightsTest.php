@@ -7,6 +7,9 @@ use App\Auth\Models\Usuario;
 use App\Professionals\DocumentoProfissional;
 use App\Services\Servico;
 use App\Services\StatusServico;
+use App\Trust\Enums\OrigemVazamentoContato;
+use App\Trust\Enums\PadraoContatoDetectado;
+use App\Trust\Models\ContactLeakAttempt;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -112,6 +115,41 @@ class DataSubjectRightsTest extends TestCase
 
         Storage::disk('s3')->assertMissing('documents/rg.jpg');
         $this->assertDatabaseMissing('documentos_profissional', ['profissional_id' => $profissional->id]);
+    }
+
+    public function test_account_deletion_erases_the_avatar_and_the_pre_filter_text(): void
+    {
+        Storage::fake('s3');
+
+        $usuario = Usuario::factory()->create();
+        Storage::disk('s3')->put('avatars/'.$usuario->id.'/foto.jpg', 'original');
+        Storage::disk('s3')->put('avatars/'.$usuario->id.'/foto_thumb.jpg', 'miniatura');
+        $usuario->forceFill(['foto' => 'avatars/'.$usuario->id.'/foto_thumb.jpg'])->save();
+
+        ContactLeakAttempt::query()->create([
+            'usuario_id' => $usuario->id,
+            'origem' => OrigemVazamentoContato::Mensagem,
+            'padrao_detectado' => PadraoContatoDetectado::Telefone,
+            'texto_original' => 'me chama no 51 99999-0000',
+            'texto_filtrado' => 'me chama no [contato removido]',
+        ]);
+
+        $token = $usuario->createToken('auth')->plainTextToken;
+
+        $this->withToken($token)->deleteJson('/api/v1/privacy/account')->assertOk();
+
+        // A foto sai do bucket, não só da coluna: o prefixo `avatars/` é de
+        // leitura pública, então referência apagada com arquivo de pé ainda
+        // seria o rosto do titular acessível por URL.
+        Storage::disk('s3')->assertMissing('avatars/'.$usuario->id.'/foto.jpg');
+        Storage::disk('s3')->assertMissing('avatars/'.$usuario->id.'/foto_thumb.jpg');
+
+        // A tentativa continua contando para reincidência; o texto com o
+        // contato pessoal, não.
+        $tentativa = DB::table('contact_leak_attempts')->where('usuario_id', $usuario->id)->first();
+        $this->assertNotNull($tentativa);
+        $this->assertNull($tentativa->texto_original);
+        $this->assertNull($tentativa->texto_filtrado);
     }
 
     public function test_account_deletion_is_refused_while_a_service_is_open(): void
