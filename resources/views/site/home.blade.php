@@ -27,6 +27,23 @@
 
     <link rel="icon" href="{{ asset('site/favicon.svg') }}" type="image/svg+xml">
     <link rel="stylesheet" href="{{ asset('site/site.css') }}?v={{ $versaoCss }}">
+
+    {{--
+        Roda antes da primeira pintura para a página não piscar branco em quem
+        já escolheu o escuro. Sem escolha salva o site é claro: o padrão é o
+        do produto, não o do sistema operacional.
+    --}}
+    <script>
+        (function () {
+            try {
+                if (localStorage.getItem('tema') === 'escuro') {
+                    document.documentElement.setAttribute('data-tema', 'escuro');
+                }
+            } catch (e) {
+                /* navegador com storage bloqueado fica no claro */
+            }
+        })();
+    </script>
 </head>
 <body>
 
@@ -46,7 +63,22 @@
             <a href="#profissionais">Para profissionais</a>
         </nav>
 
-        <a class="btn btn-primario" href="{{ $appUrl }}">Abrir o app</a>
+        <div class="cabecalho-acoes">
+            <button type="button" class="botao-tema" data-alternar-tema
+                    aria-label="Usar tema escuro" title="Usar tema escuro">
+                <svg class="icone-sol" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="4.2"/>
+                    <path d="M12 2.6v2.2M12 19.2v2.2M4.2 12H2M22 12h-2.2M6.2 6.2 4.7 4.7M19.3 19.3l-1.5-1.5M17.8 6.2l1.5-1.5M4.7 19.3l1.5-1.5"/>
+                </svg>
+                <svg class="icone-lua" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M20.5 14.3A8.5 8.5 0 1 1 9.7 3.5a6.8 6.8 0 0 0 10.8 10.8Z"/>
+                </svg>
+            </button>
+
+            <a class="btn btn-primario" href="{{ $appUrl }}">Abrir o app</a>
+        </div>
     </div>
 </header>
 
@@ -258,6 +290,51 @@
         </nav>
     </div>
 </footer>
+
+<script>
+    // Alterna o tema e guarda a escolha. A chave é a mesma palavra que o app
+    // grava ('claro'/'escuro'), mas o storage é por domínio: site e app não
+    // compartilham a preferência.
+    (function () {
+        var botao = document.querySelector('[data-alternar-tema]');
+        if (!botao) return;
+
+        var raiz = document.documentElement;
+        var metaCor = document.querySelector('meta[name="theme-color"]');
+
+        function rotular() {
+            var escuro = raiz.getAttribute('data-tema') === 'escuro';
+            var texto = escuro ? 'Usar tema claro' : 'Usar tema escuro';
+
+            botao.setAttribute('aria-label', texto);
+            botao.setAttribute('title', texto);
+
+            if (metaCor) {
+                metaCor.setAttribute('content', escuro ? '#080c0d' : '#0F766E');
+            }
+        }
+
+        botao.addEventListener('click', function () {
+            var escuro = raiz.getAttribute('data-tema') !== 'escuro';
+
+            if (escuro) {
+                raiz.setAttribute('data-tema', 'escuro');
+            } else {
+                raiz.removeAttribute('data-tema');
+            }
+
+            try {
+                localStorage.setItem('tema', escuro ? 'escuro' : 'claro');
+            } catch (e) {
+                /* sem storage a escolha vale só nesta visita */
+            }
+
+            rotular();
+        });
+
+        rotular();
+    })();
+</script>
 
 </body>
 </html>

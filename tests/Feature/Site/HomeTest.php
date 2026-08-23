@@ -48,6 +48,20 @@ class HomeTest extends TestCase
     }
 
     /**
+     * O site tem o mesmo botão de claro/escuro do app e abre no claro: o HTML
+     * sai do servidor sem tema escuro marcado, e só o clique (ou a escolha já
+     * salva no navegador) liga o escuro.
+     */
+    public function test_home_has_theme_toggle_and_starts_light(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('data-alternar-tema', false)
+            ->assertSee('Usar tema escuro', false)
+            ->assertDontSee('<html lang="pt-BR" data-tema', false);
+    }
+
+    /**
      * O tratador de exceções devolve JSON para a API mesmo sem Accept — o que
      * antes valia para o site inteiro e transformava erro de página em objeto
      * JSON no navegador.

@@ -3,8 +3,11 @@
  *
  * A paleta é a mesma de `AuthColors` no app (lib/widgets/auth_shell.dart):
  * quem chega pelo site e abre o app precisa reconhecer o mesmo produto. Toda
- * cor entra por variável, e o bloco de `prefers-color-scheme` troca só as
+ * cor entra por variável, e o bloco de `[data-tema="escuro"]` troca só as
  * variáveis — nenhum componente repete cor literal.
+ *
+ * O claro é o padrão do site, como no app: o escuro não segue o sistema
+ * operacional, é escolha explícita no botão do cabeçalho.
  *
  * Sem build: é CSS servido direto de public/. A página é uma só, não paga o
  * custo de um pipeline de assets para isso.
@@ -27,27 +30,26 @@
     --sombra-alta: 0 2px 4px rgba(0, 0, 0, 0.04), 0 18px 48px rgba(12, 22, 21, 0.12);
     --raio: 16px;
     --fonte: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-    color-scheme: light dark;
+    color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --bg: #080c0d;
-        --surface: #11181a;
-        --surface-alt: #0c1213;
-        --border: #1e2729;
-        --text: #f1f5f4;
-        --muted: #8c9b99;
-        --faint: #5f6e6c;
-        /* Teal clareado: o #0F766E do painel some no preto e reprova
-           contraste como cor de texto. Mesma decisão do app. */
-        --accent: #2dd4bf;
-        --accent-ink: #04231f;
-        --halo-forte: rgba(45, 212, 191, 0.16);
-        --halo-fraco: rgba(15, 118, 110, 0.18);
-        --sombra: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
-        --sombra-alta: 0 2px 4px rgba(0, 0, 0, 0.4), 0 18px 48px rgba(0, 0, 0, 0.6);
-    }
+html[data-tema="escuro"] {
+    color-scheme: dark;
+    --bg: #080c0d;
+    --surface: #11181a;
+    --surface-alt: #0c1213;
+    --border: #1e2729;
+    --text: #f1f5f4;
+    --muted: #8c9b99;
+    --faint: #5f6e6c;
+    /* Teal clareado: o #0F766E do painel some no preto e reprova
+       contraste como cor de texto. Mesma decisão do app. */
+    --accent: #2dd4bf;
+    --accent-ink: #04231f;
+    --halo-forte: rgba(45, 212, 191, 0.16);
+    --halo-fraco: rgba(15, 118, 110, 0.18);
+    --sombra: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.5);
+    --sombra-alta: 0 2px 4px rgba(0, 0, 0, 0.4), 0 18px 48px rgba(0, 0, 0, 0.6);
 }
 
 *,
@@ -253,6 +255,51 @@ p {
     .menu {
         display: none;
     }
+}
+
+.cabecalho-acoes {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+/* Alternar claro/escuro. Um toque só, mesma decisão do app: quem troca o tema
+   quer ver a outra versão agora, não escolher política de sistema. */
+.botao-tema {
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    background-color: var(--surface);
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.botao-tema:hover {
+    color: var(--text);
+    border-color: var(--accent);
+}
+
+.botao-tema svg {
+    display: block;
+    width: 19px;
+    height: 19px;
+}
+
+/* O ícone mostra o estado atual — sol no claro, lua no escuro —, e o rótulo
+   diz a ação. Foi assim que o cliente leu o botão. */
+.botao-tema .icone-lua,
+html[data-tema="escuro"] .botao-tema .icone-sol {
+    display: none;
+}
+
+html[data-tema="escuro"] .botao-tema .icone-lua {
+    display: block;
 }
 
 /* ------------------------------------------------------------------ hero */
