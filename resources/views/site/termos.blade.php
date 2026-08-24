@@ -86,7 +86,7 @@
                 pedido de cancelamento durante a execução é <em>aceito</em> e a cobrança é
                 liberada sem custo para o cliente. Foi a plataforma que perdeu o prazo, e
                 nenhuma das partes fica com o dinheiro travado por causa disso. Você pode
-                pedir revisão pelo suporte.
+                pedir revisão pelo <a href="mailto:{{ $emailEncarregado }}">{{ $emailEncarregado }}</a>.
             </p>
 
             <h2>7. Garantia</h2>
@@ -108,8 +108,9 @@
             <p>
                 Cada tentativa fica registrada, e a régua é esta:
                 <strong>cinco tentativas em 90 dias suspendem a conta automaticamente</strong>,
-                sem análise prévia. A suspensão pode ser revista — escreva para o suporte e
-                uma pessoa reexamina o caso.
+                sem análise prévia. A suspensão pode ser revista — escreva para
+                <a href="mailto:{{ $emailEncarregado }}">{{ $emailEncarregado }}</a> e uma
+                pessoa reexamina o caso.
             </p>
 
             <h2>9. Conduta e avaliações</h2>
@@ -150,7 +151,7 @@
                 foro do domicílio do consumidor para as questões de consumo.
             </p>
 
-            <p>Dúvidas: <a href="mailto:{{ $emailContato }}">{{ $emailContato }}</a>.</p>
+            <p>Dúvidas sobre estes termos: <a href="mailto:{{ $emailEncarregado }}">{{ $emailEncarregado }}</a>.</p>
         </div>
     </section>
 
