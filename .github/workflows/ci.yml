@@ -1,5 +1,11 @@
 name: CI
 
+# Runner self-hosted (resolveplus-vps, na Stage): a cota de minutos hosted do
+# GitHub acabou e job em ubuntu-latest nem começa.
+#
+# Nada de PHP no host: tudo roda na mesma imagem que o docker-compose usa. O
+# Postgres de teste sobe numa rede docker por `run_id` e **sem publicar porta**
+# — a Stage já tem Postgres no 5432, e a suíte deste repo trunca o banco.
 on:
   pull_request:
   push:
@@ -11,62 +17,73 @@ concurrency:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
-
-    services:
-      postgres:
-        image: postgres:17-alpine
-        env:
-          POSTGRES_DB: resolve_plus_test
-          POSTGRES_USER: resolve_plus
-          POSTGRES_PASSWORD: resolve_plus
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U resolve_plus -d resolve_plus_test"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 10
-
-    env:
-      DB_CONNECTION: pgsql
-      DB_HOST: 127.0.0.1
-      DB_PORT: 5432
-      DB_DATABASE: resolve_plus_test
-      DB_USERNAME: resolve_plus
-      DB_PASSWORD: resolve_plus
+    runs-on: [self-hosted, resolveplus-vps]
 
     steps:
       - name: Checkout código
         uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
-        with:
-          php-version: '8.4'
-          extensions: pgsql, pdo_pgsql, bcmath, intl, redis
-          coverage: none
-
-      - name: Cache dependências do Composer
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: composer-${{ hashFiles('composer.lock') }}
-          restore-keys: composer-
+      - name: Subir Postgres efêmero
+        run: |
+          NET="rp-ci-${{ github.run_id }}"
+          docker network create "$NET"
+          docker run -d --name "rp-ci-pg-${{ github.run_id }}" --network "$NET" --network-alias ci-pg \
+            -e POSTGRES_DB=resolve_plus_test \
+            -e POSTGRES_USER=resolve_plus \
+            -e POSTGRES_PASSWORD=resolve_plus \
+            postgres:17-alpine
+          for i in $(seq 1 30); do
+            docker exec "rp-ci-pg-${{ github.run_id }}" pg_isready -U resolve_plus -d resolve_plus_test >/dev/null 2>&1 && exit 0
+            sleep 2
+          done
+          echo "Postgres não subiu a tempo" >&2
+          exit 1
 
       - name: Instalar dependências PHP
-        run: composer install --no-interaction --prefer-dist
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/app" -w /app \
+            arthurlehdermann/alpine-nginx-php8.4 \
+            composer install --no-interaction --prefer-dist
 
       - name: Preparar .env
         run: |
           cp .env.example .env
-          php artisan key:generate
+          docker run --rm \
+            -v "${{ github.workspace }}:/app" -w /app \
+            arthurlehdermann/alpine-nginx-php8.4 \
+            php artisan key:generate
 
       - name: Rodar testes (Postgres real - suíte usa jsonb e índices parciais, não roda em sqlite)
-        run: vendor/bin/phpunit
+        run: |
+          docker run --rm \
+            --network "rp-ci-${{ github.run_id }}" \
+            -v "${{ github.workspace }}:/app" -w /app \
+            -e DB_CONNECTION=pgsql \
+            -e DB_HOST=ci-pg \
+            -e DB_PORT=5432 \
+            -e DB_DATABASE=resolve_plus_test \
+            -e DB_USERNAME=resolve_plus \
+            -e DB_PASSWORD=resolve_plus \
+            arthurlehdermann/alpine-nginx-php8.4 \
+            vendor/bin/phpunit
 
       - name: Pint (estilo)
-        run: vendor/bin/pint --test
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/app" -w /app \
+            arthurlehdermann/alpine-nginx-php8.4 \
+            vendor/bin/pint --test
 
       - name: Larastan
-        run: vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+        run: |
+          docker run --rm \
+            -v "${{ github.workspace }}:/app" -w /app \
+            arthurlehdermann/alpine-nginx-php8.4 \
+            vendor/bin/phpstan analyse --no-progress --memory-limit=1G
+
+      - name: Teardown Postgres efêmero
+        if: always()
+        run: |
+          docker rm -f "rp-ci-pg-${{ github.run_id }}" 2>/dev/null || true
+          docker network rm "rp-ci-${{ github.run_id }}" 2>/dev/null || true
