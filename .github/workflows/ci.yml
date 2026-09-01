@@ -1,6 +1,6 @@
 name: CI
 
-# Runner self-hosted (resolveplus-vps, na Stage): a cota de minutos hosted do
+# Runner self-hosted (stage-vps; app na Stage): a cota de minutos hosted do
 # GitHub acabou e job em ubuntu-latest nem começa.
 #
 # Nada de PHP no host: tudo roda na mesma imagem que o docker-compose usa. O
@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   test:
-    runs-on: [self-hosted, resolveplus-vps]
+    runs-on: [self-hosted, stage-vps]
 
     steps:
       - name: Checkout código
