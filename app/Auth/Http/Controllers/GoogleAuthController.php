@@ -6,6 +6,7 @@ use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
 use App\Auth\Http\Resources\UsuarioResource;
 use App\Auth\Models\Usuario;
+use App\Auth\NotificaAdminNovoUsuario;
 use App\Http\Controllers\Controller;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -189,7 +190,7 @@ class GoogleAuthController extends Controller
             return $usuario;
         }
 
-        return Usuario::query()->create([
+        $usuario = Usuario::query()->create([
             'tipo' => $tipo,
             'nome' => $perfil['nome'],
             'email' => $perfil['email'],
@@ -202,6 +203,10 @@ class GoogleAuthController extends Controller
                 ? StatusConta::Ativa
                 : StatusConta::PendenteVerificacao,
         ]);
+
+        NotificaAdminNovoUsuario::enviar($usuario, 'Google');
+
+        return $usuario;
     }
 
     private function tipoSolicitado(Request $request): TipoUsuario

@@ -14,6 +14,7 @@ use App\Auth\Http\Resources\UsuarioResource;
 use App\Auth\Mail\MagicLinkMail;
 use App\Auth\Models\LinkMagico;
 use App\Auth\Models\Usuario;
+use App\Auth\NotificaAdminNovoUsuario;
 use App\Http\Controllers\Controller;
 use App\Support\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -42,6 +43,8 @@ class AuthController extends Controller
             'senha_hash' => null,
             'status' => $status,
         ]);
+
+        NotificaAdminNovoUsuario::enviar($usuario, 'formulário');
 
         $token = $usuario->createToken('auth')->plainTextToken;
 

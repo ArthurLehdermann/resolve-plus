@@ -4,9 +4,11 @@ namespace Tests\Feature\Auth;
 
 use App\Auth\Enums\StatusConta;
 use App\Auth\Enums\TipoUsuario;
+use App\Auth\Mail\NovoUsuarioAdminMail;
 use App\Auth\Models\Usuario;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class GoogleAuthTest extends TestCase
@@ -42,6 +44,8 @@ class GoogleAuthTest extends TestCase
 
     public function test_callback_cria_conta_e_app_troca_codigo_por_token(): void
     {
+        config()->set('mail.admin_address', 'dono@example.com');
+        Mail::fake();
         $this->fakeGoogle('novo@example.com', 'Fulano do Google');
 
         $state = $this->stateValido();
@@ -62,6 +66,9 @@ class GoogleAuthTest extends TestCase
         $this->assertSame(TipoUsuario::Cliente, $usuario->tipo);
         $this->assertSame(StatusConta::Ativa, $usuario->status);
         $this->assertNull($usuario->senha_hash);
+
+        Mail::assertQueued(NovoUsuarioAdminMail::class, fn (NovoUsuarioAdminMail $mail): bool => $mail->origem === 'Google'
+            && $mail->usuario->email === 'novo@example.com');
 
         // Código de troca é de uso único.
         $this->postJson('/api/v1/auth/google/exchange', ['codigo' => $codigo])

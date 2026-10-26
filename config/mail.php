@@ -115,4 +115,9 @@ return [
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
     ],
 
+    /*
+    | Quem recebe o aviso de conta nova (cliente ou profissional). Vazio = sem aviso.
+    */
+    'admin_address' => env('ADMIN_EMAIL'),
+
 ];
