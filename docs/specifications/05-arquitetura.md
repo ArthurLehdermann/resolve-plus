@@ -48,7 +48,7 @@ Redis, usado para: sessões, cache de consultas, rate limit, filas, notificaçõ
 
 ### Storage
 
-Object Storage (S3 compatível), para armazenar fotos, documentos, evidências, avatares. Evitar armazenar arquivos no servidor da aplicação.
+Object Storage (S3 compatível), para armazenar fotos, documentos, evidências, avatares. Disco padrão via `OBJECT_STORAGE_DISK` + `AWS_*` (`.env.example`); credenciais e nome do bucket ficam nos secrets do host de deploy, não no repositório. Evitar armazenar arquivos no disco local da aplicação em Stage/produção.
 
 ## Módulos do Sistema
 
@@ -60,11 +60,11 @@ Cada módulo deve ser isolado por domínio, mesmo dentro do monólito.
 
 ## Autenticação
 
-- JWT ou Laravel Sanctum
-- Refresh Token
-- Logout em todos os dispositivos
-- Recuperação de senha
-- Verificação de e-mail e telefone
+- Laravel Sanctum (Bearer Token)
+- Login por senha, código por e-mail (`POST /auth/magic-link`) e Google OAuth (`/auth/google/*`)
+- Logout (invalidação do token)
+- Recuperação de senha (fluxo clássico ainda disponível)
+- Verificação de e-mail/telefone (evolução)
 
 ## Autorização
 
@@ -124,11 +124,11 @@ HTTPS obrigatório, senhas com Argon2id, criptografia de dados sensíveis, rate 
 
 ## Deploy
 
-**Ambiente**: Docker. Containers: Backend, Nginx, PostgreSQL, Redis, Queue Worker.
+**Ambiente**: Docker Compose. Containers: app (Nginx+PHP), PostgreSQL, Redis, queue worker, scheduler. Stage sobe com `--env-file` de secrets no host de deploy; Traefik roteia o domínio da Stage.
 
-**CI/CD**: GitHub Actions. Pipeline: testes, análise estática, build, deploy.
+**CI/CD**: GitHub Actions no runner self-hosted da Stage. Pipeline: Pint, Larastan/PHPStan, PHPUnit com Postgres efêmero (mesma imagem do compose). Deploy da Stage é o compose no host — ver cabeçalho de `docker-compose.yml`.
 
-**Infraestrutura**: ambiente inicial, VPS 4 vCPU, 8 GB RAM, SSD NVMe, Ubuntu LTS. Escalável para AWS, Azure ou DigitalOcean posteriormente.
+**Infraestrutura**: host de Stage dimensionado para o MVP (sem HA; Postgres/Redis no próprio compose). Produção futura deve migrar banco/redis para padrão gerenciado. Endereço e hostname do host ficam na config de infra / Vault.
 
 ## Monitoramento
 
@@ -192,12 +192,11 @@ Evitar estrutura baseada apenas em Controllers e Models. Organizar por domínio 
 
 ## Pendências para Validação
 
-> Flutter/Laravel removidos desta lista em 2026-08-17, decididos em ADR-001, listá-los aqui como pendência contradizia o próprio ADR. Gateway de pagamento removido em 2026-08-17, decidido em `adr/ADR-005-gateway-pagamento.md` (Asaas, B006). Login social (Google/Apple) removido em 2026-08-21: decisão fechada, Pós-MVP (V1), `08-planejamento.md`.
+> Flutter/Laravel removidos desta lista em 2026-08-17, decididos em ADR-001. Gateway de pagamento removido em 2026-08-17 (`adr/ADR-005-gateway-pagamento.md`, Asaas, B006). Login Google entregue na API/app (código + OAuth); Apple segue Pós-MVP. Chat no MVP é polling (dívida aceitável em `08-planejamento.md`). Painel Admin é aplicação separada (`resolve-plus-admin`, Next.js), consumindo a API deste repositório. Stage roda em host próprio via Docker Compose + Traefik.
 
 - Google Maps ou Mapbox?
-- Chat via polling no MVP ou WebSocket?
-- Hospedagem inicial (VPS própria ou cloud gerenciada)?
-- O painel administrativo será integrado ao backend ou uma aplicação separada?
+- WebSocket para chat (Pós-MVP)?
+- Hospedagem de produção: manter host próprio ou cloud gerenciada?
 
 ## Avaliação da Arquitetura
 

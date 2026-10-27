@@ -62,6 +62,16 @@ Erros: 400, 409, 422
 
 **POST /auth/reset-password**, Redefine senha.
 
+**POST /auth/magic-link**, Envia código de acesso por e-mail (login sem senha).
+
+**POST /auth/magic-link/verify**, Troca o código por token Sanctum.
+
+**GET /auth/google/redirect**, Inicia OAuth Google (query `tipo` = `CLIENTE`|`PROFISSIONAL`).
+
+**GET /auth/google/callback**, Callback OAuth; redireciona ao app com código de troca de curta duração.
+
+**POST /auth/google/exchange**, Troca o código do callback por token Sanctum.
+
 ## Usuários
 
 **GET /users/me**, Retorna usuário autenticado. Se `tipo = PROFISSIONAL`, inclui objeto `trust_profile` (`nivel_confianca`, `servicos_aprovados`, `nota_media`, `taxa_cancelamento_pct`, `reclamacoes_12m`).
@@ -306,6 +316,8 @@ Request
 
 **POST /services/{id}/disputes**, Abre disputa sobre o serviço (`PaymentDispute`, INV-045). No MVP, disputas nascem preferencialmente via `POST /services/{id}/cancel` (Cenário C) ou `POST /services/{id}/contest` (contestação de conclusão); este endpoint fica para casos administrativos ou extensões futuras. Bloqueia repasse até resolução, não bloqueia novos `PaymentEvent`. Whitelist de `tipo` aceito neste endpoint **não** inclui `CHARGEBACK` (adicionado em 2026-08-20): esse tipo só é aberto pelo webhook do Asaas (`POST /webhooks/asaas`, `## Pagamentos`), nunca por request de usuário.
 
+**GET /admin/disputes**, Lista disputas para mediação (Admin), com contexto de serviço/proposta/solicitação. Filtros: `status`, `tipo`. Paginação padrão.
+
 **PUT /disputes/{id}/resolve**, Admin resolve disputa (`Usuario.tipo = ADMIN`). Serviço deve estar `Em Contestação`. Critérios em `foundation/03-cancellation-rules.md` (B003): prazo `DISPUTE_MEDIATION_DAYS` (7 dias), timeout automático se Admin não decidir.
 
 Request
@@ -345,6 +357,18 @@ Erros: 403 (não Admin), 404, 409 (disputa já `RESOLVIDA` ou serviço fora de `
 
 **PUT /notifications/{id}/read**, Marca como lida.
 
+## Privacidade (LGPD)
+
+**GET /privacy/data-export**, Exportação dos dados do titular autenticado.
+
+**DELETE /privacy/account**, Solicitação de exclusão da conta (soft delete + expurgo agendado via `privacy:purge`).
+
+**GET /admin/privacy/subject**, Busca titular por e-mail (Admin / atendimento do encarregado).
+
+**GET /admin/privacy/subject/export**, Exportação administrativa por e-mail.
+
+**DELETE /admin/privacy/subject**, Exclusão administrativa por e-mail.
+
 ## Administração
 
 **GET /admin/users**, Usuários.
@@ -352,6 +376,8 @@ Erros: 403 (não Admin), 404, 409 (disputa já `RESOLVIDA` ou serviço fora de `
 **GET /admin/services**, Serviços.
 
 **GET /admin/payments**, Pagamentos.
+
+**GET /admin/disputes**, Disputas (ver seção Disputas).
 
 **GET /admin/dashboard**, Indicadores gerais.
 
@@ -457,9 +483,10 @@ Idempotency-Key: <uuid>  (obrigatório em POST /proposals/{id}/accept, /services
 
 ## Pendências para Validação
 
+> Upload no MVP é via backend (disco `OBJECT_STORAGE_DISK`); pré-signed URL fica como evolução. Chat no MVP é polling REST.
+
 - REST puro ou GraphQL complementar?
-- Chat via REST (polling) no MVP ou WebSocket?
-- Upload direto para S3 (pré-signed URL) ou via backend?
+- WebSocket para chat (Pós-MVP)?
 - Estratégia de refresh token.
 - Rate limit por IP, usuário ou ambos?
 - API pública para parceiros?
