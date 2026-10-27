@@ -32,9 +32,9 @@ Transformar a visão do produto em um plano de execução incremental, reduzindo
 
 ### Pós-MVP (V1)
 
-Notificações em tempo real, login Google/Apple, múltiplos imóveis, painel financeiro avançado, cupons, cashback, sistema de disputas, painel de suporte.
+Notificações em tempo real / push, login Apple, múltiplos imóveis, painel financeiro avançado, cupons, cashback, painel de suporte avançado.
 
-> Login por magic link: implementado em 2026-08-21 (`POST /auth/magic-link` + `/auth/magic-link/verify`), decisão do PO de seguir com isso já, fora da leva conjunta com login Google/Apple cogitada anteriormente. É complementar ao login por senha, não substitui.
+> Auth sem senha: magic link (`POST /auth/magic-link` + `/auth/magic-link/verify`, 2026-08-21) e Google OAuth (`/auth/google/*`) já estão na API e no app. Continuam complementares ao login por senha. Apple permanece Pós-MVP. Disputas de mediação (abrir/resolver + listagem admin) já existem no domínio; o que sobra é operação de produção e polish de painel (`12-proximos-passos.md`).
 
 ### V2
 
@@ -78,7 +78,7 @@ O MVP será considerado pronto quando permitir: cadastro e autenticação de cli
 
 **Técnicas**: Asaas (pagamentos, `adr/ADR-005-gateway-pagamento.md`), Firebase Cloud Messaging, serviço de mapas, Object Storage, Redis, PostgreSQL.
 
-**Organizacionais**: definição da marca, política de garantia, política de cancelamento, política de mediação, termos de uso, política de privacidade.
+**Organizacionais**: definição da marca, política de garantia, política de cancelamento, política de mediação. Termos de uso e política de privacidade já publicados no site público e alinhados ao código (revisão LGPD); parecer jurídico definitivo de B001/B005 continua aberto.
 
 ## Estimativa de Complexidade
 
@@ -142,7 +142,7 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 - Critérios de reputação?
 - Cidade piloto?
 
-> "Login social?" removida desta lista em 2026-08-21: decisão fechada, Pós-MVP (V1) (ver seção Roadmap acima), não é mais pergunta em aberto.
+> "Login social?" removida desta lista em 2026-08-21 (decisão: fora da leva conjunta Google/Apple). Atualizado em 2026-10-27: Google já entregue; Apple permanece Pós-MVP.
 
 **Médias**
 - Cupom de desconto?
@@ -178,7 +178,7 @@ Com dois desenvolvedores, o prazo pode cair para aproximadamente 8 a 10 semanas,
 
 **Pontos Prontos**: visão de produto definida, fluxos principais mapeados, escopo do MVP delimitado, arquitetura definida, APIs especificadas, requisitos não funcionais levantados, roadmap e backlog estruturados.
 
-**Bloqueadores**: parecer jurídico definitivo de garantia (B001, decisão provisória já permite desenvolver), parecer jurídico definitivo da multa de cancelamento (B003, decisão provisória já permite desenvolver), parecer jurídico definitivo de responsabilidade civil (B005, decisão provisória já permite desenvolver RF002/Termos), protótipos de interface em alta fidelidade. Gateway de pagamento deixou de ser bloqueador em 2026-08-17 (`adr/ADR-005-gateway-pagamento.md`, B006). Critérios de validação documental de profissionais (RF002) resolvidos em 2026-08-17 (`04-modelo-dados.md` §DocumentoProfissional).
+**Bloqueadores**: parecer jurídico definitivo de garantia (B001, decisão provisória já permite desenvolver), parecer jurídico definitivo da multa de cancelamento (B003, decisão provisória já permite desenvolver), parecer jurídico definitivo de responsabilidade civil (B005, decisão provisória já permite desenvolver RF002/Termos), protótipos de interface em alta fidelidade. Gateway de pagamento deixou de ser bloqueador em 2026-08-17 (`adr/ADR-005-gateway-pagamento.md`, B006). Critérios de validação documental de profissionais (RF002) resolvidos em 2026-08-17 (`04-modelo-dados.md` §DocumentoProfissional). Fila técnica viva em `12-proximos-passos.md` (cartão ponta a ponta, Asaas real, bordas de API).
 
 ## Análise Crítica da Conversa
 

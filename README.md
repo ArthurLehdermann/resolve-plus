@@ -8,6 +8,7 @@ Marketplace de serviços residenciais e prediais. A plataforma participa da tran
 |---|---|
 | **Repositório** | https://github.com/ArthurLehdermann/resolve-plus |
 | **Stack** | Laravel 12, PHP 8.4, PostgreSQL, Redis — [ADR-001](docs/adr/ADR-001-stack.md) |
+| **Repos relacionados** | App Flutter (`resolve-plus-app`), painel Admin Next.js (`resolve-plus-admin`) |
 
 ---
 
@@ -25,7 +26,7 @@ docker compose exec app php artisan migrate
 
 A API sobe em http://localhost:8080 (`/up` é o health check).
 
-A raiz (`/`) serve a página pública do produto — Blade + CSS em `public/site/`, sem passo de build. O botão "Abrir o app" aponta para `SITE_APP_URL` ou, se ela não existir, para o `APP_URL` com o subdomínio `app.` na frente.
+A raiz (`/`) serve a página pública do produto — Blade + CSS em `public/site/` (política de privacidade e termos inclusos), sem passo de build. O botão "Abrir o app" aponta para `SITE_APP_URL` ou, se ela não existir, para o `APP_URL` com o subdomínio `app.` na frente.
 
 Categorias e tabela de preço do MVP vêm do seeder (sem elas não dá pra criar solicitação nem estimar preço):
 
@@ -40,6 +41,25 @@ docker compose exec app vendor/bin/pint --test
 docker compose exec app php artisan test
 ```
 
+Variáveis relevantes (ver `.env.example`; valores de Stage/produção ficam no arquivo de secrets do host de deploy, não no repositório):
+
+| Variável | Papel |
+|---|---|
+| `PAYMENT_GATEWAY` | `fake` no local/Stage; Asaas real só com credenciais e webhook configurados |
+| `OBJECT_STORAGE_DISK` / `AWS_*` | Uploads (fotos, documentos, evidências) via Object Storage S3-compatível |
+| `ADMIN_EMAIL` | Destinatário do aviso de conta nova |
+| `GOOGLE_*` / redirect | Login Google (`/api/v1/auth/google/*`) |
+
+Auth no app: senha clássica, código por e-mail (`POST /api/v1/auth/magic-link`) e Google OAuth.
+
+---
+
+## Deploy e CI
+
+Na Stage o compose sobe com o `--env-file` de secrets do host de deploy (caminho no cabeçalho de `docker-compose.yml`). Traefik roteia o domínio da Stage; DNS e host ficam na configuração de infra / Vault — não nesta documentação.
+
+CI (`.github/workflows/ci.yml`): Pint, PHPStan e PHPUnit em container na mesma imagem do compose, com Postgres efêmero. Roda no runner self-hosted da Stage (não usa minutos hosted do GitHub).
+
 ---
 
 ## Documentação
@@ -51,6 +71,8 @@ docker compose exec app php artisan test
 | [`docs/foundation/`](docs/foundation/) | Invariantes, event storm, state machine |
 | [`docs/specifications/`](docs/specifications/) | Visão, funcionalidades, modelo, arquitetura, APIs |
 | [`docs/adr/`](docs/adr/) | Decisões (stack, financeiro, garantia, prazo de aceite, gateway/Pix) |
+
+Fila de execução atual: [`docs/specifications/12-proximos-passos.md`](docs/specifications/12-proximos-passos.md).
 
 Organização do código por domínio: [`docs/specifications/05-arquitetura.md`](docs/specifications/05-arquitetura.md).
 

@@ -1,8 +1,9 @@
 # Deploy (Stage):
-#   docker compose --env-file /root/resolve-plus-secrets/vars.conf up -d
+#   docker compose --env-file <arquivo-de-secrets-do-host> up -d
+#   (caminho típico no host de deploy: /root/resolve-plus-secrets/vars.conf)
 #
-# Domínio: resolveplus.staging.bigworks.com.br (Traefik via labels no serviço app,
-# DNS wildcard *.staging.bigworks.com.br já aponta pra esta VPS).
+# Domínio da Stage e labels Traefik no serviço app: ver APP_URL / labels abaixo.
+# DNS e endereço do host ficam na config de infra / Vault — não neste arquivo.
 #
 # Ainda é staging: banco e redis rodam local neste compose (sem HA, sem backup
 # automatizado). Se um dia isso virar produção de verdade, migrar pra padrão

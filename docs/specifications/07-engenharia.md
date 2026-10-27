@@ -31,7 +31,9 @@ HTTPS obrigatório, senhas com Argon2id, JWT/Sanctum com expiração, criptograf
 
 **Requisitos**: consentimento para tratamento de dados, política de privacidade, exclusão lógica da conta, exportação dos dados do usuário, registro de consentimento, controle de retenção de dados.
 
-**Necessita Validação**: prazos legais e política de descarte.
+**Implementado na API/site**: política e termos no site público; `GET /privacy/data-export` e `DELETE /privacy/account` para o titular; atendimento por e-mail do encarregado via rotas `/admin/privacy/subject*`; expurgo agendado (`privacy:purge`).
+
+**Necessita Validação**: prazos legais definitivos e política de descarte além do fluxo já codificado (parecer jurídico).
 
 ## RNF005 • Backup
 

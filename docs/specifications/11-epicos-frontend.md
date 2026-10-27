@@ -13,7 +13,7 @@ Cada épico traz: **Telas**, **Endpoints** (`06-apis.md`), **Regras de domínio 
 | Superfície | Stack | Papéis | Status da decisão |
 |---|---|---|---|
 | App mobile | Flutter (ADR-001) | Cliente, Profissional | Decidido |
-| Painel Admin | React + Next.js, Shadcn/UI (`05-arquitetura.md`) | Admin | Decidido em `05-arquitetura.md`, mas a mesma pergunta ("integrado ao backend ou app separada?") continua em "Pendências para Validação" no mesmo documento, nunca fechada em ADR. Resolver antes de iniciar F10, senão o setup inicial é retrabalho. |
+| Painel Admin | React + Next.js (`resolve-plus-admin`) | Admin | App separada consumindo esta API. Decisão fechada na prática (painel no ar na Stage); ver `05-arquitetura.md` e `12-proximos-passos.md`. |
 
 Nenhuma das duas superfícies tem protótipo de alta fidelidade (Figma) ainda; `08-planejamento.md` lista isso como bloqueador desde 2026-08-16, sem mudança de status. Os épicos abaixo definem **o que** cada tela precisa fazer (telas, dados, regras), não o layout. Design visual é etapa separada, não bloqueia a decomposição em épicos/issues.
 
@@ -23,9 +23,9 @@ Nenhuma das duas superfícies tem protótipo de alta fidelidade (Figma) ainda; `
 
 ### F1, Fundação & Autenticação (P0)
 
-**Telas**: splash, escolha de tipo de conta (Cliente/Profissional), cadastro, login, recuperar senha, ver/editar perfil, upload de foto.
+**Telas**: splash, escolha de tipo de conta (Cliente/Profissional), cadastro, login (senha, código por e-mail e Google), recuperar senha, ver/editar perfil, upload de foto.
 
-**Endpoints**: `POST /auth/register|login|forgot-password|reset-password|logout`, `GET/PUT /users/me`, `POST /users/photo`.
+**Endpoints**: `POST /auth/register|login|forgot-password|reset-password|logout`, `POST /auth/magic-link` + `/auth/magic-link/verify`, `GET /auth/google/redirect|callback` + `POST /auth/google/exchange`, `GET/PUT /users/me`, `POST /users/photo`.
 
 **Regras de domínio**: `tipo` de conta é fixo no cadastro (INV-001), não existe tela de "trocar de Cliente para Profissional" depois, CPF que quiser os dois papéis cadastra duas contas. Profissional com `status = PENDENTE_VERIFICACAO` precisa de uma tela de bloqueio ("aguardando verificação") antes de qualquer tela operacional (INV-002, `02-state-machine.md` §6), não é só um badge, é um gate de navegação.
 
@@ -102,11 +102,11 @@ Nenhuma das duas superfícies tem protótipo de alta fidelidade (Figma) ainda; `
 
 **Telas**: dashboard, gestão de categorias (CRUD), revisão de documentos de profissionais (aprovar/rejeitar com motivo), lista de usuários, lista de serviços, lista de pagamentos, resolução de disputas, liberação manual de pagamento.
 
-**Endpoints**: `GET /admin/dashboard`, `GET/POST/GET/PUT/DELETE /admin/categories`, `PATCH /admin/professionals/documents/{id}/review`, `GET /admin/users|services|payments`, `PUT /disputes/{id}/resolve`, `POST /payments/{id}/release`.
+**Endpoints**: `GET /admin/dashboard`, `GET/POST/GET/PUT/DELETE /admin/categories`, `PATCH /admin/professionals/documents/{id}/review`, `GET /admin/users|services|payments|disputes`, `PUT /disputes/{id}/resolve`, `POST /payments/{id}/release`, rotas `/admin/privacy/subject*` para atendimento de titular.
 
 **Regras de domínio**: resolução de disputa exige `justificativa` (INV-070), campo obrigatório na tela, não opcional, o backend rejeita sem isso (422). Liberação manual de pagamento é ação **fora do fluxo automático** (INV-041 exige justificativa e responsável em auditoria); a tela precisa de confirmação explícita e deixar claro que é uma exceção administrativa, não uma ação de rotina, não usar o mesmo padrão de botão/confirmação das outras ações de listagem.
 
-**Pendência que bloqueia o início deste épico**: `05-arquitetura.md` decide "Web Admin: React + Next.js" na seção de Stack, mas a mesma pergunta ("painel integrado ao backend ou aplicação separada?") continua na lista de "Pendências para Validação" do mesmo documento, e não existe ADR próprio para o Admin (`ADR-001-stack.md` só cobre mobile/backend/infra). Fechar isso antes de abrir issues de F10, senão o setup inicial do painel é retrabalho se a resposta for "integrado".
+**Status**: painel no ar como app separada; listagem de disputas e atendimento LGPD no backend já existem. Pendências restantes de operação (liberação manual na UI, Asaas real) em `12-proximos-passos.md`.
 
 ---
 
@@ -121,3 +121,4 @@ Nenhuma das duas superfícies tem protótipo de alta fidelidade (Figma) ainda; `
 | Data | Mudança |
 |---|---|
 | 2026-08-20 | Criação do documento: decompõe os Épicos 1-7 de `08-planejamento.md` em telas de frontend (Flutter + Admin), cada épico ancorado em endpoints reais (`06-apis.md`) e invariantes/estados que a UI precisa respeitar. Identifica dois bloqueadores: arquitetura do painel Admin (integrado × app separada, sem ADR) e ausência de rota para registro `MANUAL` no prontuário (B004). |
+| 2026-10-27 | Admin confirmado como app separada; F1 ganha magic link + Google; F10 inclui `GET /admin/disputes` e privacy admin. Bloqueador de setup do painel sai. |
