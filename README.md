@@ -56,7 +56,7 @@ Auth no app: senha clássica, código por e-mail (`POST /api/v1/auth/magic-link`
 
 ## Deploy e CI
 
-Na Stage o compose sobe com o `--env-file` de secrets do host de deploy (caminho no cabeçalho de `docker-compose.yml`). Traefik roteia o domínio da Stage; DNS e host ficam na configuração de infra / Vault — não nesta documentação.
+Na Stage o compose sobe com o `--env-file` de secrets do host de deploy (caminho no cabeçalho de `compose.yml`). Traefik roteia o domínio da Stage; DNS e host ficam na configuração de infra / Vault — não nesta documentação.
 
 CI (`.github/workflows/ci.yml`): Pint, PHPStan e PHPUnit em container na mesma imagem do compose, com Postgres efêmero. Roda no runner self-hosted da Stage (não usa minutos hosted do GitHub).
 

@@ -126,7 +126,7 @@ HTTPS obrigatório, senhas com Argon2id, criptografia de dados sensíveis, rate 
 
 **Ambiente**: Docker Compose. Containers: app (Nginx+PHP), PostgreSQL, Redis, queue worker, scheduler. Stage sobe com `--env-file` de secrets no host de deploy; Traefik roteia o domínio da Stage.
 
-**CI/CD**: GitHub Actions no runner self-hosted da Stage. Pipeline: Pint, Larastan/PHPStan, PHPUnit com Postgres efêmero (mesma imagem do compose). Deploy da Stage é o compose no host — ver cabeçalho de `docker-compose.yml`.
+**CI/CD**: GitHub Actions no runner self-hosted da Stage. Pipeline: Pint, Larastan/PHPStan, PHPUnit com Postgres efêmero (mesma imagem do compose). Deploy da Stage é o compose no host — ver cabeçalho de `compose.yml`.
 
 **Infraestrutura**: host de Stage dimensionado para o MVP (sem HA; Postgres/Redis no próprio compose). Produção futura deve migrar banco/redis para padrão gerenciado. Endereço e hostname do host ficam na config de infra / Vault.
 
